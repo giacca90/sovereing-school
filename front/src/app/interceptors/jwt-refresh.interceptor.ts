@@ -14,6 +14,7 @@ export const jwtRefreshInterceptor: HttpInterceptorFn = (req, next) => {
 				return loginService.refreshToken().pipe(
 					switchMap((token) => {
 						if (token) {
+							console.log('Hay token...');
 							localStorage.setItem('Token', token);
 							const clonedRequest = req.clone({
 								setHeaders: {
@@ -28,7 +29,7 @@ export const jwtRefreshInterceptor: HttpInterceptorFn = (req, next) => {
 						}
 					}),
 					catchError((refreshError) => {
-						console.error('Error refrescando token:', refreshError);
+						console.error('Error refrescando token:', refreshError.message);
 						loginService.logout();
 						return throwError(() => refreshError);
 					}),

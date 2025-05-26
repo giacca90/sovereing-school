@@ -83,6 +83,7 @@ public class StreamingService {
                     ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null);
                     if (ffmpegCommand != null) {
                         // Ejecutar el comando FFmpeg
+                        System.out.println("Comando FFmpeg: " + String.join(" ", ffmpegCommand));
                         ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
 
                         // Establecer el directorio de trabajo
@@ -97,6 +98,9 @@ public class StreamingService {
                             while ((line = reader.readLine()) != null) {
                                 System.err.println("FFmpeg: " + line);
                             }
+                        } catch (IOException e) {
+                            System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
+                            throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
                         }
 
                         int exitCode = process.waitFor();
@@ -198,7 +202,7 @@ public class StreamingService {
                 os.flush();
                 os.close();
 
-                boolean finished = process.waitFor(1, TimeUnit.SECONDS); // Esperar 5 segundos
+                boolean finished = process.waitFor(5, TimeUnit.SECONDS); // Esperar 5 segundos
                 if (finished) {
                     // El proceso terminó correctamente
                     int exitCode = process.exitValue();

@@ -45,7 +45,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .setAllowedOrigins("*")// Cambiar "*" por dominios específicos en producción
                 .addInterceptors(authHandshakeInterceptor);
         // Registrar el handler para OBS
-        registry.addHandler(new OBSWebSocketHandler(webSocketTaskExecutor(), streamingService, RTMP_URL), "/live-obs")
+        registry.addHandler(new OBSWebSocketHandler(webSocketTaskExecutor(), streamingService, RTMP_URL + "/live/"),
+                "/live-obs")
                 .setAllowedOrigins("*") // Cambia "*" a los dominios permitidos en producción
                 .addInterceptors(authHandshakeInterceptor);
     }

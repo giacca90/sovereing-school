@@ -1,132 +1,130 @@
-version: '3.9'
-
 services:
-  sovschool-front:
-    image: sovschool-front
-    build:
-      context: ../front
-      dockerfile: Dockerfile
-    container_name: sovschool-front
-    env_file:
-      - ../front/.env
-    ports:
-      - "4200:4200"
-    networks:
-      - sovschool-network     
-    depends_on:
-      - sovschool-back-base
-      - sovschool-back-chat
-      - sovschool-back-stream
-      - sovschool-rtmp
+    sovschool-front:
+        image: sovschool-front
+        build:
+            context: ../front
+            dockerfile: Dockerfile
+        container_name: sovschool-front
+        env_file:
+            - ../front/.env
+        ports:
+            - "4200:4200"
+        networks:
+            - sovschool-network
+        depends_on:
+            - sovschool-back-base
+            - sovschool-back-chat
+            - sovschool-back-stream
+            - sovschool-rtmp
 
-  sovschool-postgres:
-    image: sovschool-postgres
-    build:
-      context: .
-      dockerfile: Dockerfile.postgres
-    container_name: sovschool-postgres
-    environment:
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
-    networks:
-      - sovschool-network
-    volumes:
-      - sovschool-postgres:/var/lib/postgresql/data
+    sovschool-postgres:
+        image: sovschool-postgres
+        build:
+            context: .
+            dockerfile: Dockerfile.postgres
+        container_name: sovschool-postgres
+        environment:
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        ports:
+            - "5432:5432"
+        networks:
+            - sovschool-network
+        volumes:
+            - sovschool-postgres:/var/lib/postgresql/data
 
-  sovschool-mongo:
-    image: sovschool-mongo
-    build:
-      context: .
-      dockerfile: Dockerfile.mongo
-    container_name: sovschool-mongo
-    ports:
-      - "27017:27017"
-    command: ["--replSet", "rs0"]
-    networks:
-      - sovschool-network
-    volumes:
-      - sovschool-mongo-data:/data/db
-      - sovschool-mongo-config:/data/configdb
+    sovschool-mongo:
+        image: sovschool-mongo
+        build:
+            context: .
+            dockerfile: Dockerfile.mongo
+        container_name: sovschool-mongo
+        ports:
+            - "27017:27017"
+        command: ["--replSet", "rs0"]
+        networks:
+            - sovschool-network
+        volumes:
+            - sovschool-mongo-data:/data/db
+            - sovschool-mongo-config:/data/configdb
 
-  sovschool-rtmp:
-    image: sovschool-rtmp
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-    container_name: sovschool-rtmp
-    ports:
-      - "8060:8060"
-    networks:
-      - sovschool-network
+    sovschool-rtmp:
+        image: sovschool-rtmp
+        build:
+            context: .
+            dockerfile: Dockerfile.nginx
+        container_name: sovschool-rtmp
+        ports:
+            - "8060:8060"
+        networks:
+            - sovschool-network
 
-  sovschool-back-base:
-    image: sovschool-back-base
-    build:
-      context: .
-      dockerfile: Dockerfile.back_base
-    container_name: sovschool-back-base
-    env_file:
-      - .env.back_base
-    ports:
-      - "8080:8080"
-    networks:
-      - sovschool-network
-    volumes:
-      - sovschool-fotos:/Fotos
-      - sovschool-videos:/Videos
-    depends_on:
-      - sovschool-postgres
-      - sovschool-mongo
+    sovschool-back-base:
+        image: sovschool-back-base
+        build:
+            context: .
+            dockerfile: Dockerfile.back_base
+        container_name: sovschool-back-base
+        env_file:
+            - .env.back_base
+        ports:
+            - "8080:8080"
+        networks:
+            - sovschool-network
+        volumes:
+            - sovschool-fotos:/Fotos
+            - sovschool-videos:/Videos
+        depends_on:
+            - sovschool-postgres
+            - sovschool-mongo
 
-  sovschool-back-chat:
-    image: sovschool-back-chat
-    build:
-      context: .
-      dockerfile: Dockerfile.back_chat
-    container_name: sovschool-back-chat
-    env_file:
-      - .env.back_chat
-    ports:
-      - "8070:8070"
-    networks:
-      - sovschool-network
-    depends_on:
-      - sovschool-postgres
-      - sovschool-mongo
+    sovschool-back-chat:
+        image: sovschool-back-chat
+        build:
+            context: .
+            dockerfile: Dockerfile.back_chat
+        container_name: sovschool-back-chat
+        env_file:
+            - .env.back_chat
+        ports:
+            - "8070:8070"
+        networks:
+            - sovschool-network
+        depends_on:
+            - sovschool-postgres
+            - sovschool-mongo
 
-  sovschool-back-stream:
-    image: sovschool-back-stream
-    build:
-      context: .
-      dockerfile: Dockerfile.back_stream
-    container_name: sovschool-back-stream
-    env_file:
-      - .env.back_stream
-    ports:
-      - "8090:8090"
-    networks:
-      - sovschool-network
-    volumes:
-      - sovschool-videos:/Videos
-    depends_on:
-      - sovschool-postgres
-      - sovschool-mongo
-      - sovschool-rtmp
+    sovschool-back-stream:
+        image: sovschool-back-stream
+        build:
+            context: .
+            dockerfile: Dockerfile.back_stream
+        container_name: sovschool-back-stream
+        env_file:
+            - .env.back_stream
+        ports:
+            - "8090:8090"
+        networks:
+            - sovschool-network
+        volumes:
+            - sovschool-videos:/Videos
+        depends_on:
+            - sovschool-postgres
+            - sovschool-mongo
+            - sovschool-rtmp
 
 networks:
-  sovschool-network:
-    name: sovschool-network
-    driver: bridge
+    sovschool-network:
+        name: sovschool-network
+        driver: bridge
 
 volumes:
-  sovschool-fotos:
-    name: sovschool-fotos
-  sovschool-mongo-config:
-    name: sovschool-mongo-config
-  sovschool-mongo-data:
-    name: sovschool-mongo-data
-  sovschool-postgres:
-    name: sovschool-postgres
-  sovschool-videos:
-    name: sovschool-videos
+    sovschool-fotos:
+        name: sovschool-fotos
+    sovschool-mongo-config:
+        name: sovschool-mongo-config
+    sovschool-mongo-data:
+        name: sovschool-mongo-data
+    sovschool-postgres:
+        name: sovschool-postgres
+    sovschool-videos:
+        name: sovschool-videos
