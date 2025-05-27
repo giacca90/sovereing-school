@@ -14,13 +14,13 @@ export const jwtRefreshInterceptor: HttpInterceptorFn = (req, next) => {
 				return loginService.refreshToken().pipe(
 					switchMap((token) => {
 						if (token) {
-							console.log('Hay token...');
+							console.log('Hay token: \n');
+							console.log(token);
 							localStorage.setItem('Token', token);
 							const clonedRequest = req.clone({
 								setHeaders: {
 									Authorization: `Bearer ${token}`,
 								},
-								body: token,
 							});
 							return next(clonedRequest); // Reenviar la petición original
 						} else {

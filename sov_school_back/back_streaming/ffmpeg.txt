@@ -1,0 +1,28 @@
+ffmpeg -loglevel warning -re -i rtmp://localhost:8060/live/1_caa32194-53ee-a08f-d341-2e37804faf2f -f hls -hls_time 5 -hls_playlist_type event -hls_flags independent_segments+append_list+program_date_time -hls_segment_type mpegts 
+-filter_complex [0:v]split=4[v1][v2][v3][v4]; [v1]copy[v1out]; [v2]scale=w=854:h=480[v2out]; [v3]scale=w=570:h=320[v3out]; [v4]scale=w=380:h=214[v4out] 
+-map [v1out] -c:v:0 libx264 -preset veryfast -g 30 -sc_threshold 0 -keyint_min 30 -hls_segment_filename 1280x720@30_%v/data%02d.ts -hls_base_url 1280x720@30_0/ 
+-map [v2out] -c:v:1 libx264 -preset veryfast -g 30 -sc_threshold 0 -keyint_min 30 -hls_segment_filename 854x480@30_%v/data%02d.ts -hls_base_url 854x480@30_1/ 
+-map [v3out] -c:v:2 libx264 -preset veryfast -g 30 -sc_threshold 0 -keyint_min 30 -hls_segment_filename 570x320@30_%v/data%02d.ts -hls_base_url 570x320@30_2/ 
+-map [v4out] -c:v:3 libx264 -preset veryfast -g 30 -sc_threshold 0 -keyint_min 30 -hls_segment_filename 380x214@30_%v/data%02d.ts -hls_base_url 380x214@30_3/ 
+-map a:0 -c:a:0 aac -b:a:0 64k -ac 2 
+-map a:0 -c:a:1 aac -b:a:1 48k 
+-map a:0 -c:a:2 aac -b:a:2 48k 
+-map a:0 -c:a:3 aac -b:a:3 48k 
+-master_pl_name master.m3u8 
+-var_stream_map v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3 stream_%v.m3u8 
+-map 0:v -map 0:a -c:v copy -c:a aac original.mp4
+
+
+
+ffmpeg -loglevel warning -i /home/matt/Escritorio/Proyectos/SovereingSchool/Videos/3/30/9812c6e3-90d4-49fc-ac1d-e9bf5bef66d9_Que invierta su puta madre!!.mp4 -f hls -hls_time 5 -hls_playlist_type vod -hls_flags independent_segments -hls_segment_type mpegts 
+-filter_complex [0:v]split=4[v1][v2][v3][v4]; [v1]copy[v1out]; [v2]scale=w=854:h=480[v2out]; [v3]scale=w=570:h=320[v3out]; [v4]scale=w=380:h=214[v4out] 
+-map [v1out] -c:v:0 libx264 -preset fast -g 25 -sc_threshold 0 -keyint_min 25 -hls_segment_filename 1280x720@25_%v/data%02d.ts -hls_base_url 1280x720@25_0/ 
+-map [v2out] -c:v:1 libx264 -preset fast -g 25 -sc_threshold 0 -keyint_min 25 -hls_segment_filename 854x480@25_%v/data%02d.ts -hls_base_url 854x480@25_1/ 
+-map [v3out] -c:v:2 libx264 -preset fast -g 25 -sc_threshold 0 -keyint_min 25 -hls_segment_filename 570x320@25_%v/data%02d.ts -hls_base_url 570x320@25_2/ 
+-map [v4out] -c:v:3 libx264 -preset fast -g 25 -sc_threshold 0 -keyint_min 25 -hls_segment_filename 380x214@25_%v/data%02d.ts -hls_base_url 380x214@25_3/ 
+-map a:0 -c:a:0 aac -b:a:0 64k -ac 2 
+-map a:0 -c:a:1 aac -b:a:1 48k 
+-map a:0 -c:a:2 aac -b:a:2 48k 
+-map a:0 -c:a:3 aac -b:a:3 48k 
+-master_pl_name master.m3u8 
+-var_stream_map  v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3 stream_%v.m3u8

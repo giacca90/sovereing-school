@@ -40,6 +40,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
+        // TODO: arreglar esto
         Boolean isAuthenticate = (boolean) session.getAttributes().get("Authenticate");
         if (isAuthenticate == null || !isAuthenticate) {
             String error = (String) session.getAttributes().get("Error");

@@ -76,14 +76,13 @@ public class StreamingService {
 
                     // Mover el archivo de entrada a la carpeta de destino
                     if (!inputFile.renameTo(destino)) {
-                        System.err.println("Error al mover el video a la carpeta de destino");
+                        // System.err.println("Error al mover el video a la carpeta de destino");
                         continue;
                     }
                     List<String> ffmpegCommand = null;
                     ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null);
                     if (ffmpegCommand != null) {
                         // Ejecutar el comando FFmpeg
-                        System.out.println("Comando FFmpeg: " + String.join(" ", ffmpegCommand));
                         ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
 
                         // Establecer el directorio de trabajo
@@ -100,6 +99,7 @@ public class StreamingService {
                             }
                         } catch (IOException e) {
                             System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
+                            process.destroy();
                             throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
                         }
 
@@ -154,7 +154,6 @@ public class StreamingService {
         }
 
         // Comando FFmpeg para procesar el streaming
-        System.out.println("Comando FFmpeg: " + String.join(" ", ffmpegCommand));
         ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
         processBuilder.redirectErrorStream(true);
         processBuilder.directory(outputDir.toFile());
@@ -395,7 +394,7 @@ public class StreamingService {
         }
         // Obtener la resolución del video
         if (width == null || height == null || fps == null) {
-
+            System.out.println("Obteniendo la resolución del video con ffprobe");
             ProcessBuilder processBuilder = new ProcessBuilder("ffprobe",
                     "-v", "error",
                     "-select_streams", "v:0",
@@ -434,6 +433,7 @@ public class StreamingService {
             String line;
 
             while ((line = reader.readLine()) != null) {
+                System.out.println("FFProbe: " + line);
                 String[] parts = line.split(",");
                 width = parts[0];
                 height = parts[1];
@@ -456,6 +456,11 @@ public class StreamingService {
                 System.err.println("La resolución es 0");
                 return null;
             }
+            if (width == null || height == null || fps == null) {
+                System.err.println("La resolución es null, reintentando con ffprobe");
+                this.creaComandoFFmpeg(inputFilePath, live, inputStream, streamIdAndSettings);
+            }
+            System.out.println("Resolución: " + width + "x" + height + "@" + fps);
         }
 
         // Calcular las partes necesarias según la resolución
@@ -605,11 +610,13 @@ public class StreamingService {
             streamMap += " v:" + i + ",a:" + i;
         }
         ffmpegCommand.add(streamMap);
-        ffmpegCommand.addAll(List.of(
-                "stream_%v.m3u8"));
+        ffmpegCommand.addAll(List.of("stream_%v.m3u8"));
+
         if (live) {
             ffmpegCommand.addAll(List.of("-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "aac", "original.mp4"));
         }
+
+        System.out.println("Comando FFmpeg: " + String.join(" ", ffmpegCommand));
         return ffmpegCommand;
     }
 }
