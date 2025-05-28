@@ -30,7 +30,7 @@ public class JwtTokenCookieFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest req,
             @NonNull HttpServletResponse res,
-            @NonNull FilterChain chain)
+            @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         try {
             Cookie[] cookies = req.getCookies();
@@ -53,11 +53,11 @@ public class JwtTokenCookieFilter extends OncePerRequestFilter {
                 Authentication auth = jwtUtil.createAuthenticationFromToken(init);
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
-            chain.doFilter(req, res);
         } catch (AuthenticationException ex) {
             SecurityContextHolder.clearContext();
             throw new BadCredentialsException("Error en JwtTokenCookieFilter: " + ex.getMessage());
         }
+        filterChain.doFilter(req, res);
     }
 
     private boolean hasText(String s) {

@@ -57,6 +57,7 @@ public class StreamingService {
      * @throws InterruptedException
      */
     @Async
+    // TODO: Modificar para trabajar solo con clases concretas
     public void convertVideos(Curso curso) throws IOException, InterruptedException {
         if (curso.getClases_curso() != null && !curso.getClases_curso().isEmpty()) {
             for (Clase clase : curso.getClases_curso()) {

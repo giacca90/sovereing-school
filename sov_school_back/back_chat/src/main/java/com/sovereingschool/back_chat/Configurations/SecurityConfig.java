@@ -47,8 +47,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(csrf -> csrf.disable())
-                .requiresChannel(channel -> channel
-                        .anyRequest().requiresSecure())
+                .redirectToHttps(Customizer.withDefaults())
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .userDetailsService(inMemoryUserDetailsManager())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -79,17 +79,6 @@ public class SecurityConfig {
             throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
-
-    /*
-     * @Bean
-     * public AuthenticationProvider authenticationProvider(UserDetailServiceImpl
-     * userDetailServiceImpl) {
-     * DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-     * provider.setPasswordEncoder(passwordEncoder());
-     * provider.setUserDetailsService(userDetailServiceImpl);
-     * return provider;
-     * }
-     */
 
     @Bean
     public PasswordEncoder passwordEncoder() {

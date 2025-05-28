@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.ChangePassword;
 import com.sovereingschool.back_base.Services.LoginService;
@@ -224,10 +225,13 @@ public class LoginController {
 			response = "Token no puede ser vacio";
 			return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
 		}
-
 		try {
 			response = this.loginService.loginWithToken(token);
 			return new ResponseEntity<>(response, HttpStatus.OK);
+		} catch (JWTVerificationException e) {
+			System.err.println(e.getMessage());
+			response = e.getMessage();
+			return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
 		} catch (Exception e) {
 			System.err.println("Error en login con token: " + e.getMessage());
 			response = "Error en login con token: " + e.getMessage();

@@ -39,7 +39,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SecurityConfig {
 
     @Autowired
-    private JwtTokenValidator JwtTokenValidator;
+    private JwtTokenValidator jwtTokenValidator;
     @Autowired
     private JwtTokenCookieFilter jwtTokenCookieFilter;
 
@@ -47,21 +47,19 @@ public class SecurityConfig {
     private String front;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        return httpSecurity
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
                 .csrf(csrf -> csrf.disable())
-                .requiresChannel(channel -> channel
-                        .anyRequest().requiresSecure())
-                .authorizeHttpRequests(http -> http.anyRequest().authenticated())
+                .redirectToHttps(Customizer.withDefaults())
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .userDetailsService(inMemoryUserDetailsManager())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(corsFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(jwtTokenCookieFilter, ExceptionTranslationFilter.class)
-                .addFilterAfter(JwtTokenValidator, ExceptionTranslationFilter.class)
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(customOAuth2SuccessHandler()))
-                .formLogin(form -> form.disable()) // Desactivar form login
+                .addFilterAfter(jwtTokenValidator, ExceptionTranslationFilter.class)
+                .oauth2Login(oauth2 -> oauth2.successHandler(customOAuth2SuccessHandler()))
+                .formLogin(form -> form.disable())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -88,9 +86,8 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider(LoginService loginService) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(loginService);
         provider.setPasswordEncoder(passwordEncoder());
-        provider.setUserDetailsService(loginService);
         return provider;
     }
 

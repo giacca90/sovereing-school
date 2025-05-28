@@ -1,0 +1,35 @@
+<div class="dark:scrollbar dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900 absolute top-0 left-0 z-10 flex h-screen w-full overflow-y-auto bg-white/90 dark:bg-black/90">
+	<div class="m-2 mt-2 mb-2 flex h-fit min-h-screen grow flex-col justify-start rounded-lg border border-black p-2 dark:border-gray-400">
+		<input class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" type="text" placeholder="Pon un nombre a tu Clase" [(ngModel)]="clase.nombre_clase" />
+		@if (clase.id_clase === 0) {
+			<div class="flex flex-col items-center md:flex-row">
+				<button id="claseVideo" class="text- m-2 cursor-pointer rounded-lg border border-black p-2 text-blue-700 dark:border-gray-400" (click)="cambiaTipoClase(0)">Clase en Video pre-gravado</button>
+				<button id="claseOBS" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cambiaTipoClase(1)">Clase en Vivo desde OBS</button>
+				<button id="claseWebCam" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cambiaTipoClase(2)">Clase en Vivo desde la Webcam</button>
+				<p class="m-2 font-bold text-red-500">ATENCIÓN: No se podrá cambiar el tipo una vez creada la clase</p>
+			</div>
+			<div class="flex grow flex-col items-center md:flex-row md:items-start">
+				@if (this.clase.tipo_clase !== 2) {
+					<div class="m-2 flex w-11/12 flex-col md:w-3/5">
+						@if (this.clase.tipo_clase === 0 || this.clase.id_clase !== 0) {
+							<app-editor-video></app-editor-video>
+						}
+						@if (this.clase.tipo_clase === 1) {
+							<app-editor-obs [readyObserve]="this.ready"></app-editor-obs>
+						}
+					</div>
+				}
+				<div class="m-2 flex w-full grow flex-col">
+					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccion_clase" />
+					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenido_clase"></textarea>
+				</div>
+			</div>
+			@if (this.clase.tipo_clase === 2) {
+				<WebOBS class="m-2" (emision)="emiteWebcam($event)" (savePresets)="savePresets($event)" [readyObserve]="this.ready" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></WebOBS>
+			}
+		} @else {
+			<app-editor-video></app-editor-video>
+		}
+		<button id="button-guardar-clase" type="button" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="guardarCambiosClase()">Guardar Cambios</button>
+	</div>
+</div>

@@ -1,6 +1,6 @@
 <div class="relative m-2 flex w-11/12 grow flex-col items-center rounded-lg border border-black p-2 dark:border-gray-400">
-	@if (this.curso?.imagen_curso) {
-		<img class="absolute -z-10 h-full content-center opacity-20" [src]="this.curso?.imagen_curso" alt="curso" />
+	@if (this.curso.imagen_curso) {
+		<img class="absolute -z-10 h-full content-center opacity-20" [src]="this.curso.imagen_curso" alt="curso" />
 	}
 	@if (this.curso) {
 		<div class="flex flex-col sm:flex-row">
@@ -24,7 +24,7 @@
 							<p class="ml-2 hidden grow text-gray-500 md:block">{{ clase.descriccion_clase }}</p>
 							<svg class="cursor-pointer" xmlns="http://www.w3.org/2000/svg" (click)="eliminaClase(clase)" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 						</div>
-						<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="editar = clase; this.startVideoJS()">Editar <span class="hidden md:inline">esta clase</span></button>
+						<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="editarClase(clase)">Editar <span class="hidden md:inline">esta clase</span></button>
 					</div>
 				}
 			</div>
@@ -46,66 +46,8 @@
 		</div>
 	}
 </div>
-@if (editar) {
-	<div class="dark:scrollbar dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900 absolute top-0 left-0 z-10 flex h-screen w-full overflow-y-auto bg-white/90 dark:bg-black/90">
-		<div class="m-2 mt-2 mb-2 flex h-fit min-h-screen grow flex-col justify-start rounded-lg border border-black p-2 dark:border-gray-400">
-			<input class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" type="text" placeholder="Pon un nombre a tu Clase" [(ngModel)]="editar.nombre_clase" />
-			@if (editar.id_clase === 0) {
-				<div class="flex flex-col items-center md:flex-row">
-					<button id="claseVideo" class="text- m-2 cursor-pointer rounded-lg border border-black p-2 text-blue-700 dark:border-gray-400" (click)="cambiaTipoClase(0)">Clase en Video pre-gravado</button>
-					<button id="claseOBS" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cambiaTipoClase(1)">Clase en Vivo desde OBS</button>
-					<button id="claseWebCam" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cambiaTipoClase(2)">Clase en Vivo desde la Webcam</button>
-					<p class="m-2 font-bold text-red-500">ATENCIÓN: No se podrá cambiar el tipo una vez creada la clase</p>
-				</div>
-				<div class="flex grow flex-col items-center md:flex-row md:items-start">
-					@if (this.editar.tipo_clase !== 2) {
-						<div class="m-2 flex w-11/12 flex-col md:w-3/5">
-							@if (this.editar.tipo_clase === 0 || this.editar.id_clase !== 0) {
-								<video id="videoPlayer" controls src="" class="vjs-default-skin w-full bg-black dark:border dark:border-gray-400"></video>
-								<div class="flex">
-									<label for="video-upload" id="video-upload-button" class="m-2 grow cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" tabindex="0" (keydown)="keyEvent($event)"> Sube un Video </label>
-									<input id="video-upload" type="file" accept="video/mp4,video/x-m4v,video/avi,video/webm" class="hidden" (change)="cargaVideo($event)" />
-								</div>
-							}
-							@if (this.editar.tipo_clase === 1) {
-								<video id="OBS" src="" class="video-js vjs-default-skin w-full dark:border dark:border-gray-400"></video>
-								<div id="audio-bar">
-									<div id="audio-level"></div>
-								</div>
-								<p id="statusOBS">Cargando...</p>
-								<div id="enlaces"></div>
-								@if (this.streamingService.enGrabacion === true) {
-									<div class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="detenerEmision()" tabindex="0" (keydown.enter)="detenerEmision()">Detener Emisión</div>
-								} @else {
-									<div class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="emiteOBS()" tabindex="0" (keydown.enter)="emiteOBS()">Emitir OBS</div>
-								}
-							}
-						</div>
-					}
-					<div class="m-2 flex w-full grow flex-col">
-						<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="editar.descriccion_clase" />
-						<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="editar.contenido_clase"></textarea>
-					</div>
-				</div>
-				@if (this.editar.tipo_clase === 2) {
-					<WebOBS class="m-2" (emision)="emiteWebcam($event)" (savePresets)="savePresets($event)" [readyObserve]="this.ready" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></WebOBS>
-				}
-			} @else {
-				<div class="flex flex-col items-center md:flex-row">
-					<div class="m-2 mr-4 flex w-11/12 flex-col md:w-3/5">
-						<video id="videoPlayer" src="" class="video-js vjs-default-skin h-full w-full object-cover dark:border dark:border-gray-400"></video>
-						<div class="flex">
-							<label for="video-upload" id="video-upload-button" class="m-2 grow cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" tabindex="0" (keydown)="keyEvent($event)"> Sube un Video </label>
-							<input id="video-upload" type="file" accept="video/mp4,video/x-m4v,video/avi,video/webm" class="hidden" (change)="cargaVideo($event)" />
-						</div>
-					</div>
-					<div class="m-2 flex w-full grow flex-col">
-						<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="editar.descriccion_clase" />
-						<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="editar.contenido_clase"></textarea>
-					</div>
-				</div>
-			}
-			<button id="button-guardar-clase" type="button" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="guardarCambiosClase()">Guardar Cambios</button>
-		</div>
+<div>
+	<div id="claseEditor" class="dark:scrollbar dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900 absolute top-0 left-0 z-10 flex h-screen w-full overflow-y-auto bg-white/90 dark:bg-black/90" style="display: none">
+		<app-editor-clase [clase]="claseEditar"></app-editor-clase>
 	</div>
-}
+</div>

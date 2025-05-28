@@ -8,7 +8,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -35,10 +34,8 @@ public class JwtTokenValidator extends OncePerRequestFilter {
         if (jwtToken != null && jwtToken.startsWith("Bearer ")) {
             jwtToken = jwtToken.substring(7);
             try {
-                SecurityContext context = SecurityContextHolder.getContext();
                 Authentication authentication = this.jwtUtil.createAuthenticationFromToken(jwtToken);
-                context.setAuthentication(authentication);
-                SecurityContextHolder.setContext(context);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (AuthenticationException e) {
                 SecurityContextHolder.clearContext();
                 throw new BadCredentialsException("Error en JwtTokenValidator: " + e.getMessage());
