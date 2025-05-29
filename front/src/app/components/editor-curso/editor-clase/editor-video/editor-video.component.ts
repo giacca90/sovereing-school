@@ -1,9 +1,9 @@
 import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import videojs from 'video.js';
 import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
 import { ClaseService } from '../../../../services/clase.service';
-
 @Component({
 	selector: 'app-editor-video',
 	imports: [],
@@ -15,7 +15,7 @@ export class EditorVideoComponent implements AfterViewInit {
 	@Output() readyEvent: EventEmitter<boolean> = new EventEmitter();
 	isBrowser: boolean;
 	player: Player | null = null;
-	videojs: any;
+	videojs = videojs;
 
 	constructor(
 		private claseService: ClaseService,
@@ -26,7 +26,7 @@ export class EditorVideoComponent implements AfterViewInit {
 
 	ngAfterViewInit(): void {
 		if (this.isBrowser) {
-			this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
+			//this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
 		}
 	}
 
