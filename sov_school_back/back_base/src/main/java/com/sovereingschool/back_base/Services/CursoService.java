@@ -74,6 +74,7 @@ public class CursoService implements ICursoService {
             @Value("${variable.VIDEOS_DIR}") String uploadDir,
             EntityManager entityManager) {
         this.baseUploadDir = Paths.get(uploadDir);
+        System.out.println("baseUploadDir: " + this.baseUploadDir);
         this.entityManager = entityManager;
     }
 
@@ -194,14 +195,14 @@ public class CursoService implements ICursoService {
         if (curso.getId_curso().equals(0L)) {
             curso.setId_curso(null);
             curso = this.cursoRepo.save(curso);
-            // Crear la carpeta del curso si no existe
-            Path cursoPath = baseUploadDir.resolve(curso.getId_curso().toString());
-            File cursoFile = new File(cursoPath.toString());
-            if (!cursoFile.exists() || !cursoFile.isDirectory()) {
-                if (!cursoFile.mkdir()) {
-                    System.err.println("Error en crear la carpeta del curso.");
-                    return null;
-                }
+        }
+        // Crear la carpeta del curso si no existe
+        Path cursoPath = baseUploadDir.resolve(curso.getId_curso().toString());
+        File cursoFile = new File(cursoPath.toString());
+        if (!cursoFile.exists() || !cursoFile.isDirectory()) {
+            if (!cursoFile.mkdir()) {
+                System.err.println("Error en crear la carpeta del curso.");
+                throw new RuntimeException("Error en crear la carpeta del curso.");
             }
         }
 
@@ -236,7 +237,7 @@ public class CursoService implements ICursoService {
                 File claseFile = new File(clasePath.toString());
                 if (!claseFile.exists() || !claseFile.isDirectory()) {
                     if (!claseFile.mkdir()) {
-                        return null;
+                        throw new RuntimeException("Error en crear la carpeta de la clase");
                     }
                 }
             }

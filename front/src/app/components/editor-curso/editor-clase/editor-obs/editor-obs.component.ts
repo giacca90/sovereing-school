@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, Inject, Input, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, Inject, Input, PLATFORM_ID } from '@angular/core';
 import { Observable } from 'rxjs';
 import Player from 'video.js/dist/types/player';
 import { LoginService } from '../../../../services/login.service';
@@ -11,11 +11,12 @@ import { StreamingService } from '../../../../services/streaming.service';
 	templateUrl: './editor-obs.component.html',
 	styleUrl: './editor-obs.component.css',
 })
-export class EditorObsComponent {
+export class EditorObsComponent implements AfterViewInit {
 	@Input() readyObserve?: Observable<boolean>;
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
 	player: Player | null = null;
+	videojs: any;
 
 	constructor(
 		public streamingService: StreamingService,
@@ -23,6 +24,11 @@ export class EditorObsComponent {
 		@Inject(PLATFORM_ID) private platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
+	}
+	ngAfterViewInit(): void {
+		if (this.isBrowser) {
+			this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
+		}
 	}
 
 	emiteOBS() {

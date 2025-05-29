@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { AfterViewInit, Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
-import { Curso } from '../../../../models/Curso';
 import { ClaseService } from '../../../../services/clase.service';
 
 @Component({
@@ -9,11 +10,26 @@ import { ClaseService } from '../../../../services/clase.service';
 	templateUrl: './editor-video.component.html',
 	styleUrl: './editor-video.component.css',
 })
-export class EditorVideoComponent {
+export class EditorVideoComponent implements AfterViewInit {
 	@Input() clase!: Clase;
-	public curso!: Curso;
+	@Output() readyEvent: EventEmitter<boolean> = new EventEmitter();
+	isBrowser: boolean;
+	player: Player | null = null;
+	videojs: any;
 
-	constructor(private claseService: ClaseService) {}
+	constructor(
+		private claseService: ClaseService,
+		@Inject(PLATFORM_ID) private platformId: Object,
+	) {
+		this.isBrowser = isPlatformBrowser(platformId);
+	}
+
+	ngAfterViewInit(): void {
+		if (this.isBrowser) {
+			this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
+		}
+	}
+
 	cargaVideo(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files) {
@@ -38,9 +54,9 @@ export class EditorVideoComponent {
 				}
 				if (input.files && this.clase) {
 					this.claseService.subeVideo(input.files[0], this.clase.curso_clase, this.clase?.id_clase).subscribe((result) => {
-						if (result && this.curso?.clases_curso && this.clase) {
+						if (result && this.clase) {
 							this.clase.direccion_clase = result;
-							this.clase.curso_clase = this.curso.id_curso;
+							this.clase.curso_clase = this.clase.curso_clase;
 							button.classList.remove('border-gray-500', 'text-gray-500');
 							button.classList.add('border-black');
 							button_guardar_clase.classList.remove('border-gray-500', 'text-gray-500');
@@ -52,6 +68,7 @@ export class EditorVideoComponent {
 			}
 		};
 		reader.readAsDataURL(input.files[0]);
+		this.readyEvent.emit(true);
 	}
 
 	keyEvent(event: KeyboardEvent) {

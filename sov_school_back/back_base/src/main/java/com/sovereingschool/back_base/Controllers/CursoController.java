@@ -165,6 +165,7 @@ public class CursoController {
 	@PreAuthorize("hasAnyRole('PROF', 'ADMIN')")
 	@PutMapping("/update")
 	public ResponseEntity<?> updateCurso(@RequestBody Curso curso) {
+		System.out.println("updateCurso");
 		Object response = new Object();
 		try {
 			this.cursoService.updateCurso(curso);

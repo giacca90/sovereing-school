@@ -2,13 +2,22 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 import { Clase } from '../models/Clase';
+import { CursosService } from './cursos.service';
 
 @Injectable({
 	providedIn: 'root',
 })
 export class ClaseService {
-	private backURL: string = ''; // TODO: Obtener URL de back
-	constructor(private http: HttpClient) {}
+	constructor(
+		private http: HttpClient,
+		private cursoService: CursosService,
+	) {}
+	get backURL(): string {
+		if (typeof window !== 'undefined' && (window as any).__env) {
+			return (window as any).__env.BACK_BASE ?? '';
+		}
+		return '';
+	}
 
 	deleteClase(clase: Clase): Observable<boolean> {
 		const curso_clase: number | undefined = clase.curso_clase;

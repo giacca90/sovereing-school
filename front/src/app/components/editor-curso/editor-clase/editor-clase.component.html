@@ -9,13 +9,16 @@
 				<p class="m-2 font-bold text-red-500">ATENCIÓN: No se podrá cambiar el tipo una vez creada la clase</p>
 			</div>
 			<div class="flex grow flex-col items-center md:flex-row md:items-start">
+				<!-- Si no es una clase WebOBS -->
 				@if (this.clase.tipo_clase !== 2) {
 					<div class="m-2 flex w-11/12 flex-col md:w-3/5">
+						<!-- Si es una clase de video o una edición-->
 						@if (this.clase.tipo_clase === 0 || this.clase.id_clase !== 0) {
-							<app-editor-video></app-editor-video>
+							<app-editor-video [clase]="clase" (readyEvent)="this.readyEvent($event)"></app-editor-video>
 						}
+						<!-- Si es una clase OBS -->
 						@if (this.clase.tipo_clase === 1) {
-							<app-editor-obs [readyObserve]="this.ready"></app-editor-obs>
+							<app-editor-obs [readyObserve]="this.readyObserver"></app-editor-obs>
 						}
 					</div>
 				}
@@ -24,11 +27,21 @@
 					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenido_clase"></textarea>
 				</div>
 			</div>
+			<!-- Si es una clase WebOBS -->
 			@if (this.clase.tipo_clase === 2) {
-				<WebOBS class="m-2" (emision)="emiteWebcam($event)" (savePresets)="savePresets($event)" [readyObserve]="this.ready" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></WebOBS>
+				<WebOBS class="m-2" (emision)="emiteWebcam($event)" (savePresets)="savePresets($event)" [readyObserve]="this.readyObserver" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></WebOBS>
 			}
 		} @else {
-			<app-editor-video></app-editor-video>
+			<div class="flex grow flex-col items-center md:flex-row md:items-start">
+				<div class="m-2 flex w-11/12 flex-col md:w-3/5">
+					<!-- Si es una clase de video o una edición-->
+					<app-editor-video [clase]="clase" (readyEvent)="this.readyEvent($event)"></app-editor-video>
+				</div>
+				<div class="m-2 flex w-full grow flex-col">
+					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccion_clase" />
+					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenido_clase"></textarea>
+				</div>
+			</div>
 		}
 		<button id="button-guardar-clase" type="button" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="guardarCambiosClase()">Guardar Cambios</button>
 	</div>

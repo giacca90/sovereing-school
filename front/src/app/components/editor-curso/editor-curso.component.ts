@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -19,12 +19,13 @@ import { EditorClaseComponent } from './editor-clase/editor-clase.component';
 	templateUrl: './editor-curso.component.html',
 	styleUrl: './editor-curso.component.css',
 })
-export class EditorCursoComponent implements OnInit, OnDestroy, AfterViewInit {
+export class EditorCursoComponent implements OnInit, OnDestroy {
 	private subscription: Subscription = new Subscription();
+	idCurso!: number;
 	curso!: Curso;
 	draggedElementId: number | null = null;
 	editado: boolean = false;
-	claseEditar: Clase = new Clase(0, '', '', '', 0, '', 0, this.curso.id_curso);
+	claseEditar: Clase = new Clase(0, '', '', '', 0, '', 0, 0);
 	//editar: Clase | null = null;
 	//streamWebcam: MediaStream | null = null;
 	//m3u8Loaded: boolean = false;
@@ -32,7 +33,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, AfterViewInit {
 	//ready: Subject<boolean> = new Subject<boolean>();
 	//savedFiles: File[] = [];
 	//savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
-	backBase = '';
+	backBase!: string;
 	isBrowser: boolean;
 	//videojs: any;
 
@@ -48,30 +49,27 @@ export class EditorCursoComponent implements OnInit, OnDestroy, AfterViewInit {
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
-				this.curso = params['curso'];
-				if (this.curso?.id_curso == 0) {
-					if (this.loginService.usuario) {
-						this.curso = new Curso(0, '', [this.loginService.usuario], '', '', new Date(), [], [], '', 0);
-					}
-				} else {
-					this.cursoService.getCurso(this.curso.id_curso).then((curso) => {
-						this.curso = JSON.parse(JSON.stringify(curso));
-						// Si el curso no existe, redirige a la página de inicio
-						if (!this.curso) {
-							this.router.navigate(['/']);
-						}
-					});
-				}
+				this.idCurso = params['id_curso'];
+				console.log('ID Curso:', this.idCurso);
 			}),
 		);
-
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
-	ngAfterViewInit(): void {
-		throw new Error('Method not implemented.');
-	}
 
-	ngOnInit(): void {
+	async ngOnInit() {
+		if (this.idCurso === 0 && this.loginService.usuario) {
+			this.curso = new Curso(0, '', [this.loginService.usuario], '', '', new Date(), [], [], '', 0);
+		} else {
+			await this.cursoService.getCurso(this.idCurso).then((curso) => {
+				this.curso = JSON.parse(JSON.stringify(curso));
+				if (!this.curso) {
+					console.log('Curso no encontrado: ' + this.idCurso);
+					this.router.navigate(['/']);
+				}
+			});
+		}
+		this.claseEditar.curso_clase = this.curso.id_curso;
+
 		this.subscription.add(
 			this.router.events.subscribe((event) => {
 				if (event instanceof NavigationStart && this.editado) {
@@ -208,8 +206,10 @@ export class EditorCursoComponent implements OnInit, OnDestroy, AfterViewInit {
 	}
 
 	nuevaClase() {
-		if (this.curso && this.curso.clases_curso) {
+		const editorClaseComponente = document.getElementById('claseEditor') as HTMLDivElement;
+		if (editorClaseComponente && this.curso.clases_curso) {
 			this.claseEditar = new Clase(0, '', '', '', 0, '', this.curso.clases_curso?.length + 1, this.curso.id_curso);
+			editorClaseComponente.style.display = 'flex';
 		}
 	}
 

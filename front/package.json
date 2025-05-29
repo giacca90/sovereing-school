@@ -12,16 +12,16 @@
 	},
 	"private": true,
 	"dependencies": {
-		"@angular/animations": "^19.2.11",
-		"@angular/common": "^19.2.11",
-		"@angular/compiler": "^19.2.11",
-		"@angular/core": "^19.2.11",
-		"@angular/forms": "^19.2.11",
-		"@angular/platform-browser": "^19.2.11",
-		"@angular/platform-browser-dynamic": "^19.2.11",
-		"@angular/platform-server": "^19.2.11",
-		"@angular/router": "^19.2.11",
-		"@angular/ssr": "^19.2.12",
+		"@angular/animations": "^20.0.0",
+		"@angular/common": "^20.0.0",
+		"@angular/compiler": "^20.0.0",
+		"@angular/core": "^20.0.0",
+		"@angular/forms": "^20.0.0",
+		"@angular/platform-browser": "^20.0.0",
+		"@angular/platform-browser-dynamic": "^20.0.0",
+		"@angular/platform-server": "^20.0.0",
+		"@angular/router": "^20.0.0",
+		"@angular/ssr": "^20.0.0",
 		"@stomp/stompjs": "^7.1.1",
 		"@tailwindcss/postcss": "^4.1.7",
 		"@types/video.js": "^7.3.58",
@@ -35,19 +35,19 @@
 		"zone.js": "~0.15.0"
 	},
 	"devDependencies": {
-		"@angular-devkit/build-angular": "^19.2.12",
-		"@angular-eslint/builder": "19.5.0",
-		"@angular-eslint/eslint-plugin": "19.5.0",
-		"@angular-eslint/eslint-plugin-template": "19.5.0",
-		"@angular-eslint/schematics": "19.5.0",
-		"@angular-eslint/template-parser": "19.5.0",
-		"@angular/cli": "^19.2.12",
-		"@angular/compiler-cli": "^19.2.11",
+		"@angular-devkit/build-angular": "^20.0.0",
+		"@angular-eslint/builder": "19.6.0",
+		"@angular-eslint/eslint-plugin": "19.6.0",
+		"@angular-eslint/eslint-plugin-template": "19.6.0",
+		"@angular-eslint/schematics": "19.6.0",
+		"@angular-eslint/template-parser": "19.6.0",
+		"@angular/cli": "^20.0.0",
+		"@angular/compiler-cli": "^20.0.0",
 		"@types/express": "^5.0.1",
 		"@types/jasmine": "~5.1.8",
 		"@types/node": "^22.15.18",
-		"@typescript-eslint/eslint-plugin": "8.32.1",
-		"@typescript-eslint/parser": "8.32.1",
+		"@typescript-eslint/eslint-plugin": "8.33.0",
+		"@typescript-eslint/parser": "8.33.0",
 		"autoprefixer": "^10.4.21",
 		"eslint": "^9.26.0",
 		"jasmine-core": "~5.7.1",
@@ -60,13 +60,13 @@
 		"prettier": "^3.5.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
 		"tailwind-scrollbar": "^4.0.2",
-		"tailwindcss": "^4.1.7",
+		"tailwindcss": "^4.1.8",
 		"ts-node": "^10.9.2",
 		"typescript": "~5.8.3"
 	},
 	"overrides": {
 		"@angular-devkit/build-angular": {
-			"tailwindcss": "^4.1.7"
+			"tailwindcss": "^4.1.8"
 		}
 	}
 }

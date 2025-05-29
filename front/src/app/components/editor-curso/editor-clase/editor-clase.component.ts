@@ -1,9 +1,10 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import { Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
-import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../models/Clase';
+import { Curso } from '../../../models/Curso';
 import { ClaseService } from '../../../services/clase.service';
 import { CursosService } from '../../../services/cursos.service';
 import { InitService } from '../../../services/init.service';
@@ -19,25 +20,27 @@ import { EditorWebcamComponent, VideoElement } from './editor-webcam/editor-webc
 	templateUrl: './editor-clase.component.html',
 	styleUrl: './editor-clase.component.css',
 })
-export class EditorClaseComponent implements AfterViewInit {
+export class EditorClaseComponent {
 	@Input() clase!: Clase;
+	@Input() curso!: Curso;
 	@Output() claseGuardada: EventEmitter<Boolean> = new EventEmitter();
 	private subscription: Subscription = new Subscription();
 	streamWebcam: MediaStream | null = null;
-	player: Player | null = null;
+	//player: Player | null = null;
 	savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
 	isBrowser: boolean;
 	backBase = '';
-	videojs: any;
+	//videojs: any;
 	savedFiles: File[] = [];
-	ready: Subject<boolean> = new Subject<boolean>();
-
+	readyObserver: Subject<boolean> = new Subject<boolean>();
+	readyEstatico: boolean = false;
 	constructor(
 		private claseService: ClaseService,
 		private cursoService: CursosService,
 		private streamingService: StreamingService,
 		private loginService: LoginService,
 		private initService: InitService,
+		private router: Router,
 		@Inject(PLATFORM_ID) private platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
@@ -56,7 +59,45 @@ export class EditorClaseComponent implements AfterViewInit {
 			alert('Debes poner contenido para la clase');
 			return;
 		}
+		if (this.clase.id_clase !== 0 || this.clase.tipo_clase === 0) {
+			if (!this.readyEstatico) {
+				alert('Debes primero subir un video');
+				return;
+			}
+		}
 		this.claseGuardada.emit(true);
+
+		if (this.clase.id_clase === 0) {
+			const clasesCurso = this.curso.clases_curso;
+			if (!clasesCurso) {
+				this.curso.clases_curso = new Array<Clase>();
+			}
+			if (this.curso.clases_curso) {
+				this.clase.posicion_clase = this.curso.clases_curso.length + 1;
+				this.curso.clases_curso.push(this.clase);
+			}
+		} else {
+			const clasesCurso = this.curso.clases_curso;
+			if (clasesCurso) {
+				const idx = clasesCurso.findIndex((clase) => clase.id_clase === this.clase.id_clase);
+				if (idx !== -1) {
+					clasesCurso[idx] = { ...this.clase };
+				}
+			}
+		}
+
+		this.cursoService.updateCurso(this.curso).subscribe({
+			next: (success: boolean) => {
+				if (success) {
+					this.router.navigate(['/cursosUsuario']);
+				} else {
+					console.error('Falló la actualización del curso');
+				}
+			},
+			error: (error) => {
+				console.error('Error al actualizar el curso:', error);
+			},
+		});
 
 		/* this.streamWebcam?.getTracks().forEach((track) => track.stop());
 		this.streamWebcam = null;
@@ -101,8 +142,8 @@ export class EditorClaseComponent implements AfterViewInit {
 			window.scrollTo(0, 0); // Subir la vista al inicio de la página
 			document.body.style.overflow = 'hidden';
 
-			this.player?.dispose();
-			this.player = null;
+			//this.player?.dispose();
+			//this.player = null;
 
 			switch (tipo) {
 				case 0: {
@@ -161,7 +202,8 @@ export class EditorClaseComponent implements AfterViewInit {
 		}, 100);
 	}
 
-	async startVideoJS() {
+	// TODO: Mover al componente que lo necesite
+	/* async startVideoJS() {
 		if (!this.isBrowser) return;
 
 		// Dinámicamente importa video.js solo en el navegador
@@ -190,17 +232,21 @@ export class EditorClaseComponent implements AfterViewInit {
 			console.error('No se pudo obtener video.js');
 		}
 	}
-
-	ngAfterViewInit(): void {
+ */
+	/* ngAfterViewInit(): void {
 		if (this.isBrowser) {
 			this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
 		}
-	}
+	} */
 
 	ngOnDestroy(): void {
 		this.subscription.unsubscribe();
 		this.streamWebcam?.getTracks().forEach((track) => track.stop());
 		this.streamWebcam = null;
+	}
+
+	readyEvent($event: boolean) {
+		this.readyEstatico = $event;
 	}
 
 	// Recuperar imagenes del curso y del usuario para el componente WebOBS
@@ -248,31 +294,31 @@ export class EditorClaseComponent implements AfterViewInit {
 		if (this.clase) {
 			if (event === null) {
 				//this.detenerEmision();
-				this.ready.next(false);
+				this.readyObserver.next(false);
 				return;
 			}
 			this.streamWebcam = event;
 			if (this.clase.nombre_clase == null || this.clase.nombre_clase == '') {
 				alert('Debes poner un nombre para la clase');
-				this.ready.next(false);
+				this.readyObserver.next(false);
 				return;
 			}
 			if (this.clase.descriccion_clase == null || this.clase.descriccion_clase == '') {
 				alert('Debes poner una descripción para la clase');
-				this.ready.next(false);
+				this.readyObserver.next(false);
 				return;
 			}
 			if (this.clase.contenido_clase == null || this.clase.contenido_clase == '') {
 				alert('Debes poner contenido para la clase');
-				this.ready.next(false);
+				this.readyObserver.next(false);
 				return;
 			}
 			if (!this.streamWebcam) {
 				alert('Debes conectarte primero con la webcam');
-				this.ready.next(false);
+				this.readyObserver.next(false);
 				return;
 			} else {
-				this.ready.next(true);
+				this.readyObserver.next(true);
 				this.streamingService.emitirWebcam(this.streamWebcam, this.clase);
 			}
 		}
