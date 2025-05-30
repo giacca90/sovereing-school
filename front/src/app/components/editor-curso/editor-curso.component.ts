@@ -23,9 +23,11 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	private subscription: Subscription = new Subscription();
 	idCurso!: number;
 	curso!: Curso;
+	backBase!: string;
 	draggedElementId: number | null = null;
 	editado: boolean = false;
-	claseEditar: Clase = new Clase(0, '', '', '', 0, '', 0, 0);
+	claseEditar: Clase | null = null;
+	isBrowser: boolean;
 	//editar: Clase | null = null;
 	//streamWebcam: MediaStream | null = null;
 	//m3u8Loaded: boolean = false;
@@ -33,8 +35,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	//ready: Subject<boolean> = new Subject<boolean>();
 	//savedFiles: File[] = [];
 	//savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
-	backBase!: string;
-	isBrowser: boolean;
 	//videojs: any;
 
 	constructor(
@@ -50,7 +50,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
 				this.idCurso = params['id_curso'];
-				console.log('ID Curso:', this.idCurso);
 			}),
 		);
 		this.isBrowser = isPlatformBrowser(platformId);
@@ -68,7 +67,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 				}
 			});
 		}
-		this.claseEditar.curso_clase = this.curso.id_curso;
 
 		this.subscription.add(
 			this.router.events.subscribe((event) => {
@@ -198,18 +196,12 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	}
 
 	editarClase(clase: Clase) {
-		const editorClaseComponente = document.getElementById('claseEditor') as HTMLDivElement;
-		if (editorClaseComponente) {
-			this.claseEditar = { ...clase };
-			editorClaseComponente.style.display = 'flex';
-		}
+		this.claseEditar = { ...clase };
 	}
 
 	nuevaClase() {
-		const editorClaseComponente = document.getElementById('claseEditor') as HTMLDivElement;
-		if (editorClaseComponente && this.curso.clases_curso) {
+		if (this.curso.clases_curso) {
 			this.claseEditar = new Clase(0, '', '', '', 0, '', this.curso.clases_curso?.length + 1, this.curso.id_curso);
-			editorClaseComponente.style.display = 'flex';
 		}
 	}
 

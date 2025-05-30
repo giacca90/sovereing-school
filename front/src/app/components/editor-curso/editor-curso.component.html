@@ -46,8 +46,8 @@
 		</div>
 	}
 </div>
-<div>
-	<div id="claseEditor" class="dark:scrollbar dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900 absolute top-0 left-0 z-10 flex h-screen w-full overflow-y-auto bg-white/90 dark:bg-black/90" style="display: none">
+@if (claseEditar) {
+	<div id="claseEditor" class="dark:scrollbar dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900 absolute top-0 left-0 z-10 flex h-screen w-full overflow-y-auto bg-white/90 dark:bg-black/90">
 		<app-editor-clase [clase]="claseEditar" [curso]="curso"></app-editor-clase>
 	</div>
-</div>
+}

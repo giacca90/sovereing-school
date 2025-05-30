@@ -2,6 +2,7 @@ package com.sovereingschool.back_streaming.Controllers;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
@@ -47,7 +48,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             if (!isAuthorized(auth)) {
                 System.err.println("Acceso denegado: usuario no autorizado");
                 session.sendMessage(new TextMessage(
-                        "{\"type\":\"error\",\"message\":\"" + "Acceso denegado: usuario no autorizado" + "\"}"));
+                        "{\"type\":\"auth\",\"message\":\"" + "Acceso denegado: usuario no autorizado" + "\"}"));
                 session.close(CloseStatus.POLICY_VIOLATION);
                 return;
             }
@@ -61,19 +62,24 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                 session.close(CloseStatus.SERVER_ERROR);
             } catch (IOException ex) {
                 System.err.println("Error en cerrar la conexión: " + ex.getMessage());
+            } finally {
+                sessions.remove(session.getId());
             }
         }
     }
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) throws Exception {
-        String userId = session.getId();
+        String sessionId = session.getId();
         try {
-            streamingService.stopFFmpegProcessForUser(userId);
+            streamingService.stopFFmpegProcessForUser(sessionId);
         } catch (Exception e) {
             System.err.println("Error al finalizar la transmisión: " + e.getMessage());
+        } finally {
+            sessions.remove(sessionId);
+            Optional.ofNullable(ffmpegThreads.remove(sessionId)).ifPresent(Thread::interrupt);
+            Optional.ofNullable(previews.remove(sessionId)).ifPresent(Thread::interrupt);
         }
-        sessions.remove(userId);
     }
 
     @Override
@@ -100,6 +106,8 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                         } catch (IOException | InterruptedException e) {
                             System.err.println(
                                     "Error al iniciar la previsualización de la transmisión: " + e.getMessage());
+                            currentThread.interrupt();
+                            previews.remove(session.getId());
                             throw new RuntimeException("Error al iniciar la previsualización de la transmisión: "
                                     + e.getMessage());
                         }
@@ -113,7 +121,14 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                 }
             } else if (payload.contains("emitirOBS") && payload.contains("rtmpUrl")) {
                 String streamId = this.extractStreamId(payload);
-                this.startFFmpegProcessForUser(streamId, RTMP_URL + streamId);
+                try {
+                    this.startFFmpegProcessForUser(streamId, RTMP_URL + streamId);
+                    session.sendMessage(
+                            new TextMessage("{\"type\":\"start\",\"message\":\" \"}"));
+                } catch (Exception e) {
+                    session.sendMessage(
+                            new TextMessage("{\"type\":\"error\",\"message\":" + e.getMessage() + "}"));
+                }
             } else if (payload.contains("detenerStreamOBS")) {
                 this.streamingService.stopFFmpegProcessForUser(this.extractStreamId(payload));
             } else {
@@ -134,7 +149,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
     private void startFFmpegProcessForUser(String userId, String rtmpUrl) {
         if (ffmpegThreads.containsKey(userId)) {
             System.err.println("El proceso FFmpeg ya está corriendo para el usuario " + userId);
-            return;
+            throw new RuntimeException("El proceso FFmpeg ya está corriendo para el usuario " + userId);
         }
 
         // Usar el Executor para ejecutar el proceso FFmpeg en un hilo separado
@@ -144,10 +159,11 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             try {
                 String[] streamIdAndSettings = { userId, null, null, null };
                 this.streamingService.startLiveStreamingFromStream(streamIdAndSettings, rtmpUrl, null);
-            } catch (IOException e) {
-                System.err.println("Error al iniciar FFmpeg para usuario " + userId + ": " + e.getMessage());
             } catch (Exception e) {
+                currentThread.interrupt();
+                ffmpegThreads.remove(userId.substring(userId.lastIndexOf("_") + 1));
                 System.err.println("Error al iniciar FFmpeg para usuario " + userId + ": " + e.getMessage());
+                throw new RuntimeException("Error al iniciar FFmpeg para usuario " + userId + ": " + e.getMessage());
             }
         });
     }

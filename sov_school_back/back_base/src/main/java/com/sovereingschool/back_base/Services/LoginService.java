@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -263,7 +264,7 @@ public class LoginService implements UserDetailsService, ILoginService {
             }
             Usuario usuario = opUsuario.get();
             return usuario;
-        } catch (JWTVerificationException e) {
+        } catch (JWTVerificationException | InsufficientAuthenticationException | BadCredentialsException e) {
             System.err.println("Error en hacer login con token: " + e.getMessage());
             throw new JWTVerificationException("Error en hacer login con token: " + e.getMessage());
         }

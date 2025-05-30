@@ -46,7 +46,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
             String error = (String) session.getAttributes().get("Error");
             System.out.println("Falló la autenticación en WebRTC: " + error);
             try {
-                session.sendMessage(new TextMessage("{\"type\":\"error\",\"message\":\"" + error + "\"}"));
+                session.sendMessage(new TextMessage("{\"type\":\"auth\",\"message\":\"" + error + "\"}"));
                 session.close(CloseStatus.POLICY_VIOLATION);
                 return;
             } catch (IOException e) {
@@ -88,6 +88,9 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
         String userId = session.getId();
         sessions.remove(userId);
+
+        ffmpegThreads.remove(userId).interrupt();
+        ;
 
         try {
             UserStreams userStreams = userSessions.remove(userId);

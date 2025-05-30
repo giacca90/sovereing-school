@@ -56,6 +56,7 @@ export class EditorVideoComponent implements AfterViewInit {
 					this.claseService.subeVideo(input.files[0], this.clase.curso_clase, this.clase?.id_clase).subscribe((result) => {
 						if (result && this.clase) {
 							this.clase.direccion_clase = result;
+							console.log('Dirección de la clase:', this.clase.direccion_clase);
 							this.clase.curso_clase = this.clase.curso_clase;
 							button.classList.remove('border-gray-500', 'text-gray-500');
 							button.classList.add('border-black');

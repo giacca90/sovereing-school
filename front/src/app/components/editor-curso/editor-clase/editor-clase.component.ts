@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
@@ -20,17 +20,15 @@ import { EditorWebcamComponent, VideoElement } from './editor-webcam/editor-webc
 	templateUrl: './editor-clase.component.html',
 	styleUrl: './editor-clase.component.css',
 })
-export class EditorClaseComponent {
+export class EditorClaseComponent implements AfterViewInit {
 	@Input() clase!: Clase;
 	@Input() curso!: Curso;
 	@Output() claseGuardada: EventEmitter<Boolean> = new EventEmitter();
 	private subscription: Subscription = new Subscription();
-	streamWebcam: MediaStream | null = null;
-	//player: Player | null = null;
+	//streamWebcam: MediaStream | null = null;
 	savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
 	isBrowser: boolean;
 	backBase = '';
-	//videojs: any;
 	savedFiles: File[] = [];
 	readyObserver: Subject<boolean> = new Subject<boolean>();
 	readyEstatico: boolean = false;
@@ -44,6 +42,11 @@ export class EditorClaseComponent {
 		@Inject(PLATFORM_ID) private platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
+	}
+
+	ngAfterViewInit(): void {
+		window.scrollTo(0, 0); // Subir la vista al inicio de la página
+		document.body.style.overflow = 'hidden';
 	}
 
 	guardarCambiosClase() {
@@ -88,9 +91,7 @@ export class EditorClaseComponent {
 
 		this.cursoService.updateCurso(this.curso).subscribe({
 			next: (success: boolean) => {
-				if (success) {
-					this.router.navigate(['/cursosUsuario']);
-				} else {
+				if (!success) {
 					console.error('Falló la actualización del curso');
 				}
 			},
@@ -99,10 +100,18 @@ export class EditorClaseComponent {
 			},
 		});
 
+		if (!this.streamingService.enGrabacion) {
+			this.close();
+		}
 		/* this.streamWebcam?.getTracks().forEach((track) => track.stop());
 		this.streamWebcam = null;
 		this.player?.dispose();
 		document.body.style.overflow = 'auto'; */
+	}
+
+	close() {
+		this.router.navigate(['/editorCurso/:' + this.curso.id_curso]);
+		document.body.style.overflow = 'auto';
 	}
 
 	eliminaClase(clase: Clase) {
@@ -150,17 +159,12 @@ export class EditorClaseComponent {
 					// Video estatico
 					this.clase.tipo_clase = 0;
 					videoButton.classList.add('text-blue-700');
-					this.streamWebcam?.getTracks().forEach((track) => track.stop());
-					this.streamWebcam = null;
 					break;
 				}
 				case 1: {
 					// OBS
 					this.clase.tipo_clase = 1;
 					obsButton.classList.add('text-blue-700');
-					this.streamWebcam?.getTracks().forEach((track) => track.stop());
-					this.streamWebcam = null;
-					//this.startOBS();
 					break;
 				}
 				case 2: {
@@ -179,23 +183,17 @@ export class EditorClaseComponent {
 								console.log('Presets actualizados:', this.savedPresets);
 								if (this.clase) this.clase.tipo_clase = 2;
 								webcamButton.classList.add('text-blue-700');
-								this.streamWebcam?.getTracks().forEach((track) => track.stop());
-								this.streamWebcam = null;
 							},
 							error: (error) => {
 								console.error('Error al obtener presets:', error);
 								this.savedPresets = new Map();
 								if (this.clase) this.clase.tipo_clase = 2;
 								webcamButton.classList.add('text-blue-700');
-								this.streamWebcam?.getTracks().forEach((track) => track.stop());
-								this.streamWebcam = null;
 							},
 						});
 					} else {
 						this.clase.tipo_clase = 2;
 						webcamButton.classList.add('text-blue-700');
-						this.streamWebcam?.getTracks().forEach((track) => track.stop());
-						this.streamWebcam = null;
 					}
 				}
 			}
@@ -241,8 +239,6 @@ export class EditorClaseComponent {
 
 	ngOnDestroy(): void {
 		this.subscription.unsubscribe();
-		this.streamWebcam?.getTracks().forEach((track) => track.stop());
-		this.streamWebcam = null;
 	}
 
 	readyEvent($event: boolean) {
@@ -290,7 +286,7 @@ export class EditorClaseComponent {
 		});
 	}
 
-	emiteWebcam(event: MediaStream | null) {
+	/* emiteWebcam(event: MediaStream | null) {
 		if (this.clase) {
 			if (event === null) {
 				//this.detenerEmision();
@@ -323,7 +319,7 @@ export class EditorClaseComponent {
 			}
 		}
 	}
-
+ */
 	savePresets(data: any) {
 		this.streamingService.savePresets(data);
 	}

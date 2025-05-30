@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { VideoElement } from '../components/editor-curso/editor-clase/editor-webcam/editor-webcam.component';
 import { Clase } from '../models/Clase';
+import { ClaseService } from './clase.service';
 import { CursosService } from './cursos.service';
 import { LoginService } from './login.service';
 
@@ -20,6 +21,7 @@ export class StreamingService {
 	constructor(
 		private http: HttpClient,
 		private cursoService: CursosService,
+		private claseService: ClaseService,
 		private loginService: LoginService,
 	) {}
 
@@ -81,65 +83,59 @@ export class StreamingService {
 
 		this.ws.onmessage = (event) => {
 			const data = JSON.parse(event.data);
-			if (data.type === 'error') {
+			if (data.type === 'auth') {
 				console.error('Error recibido del servidor:', data.message);
-				if (data.message.startsWith('Token')) {
-					this.loginService.refreshToken().subscribe({
-						next: (token: string | null) => {
-							if (token) {
-								localStorage.setItem('Token', token);
-								this.emitirWebcam(stream, clase);
-								return;
-							}
-						},
-						error: (error: HttpErrorResponse) => {
-							console.error('Error al refrescar el token: ' + error.message);
-							this.loginService.logout();
+				this.loginService.refreshToken().subscribe({
+					next: (token: string | null) => {
+						if (token) {
+							localStorage.setItem('Token', token);
+							this.emitirWebcam(stream, clase);
 							return;
-						},
-					});
-				}
+						}
+					},
+					error: (error: HttpErrorResponse) => {
+						console.error('Error al refrescar el token: ' + error.message);
+						this.ws?.close();
+						this.loginService.logout();
+						return;
+					},
+				});
 			}
 			if (data.type === 'streamId') {
 				console.log('ID del stream recibido:', data.streamId);
 				this.streanId = data.streamId;
 				this.enGrabacion = true;
 
-				// Comenzar a grabar y enviar los datos
-				if (this.mediaRecorder) {
-					console.log('frame in service: ' + this.mediaRecorder?.stream.getVideoTracks()[0].getSettings().frameRate);
-					this.mediaRecorder.start(fps * 0.1); // Fragmentos de 100 ms
-					console.log('Grabación iniciada.');
-
-					this.mediaRecorder.ondataavailable = (event) => {
-						if (event.data.size > 0) {
-							const blob = new Blob([event.data], { type: 'video/webm' });
-							this.ws?.send(blob);
-						}
-					};
-				}
-
 				// Actualizar el curso
-				if (clase && clase.curso_clase) {
-					this.cursoService.getCurso(clase.curso_clase).then((curso) => {
-						if (curso) {
-							clase.direccion_clase = data.streamId;
-							curso.clases_curso?.push(clase);
-							this.cursoService.updateCurso(curso).subscribe({
-								next: (success: boolean) => {
-									if (success) {
-										console.log('Curso actualizado con éxito');
-									} else {
-										console.error('Falló la actualización del curso');
-									}
-								},
-								error: (error) => {
-									console.error('Error al actualizar el curso: ' + error);
-								},
-							});
-						}
+				if (!clase || !clase.curso_clase) return;
+				this.cursoService.getCurso(clase.curso_clase).then((curso) => {
+					if (!curso) return;
+					clase.direccion_clase = data.streamId;
+					curso.clases_curso?.push(clase);
+					this.cursoService.updateCurso(curso).subscribe({
+						next: (success: boolean) => {
+							if (!success) {
+								console.error('Falló la actualización del curso');
+								return;
+							}
+							// Comenzar a grabar y enviar los datos
+							if (!this.mediaRecorder) return;
+							console.log('frame in service: ' + this.mediaRecorder.stream.getVideoTracks()[0].getSettings().frameRate);
+							this.mediaRecorder.start(fps * 0.1); // Fragmentos de 100 ms
+							console.log('Grabación iniciada.');
+
+							this.mediaRecorder.ondataavailable = (event) => {
+								if (event.data.size > 0) {
+									const blob = new Blob([event.data], { type: 'video/webm' });
+									this.ws?.send(blob);
+								}
+							};
+						},
+						error: (error) => {
+							console.error('Error al actualizar el curso: ' + error);
+						},
 					});
-				}
+				});
 			}
 		};
 
@@ -237,7 +233,7 @@ export class StreamingService {
 		this.ws.onmessage = (event) => {
 			const data = JSON.parse(event.data);
 
-			if (data.type === 'error') {
+			if (data.type === 'auth') {
 				console.error('Error recibido del servidor:', data.message);
 				this.loginService.refreshToken().subscribe({
 					next: (token: string | null) => {
@@ -386,40 +382,63 @@ export class StreamingService {
 
 	emitirOBS(clase: Clase | null) {
 		const status = document.getElementById('statusOBD');
-		if (this.ws) {
-			this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
+		if (!this.ws) {
+			console.error('No se puede conectar con Websocket');
 			if (status) {
-				status.textContent = 'Comenzando la emisión...';
+				status.textContent = 'No se puede conectar con Websocket';
 			}
-			this.enGrabacion = true;
-			if (clase && this.rtmpUrl) {
-				clase.direccion_clase = this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1);
-				if (clase?.curso_clase) {
-					this.cursoService.getCurso(clase?.curso_clase).then((curso) => {
-						if (curso) {
-							curso.clases_curso?.push(clase);
-							this.cursoService.updateCurso(curso).subscribe({
-								next: (success: boolean) => {
-									if (success) {
-										console.log('Curso actualizado con éxito');
-									} else {
-										console.error('Falló la actualización del curso');
-									}
-								},
-								error: (error) => {
-									console.error('Error al actualizar el curso: ' + error);
-								},
-							});
-						}
-					});
-				}
-			}
-		} else {
-			console.error('No se pudo emitir OBS');
-			if (status) {
-				status.textContent = 'No se pudo emitir OBS';
-			}
+			return;
 		}
+		//this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
+		if (status) {
+			status.textContent = 'Creando la clase...';
+		}
+		this.enGrabacion = true;
+		if (!clase || !this.rtmpUrl) return;
+		clase.direccion_clase = this.rtmpUrl;
+		//clase.direccion_clase = this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1);
+		if (!clase.curso_clase) return;
+		this.cursoService.getCurso(clase.curso_clase).then((curso) => {
+			if (!curso || !curso.clases_curso) {
+				console.error('Falló la actualización del curso');
+				if (status) {
+					status.textContent = 'Falló la creación de la clase';
+				}
+				return;
+			}
+			clase.posicion_clase = curso.clases_curso.length + 1;
+			curso.clases_curso?.push(clase);
+			this.cursoService.updateCurso(curso).subscribe({
+				next: (success: boolean) => {
+					if (!success || !status || !this.ws) return;
+					console.log('Curso actualizado con éxito');
+					status.textContent = 'Clase creada, iniciando la emisión...';
+					this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
+					this.ws.onmessage = (event) => {
+						const data = JSON.parse(event.data);
+						if (data.type === 'start') {
+							console.log('Emisión de OBS iniciada.');
+							this.enGrabacion = true;
+							status.textContent = 'Emisión de OBS iniciada.';
+						} else if (data.type === 'info') {
+							console.log('Info recibida del servidor:', data.message);
+							status.textContent = `Info: ${data.message}`;
+						} else if (data.type === 'error') {
+							console.error('Error recibido del servidor:', data.message);
+							this.enGrabacion = false;
+							status.textContent = `Error: ${data.message}`;
+							this.ws?.close();
+						}
+					};
+				},
+				error: (error) => {
+					console.error('Error al actualizar el curso: ' + error);
+					if (status) {
+						status.textContent = 'Error al crear la clase';
+					}
+				},
+			});
+		});
 	}
 
 	detenerOBS() {
@@ -457,6 +476,7 @@ export class StreamingService {
 	closeConnections() {
 		if (this.ws?.OPEN) {
 			this.ws.close();
+			this.ws = null;
 		}
 	}
 

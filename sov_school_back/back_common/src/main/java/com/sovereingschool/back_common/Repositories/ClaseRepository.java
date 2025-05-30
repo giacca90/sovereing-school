@@ -25,4 +25,6 @@ public interface ClaseRepository extends JpaRepository<Clase, Long> {
 	@Query("SELECT c.nombre_clase FROM Clase c WHERE c.id_clase = :id")
 	Optional<String> findNombreClaseById(@Param("id") Long id);
 
+	@Query("SELECT c FROM Clase c WHERE c.direccion_clase = :direccion_clase")
+	Optional<Clase> findByDireccionClase(@Param("direccion_clase") String direccion_clase);
 }

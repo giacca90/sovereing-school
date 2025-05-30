@@ -3,6 +3,7 @@ import { AfterViewInit, Component, Inject, Input, PLATFORM_ID } from '@angular/c
 import { Observable } from 'rxjs';
 import videojs from 'video.js';
 import Player from 'video.js/dist/types/player';
+import { Clase } from '../../../../models/Clase';
 import { LoginService } from '../../../../services/login.service';
 import { StreamingService } from '../../../../services/streaming.service';
 
@@ -14,6 +15,7 @@ import { StreamingService } from '../../../../services/streaming.service';
 })
 export class EditorObsComponent implements AfterViewInit {
 	@Input() readyObserve?: Observable<boolean>;
+	@Input() clase!: Clase;
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
 	player: Player | null = null;
@@ -38,6 +40,7 @@ export class EditorObsComponent implements AfterViewInit {
 			alert('Debes conectarte primero con OBS');
 			return;
 		}
+		this.streamingService.emitirOBS(this.clase);
 	}
 
 	detenerEmision() {

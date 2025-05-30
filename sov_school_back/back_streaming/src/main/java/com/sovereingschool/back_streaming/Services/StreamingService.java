@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -59,59 +60,59 @@ public class StreamingService {
     @Async
     // TODO: Modificar para trabajar solo con clases concretas
     public void convertVideos(Curso curso) throws IOException, InterruptedException {
-        if (curso.getClases_curso() != null && !curso.getClases_curso().isEmpty()) {
-            for (Clase clase : curso.getClases_curso()) {
-                Path base = Paths.get(baseUploadDir.toString(), curso.getId_curso().toString(),
-                        clase.getId_clase().toString());
+        if (curso.getClases_curso() == null || curso.getClases_curso().isEmpty())
+            throw new RuntimeException("Curso sin clases");
+        for (Clase clase : curso.getClases_curso()) {
+            Path base = Paths.get(baseUploadDir.toString(), curso.getId_curso().toString(),
+                    clase.getId_clase().toString());
 
-                // Verificar que la dirección de la clase no esté vacía y que sea diferente dela
-                // base
-                if (!clase.getDireccion_clase().isEmpty() && !clase.getDireccion_clase().equals(base.toString())
-                        && !clase.getDireccion_clase().endsWith(".m3u8")) {
+            // Verificar que la dirección de la clase no esté vacía y que sea diferente dela
+            // base
+            if (!clase.getDireccion_clase().isEmpty() && !clase.getDireccion_clase().equals(base.toString())
+                    && !clase.getDireccion_clase().endsWith(".m3u8") && clase.getDireccion_clase().contains(".")) {
 
-                    // Extraer el directorio y el nombre del archivo de entrada
-                    Path inputPath = Paths.get(clase.getDireccion_clase());
-                    File baseFile = base.toFile();
-                    File inputFile = inputPath.toFile();
-                    File destino = new File(baseFile, inputPath.getFileName().toString());
+                // Extraer el directorio y el nombre del archivo de entrada
+                Path inputPath = Paths.get(clase.getDireccion_clase());
+                File baseFile = base.toFile();
+                File inputFile = inputPath.toFile();
+                File destino = new File(baseFile, inputPath.getFileName().toString());
 
-                    // Mover el archivo de entrada a la carpeta de destino
-                    if (!inputFile.renameTo(destino)) {
-                        // System.err.println("Error al mover el video a la carpeta de destino");
-                        continue;
-                    }
-                    List<String> ffmpegCommand = null;
-                    ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null);
-                    if (ffmpegCommand != null) {
-                        // Ejecutar el comando FFmpeg
-                        ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
+                // Mover el archivo de entrada a la carpeta de destino
+                if (!inputFile.renameTo(destino)) {
+                    // System.err.println("Error al mover el video a la carpeta de destino");
+                    continue;
+                }
+                List<String> ffmpegCommand = null;
+                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null);
+                if (ffmpegCommand != null) {
+                    // Ejecutar el comando FFmpeg
+                    ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
 
-                        // Establecer el directorio de trabajo
-                        processBuilder.directory(baseFile);
-                        processBuilder.redirectErrorStream(true);
+                    // Establecer el directorio de trabajo
+                    processBuilder.directory(baseFile);
+                    processBuilder.redirectErrorStream(true);
 
-                        Process process = processBuilder.start();
+                    Process process = processBuilder.start();
 
-                        // Leer la salida del proceso
-                        try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                System.err.println("FFmpeg: " + line);
-                            }
-                        } catch (IOException e) {
-                            System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
-                            process.destroy();
-                            throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
+                    // Leer la salida del proceso
+                    try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            System.err.println("FFmpeg: " + line);
                         }
-
-                        int exitCode = process.waitFor();
-                        if (exitCode != 0) {
-                            throw new IOException("El proceso de FFmpeg falló con el código de salida " + exitCode);
-                        }
-
-                        clase.setDireccion_clase(base.toString() + "/master.m3u8");
-                        this.claseRepo.save(clase);
+                    } catch (IOException e) {
+                        System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
+                        process.destroy();
+                        throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
                     }
+
+                    int exitCode = process.waitFor();
+                    if (exitCode != 0) {
+                        throw new IOException("El proceso de FFmpeg falló con el código de salida " + exitCode);
+                    }
+
+                    clase.setDireccion_clase(base.toString() + "/master.m3u8");
+                    this.claseRepo.save(clase);
                 }
             }
         }
@@ -130,8 +131,16 @@ public class StreamingService {
             PipedInputStream ffmpegInputStream)
             throws IOException, InterruptedException, RuntimeException, IllegalArgumentException {
         String userId = streamIdAndSettings[0];
-        Path outputDir = baseUploadDir.resolve(userId);
-
+        Optional<Clase> claseOpt = claseRepo.findByDireccionClase(userId);
+        if (!claseOpt.isPresent())
+            throw new RuntimeException("No se encuentra la clase con la dirección " + userId);
+        Clase clase = claseOpt.get();
+        Long idCurso = clase.getCurso_clase().getId_curso();
+        Long idClase = clase.getId_clase();
+        Path outputDir = baseUploadDir.resolve(idCurso.toString()).resolve(idClase.toString());
+        claseRepo.updateClase(idClase, clase.getNombre_clase(), clase.getTipo_clase(),
+                outputDir.toString() + "/master.m3u8",
+                clase.getPosicion_clase());
         // Crear el directorio de salida si no existe
         if (!Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
@@ -140,18 +149,22 @@ public class StreamingService {
         // Determinar el origen: PipedInputStream o RTMP URL
         String inputSpecifier;
         List<String> ffmpegCommand = null;
-        if (inputStream instanceof PipedInputStream) {
-            inputSpecifier = "pipe:0"; // Entrada desde el pipe
-            ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, (InputStream) inputStream,
-                    streamIdAndSettings);
-        } else if (inputStream == null) {
-            inputSpecifier = "pipe:0"; // Entrada desde el pipe
-            ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, ffmpegInputStream, streamIdAndSettings);
-        } else if (inputStream instanceof String) {
-            inputSpecifier = RTMP + "/live/" + userId;// Entrada desde una URL RTMP
-            ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, null, streamIdAndSettings);
-        } else {
-            throw new IllegalArgumentException("Fuente de entrada no soportada");
+        try {
+            if (inputStream instanceof PipedInputStream) {
+                inputSpecifier = "pipe:0"; // Entrada desde el pipe
+                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, (InputStream) inputStream,
+                        streamIdAndSettings);
+            } else if (inputStream == null) {
+                inputSpecifier = "pipe:0"; // Entrada desde el pipe
+                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, ffmpegInputStream, streamIdAndSettings);
+            } else if (inputStream instanceof String) {
+                inputSpecifier = RTMP + "/live/" + userId;// Entrada desde una URL RTMP
+                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, null, streamIdAndSettings);
+            } else {
+                throw new IllegalArgumentException("Fuente de entrada no soportada");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
         }
 
         // Comando FFmpeg para procesar el streaming
@@ -226,9 +239,6 @@ public class StreamingService {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("El proceso fue interrumpido: " + e.getMessage());
             }
-        } else {
-            System.err.println("No se encontró un proceso FFmpeg para el usuario " + userId);
-            throw new RuntimeException("No se encontró un proceso FFmpeg para el usuario " + userId);
         }
 
         Process preProcess = previewProcesses.remove(sessionId);
@@ -289,9 +299,6 @@ public class StreamingService {
             if (Files.exists(m3u8)) {
                 Files.delete(m3u8);
             }
-        } else {
-            System.err.println("No se encontró un proceso de previsualización  para el usuario " + userId);
-            throw new RuntimeException("No se encontró un proceso de previsualización  para el usuario " + userId);
         }
     }
 
@@ -423,8 +430,8 @@ public class StreamingService {
                             ffprobeInput.close();
                         } catch (IOException e1) {
                             System.err.println("Error en cerrar flujo de escritura: " + e1.getMessage());
-                            throw new RuntimeException("Error en cerrar flujo de escritura: " + e1.getMessage());
                         }
+                        throw new RuntimeException("No se pudo obtener la resolución del streaming");
                     }
                 });
                 ffprobeThread.start();
@@ -455,7 +462,7 @@ public class StreamingService {
             process.waitFor();
             if (width == "0" || height == "0" || fps == "0") {
                 System.err.println("La resolución es 0");
-                return null;
+                throw new RuntimeException("No se pudo obtener la resolución del streaming");
             }
             if (width == null || height == null || fps == null) {
                 System.err.println("La resolución es null, reintentando con ffprobe");
