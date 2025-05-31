@@ -326,10 +326,14 @@ public class StreamingService {
         // preparar comando FFmpeg preview
         List<String> ffmpegCommand = List.of(
                 "ffmpeg",
+                "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
                 "-re",
                 "-i", rtmpUrl,
+                "-vf", "format=nv12,hwupload", // Filtro para VAAPI
+                "-c:v", "h264_vaapi", // Codificador VAAPI
                 "-preset", "veryfast",
-                "-tune", "zerolatency",
+                "-qp", "24", // Calidad para vaapi
+                // "-tune", "zerolatency", // No funciona con vaapi
                 "-fflags", "nobuffer",
                 "-loglevel", "warning",
                 "-f", "hls",

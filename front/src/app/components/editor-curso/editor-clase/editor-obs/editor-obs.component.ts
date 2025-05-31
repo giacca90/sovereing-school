@@ -2,7 +2,6 @@ import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, Component, Inject, Input, PLATFORM_ID } from '@angular/core';
 import { Observable } from 'rxjs';
 import videojs from 'video.js';
-import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
 import { LoginService } from '../../../../services/login.service';
 import { StreamingService } from '../../../../services/streaming.service';
@@ -18,8 +17,6 @@ export class EditorObsComponent implements AfterViewInit {
 	@Input() clase!: Clase;
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
-	player: Player | null = null;
-	videojs = videojs;
 
 	constructor(
 		public streamingService: StreamingService,
@@ -30,7 +27,6 @@ export class EditorObsComponent implements AfterViewInit {
 	}
 	ngAfterViewInit(): void {
 		if (this.isBrowser) {
-			//this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
 			this.startOBS();
 		}
 	}
@@ -45,6 +41,11 @@ export class EditorObsComponent implements AfterViewInit {
 
 	detenerEmision() {
 		this.streamingService.stopMediaStreaming();
+		const videoOBS = document.getElementById('OBS') as HTMLVideoElement;
+		if (videoOBS) {
+			videoOBS.src = '';
+			videoOBS.srcObject = null;
+		}
 	}
 
 	async startOBS() {
@@ -64,10 +65,8 @@ export class EditorObsComponent implements AfterViewInit {
 			}
 
 			// ✅ Importar dinámicamente video.js
-			const videojsModule = await import('video.js');
-			const videojs = videojsModule.default;
 
-			this.player = videojs(videoOBS, {
+			const player = videojs(videoOBS, {
 				aspectRatio: '16:9',
 				controls: false,
 				autoplay: true,
@@ -84,17 +83,17 @@ export class EditorObsComponent implements AfterViewInit {
 				liveui: true,
 			});
 
-			this.player.src({
+			player.src({
 				src: this.streamingService.UrlPreview,
 				type: 'application/x-mpegURL',
 				withCredentials: true,
 			});
 
-			this.player.on('loadeddata', () => {
+			player.on('loadeddata', () => {
 				console.log('Archivo .m3u8 cargado correctamente');
 				this.m3u8Loaded = true;
 
-				const techEl = this.player?.tech(true)?.el() as HTMLVideoElement & { captureStream(): MediaStream };
+				const techEl = player.tech(true)?.el() as HTMLVideoElement & { captureStream(): MediaStream };
 				if (techEl?.captureStream) {
 					const mediaStream = techEl.captureStream();
 					const audioLevel = document.getElementById('audio-level') as HTMLDivElement;

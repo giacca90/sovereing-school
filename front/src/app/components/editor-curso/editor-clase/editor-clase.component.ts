@@ -62,7 +62,7 @@ export class EditorClaseComponent implements AfterViewInit {
 			alert('Debes poner contenido para la clase');
 			return;
 		}
-		if (this.clase.id_clase !== 0 || this.clase.tipo_clase === 0) {
+		if (this.clase.id_clase === 0 && this.clase.tipo_clase === 0) {
 			if (!this.readyEstatico) {
 				alert('Debes primero subir un video');
 				return;
@@ -286,14 +286,12 @@ export class EditorClaseComponent implements AfterViewInit {
 		});
 	}
 
-	/* emiteWebcam(event: MediaStream | null) {
+	emiteWebcam(event: MediaStream | null) {
 		if (this.clase) {
 			if (event === null) {
-				//this.detenerEmision();
 				this.readyObserver.next(false);
 				return;
 			}
-			this.streamWebcam = event;
 			if (this.clase.nombre_clase == null || this.clase.nombre_clase == '') {
 				alert('Debes poner un nombre para la clase');
 				this.readyObserver.next(false);
@@ -309,17 +307,17 @@ export class EditorClaseComponent implements AfterViewInit {
 				this.readyObserver.next(false);
 				return;
 			}
-			if (!this.streamWebcam) {
+			if (event === null) {
 				alert('Debes conectarte primero con la webcam');
 				this.readyObserver.next(false);
 				return;
 			} else {
 				this.readyObserver.next(true);
-				this.streamingService.emitirWebcam(this.streamWebcam, this.clase);
+				this.streamingService.emitirWebcam(event, this.clase);
 			}
 		}
 	}
- */
+
 	savePresets(data: any) {
 		this.streamingService.savePresets(data);
 	}

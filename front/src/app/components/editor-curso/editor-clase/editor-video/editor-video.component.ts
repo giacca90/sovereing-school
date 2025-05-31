@@ -15,7 +15,7 @@ export class EditorVideoComponent implements AfterViewInit {
 	@Output() readyEvent: EventEmitter<boolean> = new EventEmitter();
 	isBrowser: boolean;
 	player: Player | null = null;
-	videojs = videojs;
+	backStream: string = '';
 
 	constructor(
 		private claseService: ClaseService,
@@ -25,8 +25,40 @@ export class EditorVideoComponent implements AfterViewInit {
 	}
 
 	ngAfterViewInit(): void {
-		if (this.isBrowser) {
-			//this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
+		if (this.isBrowser && this.clase.direccion_clase) {
+			this.backStream = (window as any).__env?.BACK_STREAM ?? '';
+			const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
+			if (!videoPlayer) {
+				console.error('No se pudo obtener el elemento videoPlayer');
+				return;
+			}
+			const player = videojs(videoPlayer, {
+				aspectRatio: '16:9',
+				controls: true,
+				autoplay: false,
+				preload: 'auto',
+				html5: {
+					hls: {
+						overrideNative: true,
+						enableLowLatency: true,
+					},
+					vhs: {
+						lowLatencyMode: true,
+					},
+				},
+			});
+
+			console.log('cursoUrl:', this.clase.curso_clase);
+
+			player.src({
+				src: `${this.backStream}/${this.clase.curso_clase}/${this.clase.id_clase}/master.m3u8`,
+				type: 'application/x-mpegURL',
+				withCredentials: true,
+			});
+
+			player.on('loadeddata', () => {
+				console.log('Archivo .m3u8 cargado correctamente');
+			});
 		}
 	}
 

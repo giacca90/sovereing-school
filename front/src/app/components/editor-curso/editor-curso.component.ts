@@ -65,6 +65,9 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 					console.log('Curso no encontrado: ' + this.idCurso);
 					this.router.navigate(['/']);
 				}
+				this.curso.clases_curso?.forEach((clase) => {
+					clase.curso_clase = this.curso.id_curso;
+				});
 			});
 		}
 
