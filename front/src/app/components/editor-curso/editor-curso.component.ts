@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -96,14 +96,14 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		this.subscription.unsubscribe();
 	}
 
-	@HostListener('window:beforeunload', ['$event'])
+	/* @HostListener('window:beforeunload', ['$event'])
 	unloadNotification($event: { returnValue: string }): void {
 		if (!this.isBrowser) return;
 
 		if (this.editado) {
 			$event.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
 		}
-	}
+	} */
 
 	onDragStart(event: Event, id: number) {
 		const event2: DragEvent = event as DragEvent;
@@ -204,7 +204,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 
 	nuevaClase() {
 		if (this.curso.clases_curso) {
-			this.claseEditar = new Clase(0, '', '', '', 0, '', this.curso.clases_curso?.length + 1, this.curso.id_curso);
+			this.claseEditar = new Clase(0, '', '', '', 0, '', this.curso.clases_curso?.length + 1, this.idCurso);
 		}
 	}
 
@@ -263,12 +263,35 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 							alert('Error al eliminar la clase');
 							return;
 						}
+						this.curso.clases_curso = this.curso.clases_curso?.filter((c) => c.id_clase !== clase.id_clase);
+						this.initService.carga();
 					},
 					error: (e: Error) => {
 						console.error('Error en eliminar Clase: ' + e.message);
 					},
 				}),
 			);
+		}
+	}
+
+	async claseGuardada(event: boolean) {
+		if (event) {
+			console.log('ID Curso:', this.idCurso);
+			this.cursoService
+				.getCurso(this.idCurso, true)
+				.then((curso) => {
+					console.log('Curso actualizado:', curso);
+					if (curso) {
+						this.curso = curso;
+						this.claseEditar = null;
+						document.body.style.overflow = 'auto';
+					} else {
+						console.error('No se pudo obtener el curso');
+					}
+				})
+				.catch((error) => {
+					console.error('Error al obtener el curso:', error);
+				});
 		}
 	}
 }

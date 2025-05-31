@@ -331,7 +331,7 @@ public class StreamingService {
                 "-i", rtmpUrl,
                 "-vf", "format=nv12,hwupload", // Filtro para VAAPI
                 "-c:v", "h264_vaapi", // Codificador VAAPI
-                "-preset", "veryfast",
+                // "-preset", "veryfast", // No funciona con vaapi
                 "-qp", "24", // Calidad para vaapi
                 // "-tune", "zerolatency", // No funciona con vaapi
                 "-fflags", "nobuffer",

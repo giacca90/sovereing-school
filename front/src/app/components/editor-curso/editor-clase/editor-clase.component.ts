@@ -1,13 +1,12 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, Output, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { NavigationStart, Router } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
 import { Clase } from '../../../models/Clase';
 import { Curso } from '../../../models/Curso';
 import { ClaseService } from '../../../services/clase.service';
 import { CursosService } from '../../../services/cursos.service';
-import { InitService } from '../../../services/init.service';
 import { LoginService } from '../../../services/login.service';
 import { StreamingService } from '../../../services/streaming.service';
 import { EditorObsComponent } from './editor-obs/editor-obs.component';
@@ -20,11 +19,12 @@ import { EditorWebcamComponent, VideoElement } from './editor-webcam/editor-webc
 	templateUrl: './editor-clase.component.html',
 	styleUrl: './editor-clase.component.css',
 })
-export class EditorClaseComponent implements AfterViewInit {
+export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 	@Input() clase!: Clase;
 	@Input() curso!: Curso;
-	@Output() claseGuardada: EventEmitter<Boolean> = new EventEmitter();
+	@Output() claseGuardada: EventEmitter<boolean> = new EventEmitter();
 	private subscription: Subscription = new Subscription();
+	private claseOriginal!: Clase;
 	//streamWebcam: MediaStream | null = null;
 	savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
 	isBrowser: boolean;
@@ -37,16 +37,31 @@ export class EditorClaseComponent implements AfterViewInit {
 		private cursoService: CursosService,
 		private streamingService: StreamingService,
 		private loginService: LoginService,
-		private initService: InitService,
 		private router: Router,
 		@Inject(PLATFORM_ID) private platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
 
+	ngOnInit(): void {
+		this.subscription.add(
+			this.router.events.subscribe((event) => {
+				if (event instanceof NavigationStart) {
+					if (JSON.stringify(this.claseOriginal) !== JSON.stringify(this.clase)) {
+						const userConfirmed = window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
+						if (!userConfirmed) {
+							return;
+						}
+					}
+				}
+			}),
+		);
+	}
+
 	ngAfterViewInit(): void {
 		window.scrollTo(0, 0); // Subir la vista al inicio de la página
 		document.body.style.overflow = 'hidden';
+		this.claseOriginal = { ...this.clase };
 	}
 
 	guardarCambiosClase() {
@@ -68,7 +83,6 @@ export class EditorClaseComponent implements AfterViewInit {
 				return;
 			}
 		}
-		this.claseGuardada.emit(true);
 
 		if (this.clase.id_clase === 0) {
 			const clasesCurso = this.curso.clases_curso;
@@ -89,18 +103,21 @@ export class EditorClaseComponent implements AfterViewInit {
 			}
 		}
 
-		this.cursoService.updateCurso(this.curso).subscribe({
-			next: (success: boolean) => {
-				if (!success) {
-					console.error('Falló la actualización del curso');
-				}
-			},
-			error: (error) => {
-				console.error('Error al actualizar el curso:', error);
-			},
-		});
+		if (this.clase.tipo_clase === 0) {
+			this.cursoService.updateCurso(this.curso).subscribe({
+				next: (success: boolean) => {
+					if (!success) {
+						console.error('Falló la actualización del curso');
+					}
+					this.close();
+				},
+				error: (error) => {
+					console.error('Error al actualizar el curso:', error);
+				},
+			});
+		}
 
-		if (!this.streamingService.enGrabacion) {
+		if (this.clase.tipo_clase !== 0 && !this.streamingService.enGrabacion) {
 			this.close();
 		}
 		/* this.streamWebcam?.getTracks().forEach((track) => track.stop());
@@ -110,8 +127,7 @@ export class EditorClaseComponent implements AfterViewInit {
 	}
 
 	close() {
-		this.router.navigate(['/editorCurso/:' + this.curso.id_curso]);
-		document.body.style.overflow = 'auto';
+		this.claseGuardada.emit(true);
 	}
 
 	eliminaClase(clase: Clase) {
@@ -239,6 +255,7 @@ export class EditorClaseComponent implements AfterViewInit {
 
 	ngOnDestroy(): void {
 		this.subscription.unsubscribe();
+		document.body.style.overflow = 'auto';
 	}
 
 	readyEvent($event: boolean) {

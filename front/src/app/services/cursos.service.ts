@@ -40,6 +40,7 @@ export class CursosService {
 						this.cursos[i].fecha_publicacion_curso = response.fecha_publicacion_curso;
 						this.cursos[i].planes_curso = response.planes_curso;
 						this.cursos[i].precio_curso = response.precio_curso;
+						this.cursos[i].clases_curso?.map((clase) => (clase.curso_clase = this.cursos[i].id_curso));
 						return this.cursos[i];
 					} catch (error) {
 						console.error('Error en cargar curso:', error);

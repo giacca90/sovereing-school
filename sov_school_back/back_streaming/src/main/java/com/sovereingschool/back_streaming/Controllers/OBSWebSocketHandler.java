@@ -108,8 +108,6 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                                     "Error al iniciar la previsualización de la transmisión: " + e.getMessage());
                             currentThread.interrupt();
                             previews.remove(session.getId());
-                            throw new RuntimeException("Error al iniciar la previsualización de la transmisión: "
-                                    + e.getMessage());
                         }
                     });
                     // Enviar la URL generada al cliente

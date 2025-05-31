@@ -381,36 +381,35 @@ export class StreamingService {
 	}
 
 	emitirOBS(clase: Clase | null) {
-		const status = document.getElementById('statusOBD');
+		const status = document.getElementById('statusOBS');
 		if (!this.ws) {
-			console.error('No se puede conectar con Websocket');
-			if (status) {
-				status.textContent = 'No se puede conectar con Websocket';
-			}
-			return;
+			throw new Error('No se puede conectar con Websocket');
 		}
 		//this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
 		if (status) {
 			status.textContent = 'Creando la clase...';
 		}
 		this.enGrabacion = true;
-		if (!clase || !this.rtmpUrl) return;
-		clase.direccion_clase = this.rtmpUrl;
-		//clase.direccion_clase = this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1);
-		if (!clase.curso_clase) return;
+		if (!clase || !this.rtmpUrl) throw new Error('No se puede emitir OBS sin ruta RTMP');
+		clase.direccion_clase = this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1);
+		if (!clase.curso_clase) {
+			this.enGrabacion = false;
+			this.ws?.close();
+			console.error('No se puede emitir OBS sin curso');
+			throw new Error('No se puede emitir OBS sin curso');
+		}
 		this.cursoService.getCurso(clase.curso_clase).then((curso) => {
 			if (!curso || !curso.clases_curso) {
+				this.enGrabacion = false;
+				this.ws?.close();
 				console.error('Falló la actualización del curso');
-				if (status) {
-					status.textContent = 'Falló la creación de la clase';
-				}
-				return;
+				throw new Error('Falló la actualización del curso');
 			}
 			clase.posicion_clase = curso.clases_curso.length + 1;
 			curso.clases_curso?.push(clase);
 			this.cursoService.updateCurso(curso).subscribe({
 				next: (success: boolean) => {
-					if (!success || !status || !this.ws) return;
+					if (!success || !status || !this.ws) throw new Error('Falló la actualización del curso');
 					console.log('Curso actualizado con éxito');
 					status.textContent = 'Clase creada, iniciando la emisión...';
 					this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
@@ -432,17 +431,17 @@ export class StreamingService {
 					};
 				},
 				error: (error) => {
+					this.enGrabacion = false;
+					this.ws?.close();
 					console.error('Error al actualizar el curso: ' + error);
-					if (status) {
-						status.textContent = 'Error al crear la clase';
-					}
+					throw new Error('Error al actualizar el curso: ' + error);
 				},
 			});
 		});
 	}
 
 	detenerOBS() {
-		const status = document.getElementById('statusOBD');
+		const status = document.getElementById('statusOBS');
 		if (this.ws) {
 			this.ws.send(JSON.stringify({ 'event': 'detenerStreamOBS', 'rtmpUrl': this.rtmpUrl }));
 			if (status) {

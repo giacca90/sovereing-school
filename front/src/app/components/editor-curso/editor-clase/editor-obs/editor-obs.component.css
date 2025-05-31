@@ -1,0 +1,15 @@
+#audio-bar {
+	width: 100%;
+	height: 20px;
+	background: linear-gradient(to right, green, yellow, red);
+	border: 1px solid black;
+	position: relative;
+	overflow: hidden;
+}
+
+#audio-level {
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	width: 0%;
+	transition: width 0.1s;
+}
