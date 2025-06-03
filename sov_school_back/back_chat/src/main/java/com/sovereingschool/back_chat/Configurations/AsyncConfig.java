@@ -1,4 +1,4 @@
-package com.sovereingschool.back_base.Configurations;
+package com.sovereingschool.back_chat.Configurations;
 
 import java.util.concurrent.Executor;
 

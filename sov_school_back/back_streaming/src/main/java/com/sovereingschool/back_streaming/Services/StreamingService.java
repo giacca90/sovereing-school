@@ -83,7 +83,7 @@ public class StreamingService {
                     continue;
                 }
                 List<String> ffmpegCommand = null;
-                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null);
+                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null, null);
                 if (ffmpegCommand != null) {
                     // Ejecutar el comando FFmpeg
                     ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
@@ -122,19 +122,22 @@ public class StreamingService {
     /**
      * Función para iniciar la transmisión en vivo
      * 
-     * @param userId
-     * @param inputStream
+     * @param streamId          String: identificador del streamong en directo
+     *                          (isUsuario_idSession)
+     * @param inputStream       Object: flujo de entrada del video para ffmpeg
+     * @param ffmpegInputStream PipedInputStream: flujo de entrada del video para
+     *                          ffprobe
+     * @param videoSetting      String[]: configuración del video (ancho, alto, fps)
      * @throws IOException
      * @throws InterruptedException
      * @throws Exception
      */
-    public void startLiveStreamingFromStream(String[] streamIdAndSettings, Object inputStream,
-            PipedInputStream ffmpegInputStream)
+    public void startLiveStreamingFromStream(String streamId, Object inputStream,
+            PipedInputStream ffmpegInputStream, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException, IllegalArgumentException {
-        String userId = streamIdAndSettings[0];
-        Optional<Clase> claseOpt = claseRepo.findByDireccionClase(userId);
+        Optional<Clase> claseOpt = claseRepo.findByDireccionClase(streamId);
         if (!claseOpt.isPresent())
-            throw new RuntimeException("No se encuentra la clase con la dirección " + userId);
+            throw new RuntimeException("No se encuentra la clase con la dirección " + streamId);
         Clase clase = claseOpt.get();
         Long idCurso = clase.getCurso_clase().getId_curso();
         Long idClase = clase.getId_clase();
@@ -154,13 +157,13 @@ public class StreamingService {
             if (inputStream instanceof PipedInputStream) {
                 inputSpecifier = "pipe:0"; // Entrada desde el pipe
                 ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, (InputStream) inputStream,
-                        streamIdAndSettings);
+                        streamId, videoSetting);
             } else if (inputStream == null) {
                 inputSpecifier = "pipe:0"; // Entrada desde el pipe
-                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, ffmpegInputStream, streamIdAndSettings);
+                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, ffmpegInputStream, streamId, videoSetting);
             } else if (inputStream instanceof String) {
-                inputSpecifier = RTMP + "/live/" + userId;// Entrada desde una URL RTMP
-                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, null, streamIdAndSettings);
+                inputSpecifier = RTMP + "/live/" + streamId;// Entrada desde una URL RTMP
+                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, null, streamId, null);
             } else {
                 throw new IllegalArgumentException("Fuente de entrada no soportada");
             }
@@ -174,7 +177,7 @@ public class StreamingService {
         processBuilder.directory(outputDir.toFile());
         Process process = processBuilder.start();
         // Guardar el proceso en el mapa
-        ffmpegProcesses.put(userId.substring(userId.lastIndexOf("_") + 1), process);
+        ffmpegProcesses.put(streamId.substring(streamId.lastIndexOf("_") + 1), process);
 
         BufferedOutputStream ffmpegInput = new BufferedOutputStream(process.getOutputStream());
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -206,8 +209,8 @@ public class StreamingService {
         logReader.join(); // Esperar a que se terminen de leer los logs
     }
 
-    public void stopFFmpegProcessForUser(String userId) throws IOException, RuntimeException {
-        String sessionId = userId.substring(userId.lastIndexOf('_') + 1);
+    public void stopFFmpegProcessForUser(String streamId) throws IOException, RuntimeException {
+        String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         Process process = ffmpegProcesses.remove(sessionId);
         if (process != null && process.isAlive()) {
             try {
@@ -277,15 +280,15 @@ public class StreamingService {
             }
 
             // Elimina la carpeta de la preview
-            Path previewDir = baseUploadDir.resolve("previews").resolve(userId);
+            Path previewDir = baseUploadDir.resolve("previews").resolve(streamId);
             if (!Files.exists(previewDir) || !Files.isDirectory(previewDir)) {
                 // Si la carpeta no existe, buscar la carpeta con el mismo nombre
-                String temp = userId;
-                userId = Files.walk(previewDir.getParent())
+                String temp = streamId;
+                streamId = Files.walk(previewDir.getParent())
                         .sorted(Comparator.reverseOrder())
                         .filter(path -> path.getFileName().toString().contains(temp))
                         .findFirst().get().toString();
-                previewDir = baseUploadDir.resolve("previews").resolve(userId);
+                previewDir = baseUploadDir.resolve("previews").resolve(streamId);
             }
             try {
                 Files.walk(previewDir)
@@ -296,7 +299,7 @@ public class StreamingService {
                 System.err.println("Error al eliminar la carpeta de la previsualización: " + e.getMessage());
                 throw new RuntimeException("Error al eliminar la carpeta de la previsualización: " + e.getMessage());
             }
-            Path m3u8 = baseUploadDir.resolve("previews").resolve(userId + ".m3u8");
+            Path m3u8 = baseUploadDir.resolve("previews").resolve(streamId + ".m3u8");
             if (Files.exists(m3u8)) {
                 Files.delete(m3u8);
             }
@@ -387,12 +390,16 @@ public class StreamingService {
      * 
      * @param inputFilePath String: dirección del video original
      * @param live          Boolean: bandera para eventos en vivo
+     * @param inputStream   InputStream: flujo de entrada del video para ffprobe
+     * @param streamId      String: identificador del streamong en directo
+     *                      (isUsuario_idSession)
+     * @param videoSetting  String[]: configuración del video (ancho, alto, fps)
      * @return List<String>: el comando generado
      * @throws IOException
      * @throws InterruptedException
      */
     private List<String> creaComandoFFmpeg(String inputFilePath, Boolean live, InputStream inputStream,
-            String[] streamIdAndSettings)
+            String streamId, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException {
         String hls_playlist_type = live ? "event" : "vod";
         String hls_flags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
@@ -400,10 +407,10 @@ public class StreamingService {
         String width = null;
         String height = null;
         String fps = null;
-        if (streamIdAndSettings != null) {
-            width = streamIdAndSettings[1];
-            height = streamIdAndSettings[2];
-            fps = streamIdAndSettings[3];
+        if (videoSetting != null) {
+            width = videoSetting[0];
+            height = videoSetting[1];
+            fps = videoSetting[2];
         }
         // Obtener la resolución del video
         if (width == null || height == null || fps == null) {
@@ -471,7 +478,7 @@ public class StreamingService {
             }
             if (width == null || height == null || fps == null) {
                 System.err.println("La resolución es null, reintentando con ffprobe");
-                this.creaComandoFFmpeg(inputFilePath, live, inputStream, streamIdAndSettings);
+                this.creaComandoFFmpeg(inputFilePath, live, inputStream, streamId, videoSetting);
             }
             System.out.println("Resolución: " + width + "x" + height + "@" + fps);
         }

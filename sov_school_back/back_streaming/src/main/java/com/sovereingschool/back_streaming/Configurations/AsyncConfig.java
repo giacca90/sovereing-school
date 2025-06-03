@@ -1,4 +1,4 @@
-package com.sovereingschool.back_base.Configurations;
+package com.sovereingschool.back_streaming.Configurations;
 
 import java.util.concurrent.Executor;
 

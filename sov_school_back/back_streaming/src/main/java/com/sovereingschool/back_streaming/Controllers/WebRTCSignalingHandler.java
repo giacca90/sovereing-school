@@ -145,6 +145,8 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         UserStreams userStreams = userSessions.computeIfAbsent(session.getId(), key -> {
             try {
                 String[] streamIdAndSettings = this.sessionIdToStreamId.remove(session.getId());
+                String streamId = streamIdAndSettings[0];
+                String[] videoSettings = { streamIdAndSettings[1], streamIdAndSettings[2], streamIdAndSettings[3] };
                 PipedInputStream ffprobeInputStream = null;
                 PipedOutputStream ffprobeOutputStream = null;
                 if (streamIdAndSettings[1] == null || streamIdAndSettings[2] == null
@@ -154,7 +156,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                 }
                 PipedInputStream ffmpegInputStream = new PipedInputStream(1024 * 1024);
                 PipedOutputStream ffmpegOutputStream = new PipedOutputStream(ffmpegInputStream);
-                startFFmpegProcessForUser(streamIdAndSettings, ffprobeInputStream, ffmpegInputStream);
+                startFFmpegProcessForUser(streamId, ffprobeInputStream, ffmpegInputStream, videoSettings);
                 return new UserStreams(ffprobeInputStream, ffprobeOutputStream, ffmpegInputStream, ffmpegOutputStream);
             } catch (IOException e) {
                 System.err.println("Error al iniciar FFmpeg para usuario " + session.getId() + ": " + e.getMessage());
@@ -202,10 +204,11 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         }
     }
 
-    private void startFFmpegProcessForUser(String[] streamIdAndSettings, PipedInputStream ffprobeInputStream,
-            PipedInputStream ffmpegInputStream) {
-        String userId = streamIdAndSettings[0];
-        if (ffmpegThreads.containsKey(userId)) {
+    private void startFFmpegProcessForUser(String streamId, PipedInputStream ffprobeInputStream,
+            PipedInputStream ffmpegInputStream, String[] videoSettings) {
+        String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
+        String userId = streamId.substring(0, streamId.lastIndexOf('_'));
+        if (ffmpegThreads.containsKey(sessionId)) {
             System.err.println("El proceso FFmpeg ya está corriendo para el usuario " + userId);
             return;
         }
@@ -213,8 +216,8 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         // Usar el Executor para ejecutar el proceso FFmpeg en un hilo separado
         executor.execute(() -> {
             try {
-                this.streamingService.startLiveStreamingFromStream(streamIdAndSettings, ffprobeInputStream,
-                        ffmpegInputStream);
+                this.streamingService.startLiveStreamingFromStream(streamId, ffprobeInputStream,
+                        ffmpegInputStream, videoSettings);
                 // Registrar el hilo en el mapa después de iniciar el proceso FFmpeg
                 Thread currentThread = Thread.currentThread();
                 ffmpegThreads.put(userId, currentThread); // Añadir el hilo al mapa

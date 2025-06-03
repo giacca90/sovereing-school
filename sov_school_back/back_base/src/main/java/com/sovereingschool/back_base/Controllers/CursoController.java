@@ -167,8 +167,7 @@ public class CursoController {
 	public ResponseEntity<?> updateCurso(@RequestBody Curso curso) {
 		Object response = new Object();
 		try {
-			this.cursoService.updateCurso(curso);
-			response = "Curso actualizado con éxito!!!";
+			response = this.cursoService.updateCurso(curso);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);

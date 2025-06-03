@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -68,8 +69,13 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Bean(name = "webSocketTaskExecutor")
     public Executor webSocketTaskExecutor() {
-        // Crear un pool de hilos para manejar mensajes en paralelo
-        return Executors.newFixedThreadPool(50);
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(20); // Núcleo mínimo
+        executor.setMaxPoolSize(50); // Máximo
+        executor.setQueueCapacity(100); // Cola para tareas en espera
+        executor.setThreadNamePrefix("WS-"); // Nombres útiles para debugging
+        executor.initialize();
+        return executor;
     }
 
     @Bean

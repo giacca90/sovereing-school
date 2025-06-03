@@ -52,23 +52,23 @@ export class CursosService {
 		return null;
 	}
 
-	updateCurso(curso: Curso | null): Observable<boolean> {
+	updateCurso(curso: Curso | null): Observable<Curso> {
 		if (curso === null) {
 			console.error('El curso no existe!!!');
-			return of(false);
+			throw new Error('El curso no existe!!!');
 		}
-		return this.http.put<string>(`${this.backURL}/cursos/update`, curso, { observe: 'response', responseType: 'text' as 'json' }).pipe(
-			map((response) => {
-				if (response.ok) {
-					return true;
+		return this.http.put<Curso>(`${this.backURL}/cursos/update`, curso, { observe: 'response', responseType: 'json' }).pipe(
+			map((response: HttpResponse<Curso>) => {
+				if (response.ok && response.body) {
+					return response.body;
 				} else {
 					console.error('Respuesta del back: ' + response.body);
-					return false;
+					throw new Error('Respuesta del back: ' + response.body);
 				}
 			}),
 			catchError((e: Error) => {
 				console.error('Error en actualizar el curso: ' + e.message);
-				return of(false);
+				throw e;
 			}),
 		);
 	}

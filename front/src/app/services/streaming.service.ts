@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { VideoElement } from '../components/editor-curso/editor-clase/editor-webcam/editor-webcam.component';
 import { Clase } from '../models/Clase';
+import { Curso } from '../models/Curso';
 import { ClaseService } from './clase.service';
 import { CursosService } from './cursos.service';
 import { LoginService } from './login.service';
@@ -113,7 +114,7 @@ export class StreamingService {
 					clase.direccion_clase = data.streamId;
 					curso.clases_curso?.push(clase);
 					this.cursoService.updateCurso(curso).subscribe({
-						next: (success: boolean) => {
+						next: (success: Curso) => {
 							if (!success) {
 								console.error('Falló la actualización del curso');
 								return;
@@ -408,7 +409,7 @@ export class StreamingService {
 			clase.posicion_clase = curso.clases_curso.length + 1;
 			curso.clases_curso?.push(clase);
 			this.cursoService.updateCurso(curso).subscribe({
-				next: (success: boolean) => {
+				next: (success: Curso) => {
 					if (!success || !status || !this.ws) throw new Error('Falló la actualización del curso');
 					console.log('Curso actualizado con éxito');
 					status.textContent = 'Clase creada, iniciando la emisión...';

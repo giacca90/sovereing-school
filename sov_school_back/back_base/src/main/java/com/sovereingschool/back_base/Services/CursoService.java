@@ -413,7 +413,7 @@ public class CursoService implements ICursoService {
             if (clase.getDireccion_clase().length() > 0) {
                 try {
                     Path path = Paths.get(clase.getDireccion_clase()).getParent();
-                    if (Files.exists(path)) {
+                    if (Files.exists(path) && !path.equals(baseUploadDir)) {
                         Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                             @Override
                             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {

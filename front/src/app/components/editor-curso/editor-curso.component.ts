@@ -182,7 +182,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	updateCurso() {
 		this.subscription.add(
 			this.cursoService.updateCurso(this.curso).subscribe({
-				next: (success: boolean) => {
+				next: (success: Curso) => {
 					if (success) {
 						this.initService.carga();
 						this.editado = false;
@@ -276,7 +276,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 
 	async claseGuardada(event: boolean) {
 		if (event) {
-			console.log('ID Curso:', this.idCurso);
 			this.cursoService
 				.getCurso(this.idCurso, true)
 				.then((curso) => {
