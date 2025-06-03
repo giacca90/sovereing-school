@@ -77,8 +77,10 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         String userId = session.getId();
         sessions.remove(userId);
 
-        ffmpegThreads.remove(userId).interrupt();
-        ;
+        Thread t = ffmpegThreads.remove(userId);
+        if (t != null) {
+            t.interrupt();
+        }
 
         try {
             UserStreams userStreams = userSessions.remove(userId);
@@ -127,6 +129,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
             }
         } else if (payload.contains("detenerStreamWebcam")) {
             String streamId = this.extractStreamId(payload);
+            System.out.println("Llega el mensaje de detener Webcam");
             try {
                 this.streamingService.stopFFmpegProcessForUser(streamId);
             } catch (IOException e) {
@@ -140,7 +143,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
     @Override
     protected void handleBinaryMessage(@NonNull WebSocketSession session, @NonNull BinaryMessage message) {
         byte[] payload = message.getPayload().array();
-        System.out.println("payload: " + payload.length);
+        // System.out.println("payload: " + payload.length);
 
         UserStreams userStreams = userSessions.computeIfAbsent(session.getId(), key -> {
             try {

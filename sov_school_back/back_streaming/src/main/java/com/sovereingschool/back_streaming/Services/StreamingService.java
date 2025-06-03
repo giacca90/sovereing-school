@@ -573,8 +573,8 @@ public class StreamingService {
                         "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
                         "-sc_threshold", "0",
                         "-keyint_min", String.valueOf(fpsn),
-                        "-hls_segment_filename", Width + "x" + Height + "@" + fpsn + "_%v/data%02d.ts",
-                        "-hls_base_url", Width + "x" + Height + "@" + fpsn + "_" + i + "/"));
+                        "-hls_segment_filename", "stream_%v/data%02d.ts",
+                        "-hls_base_url", "stream_" + i + "/"));
             } else {
                 filters.addAll(Arrays.asList(
                         "-map", "[v" + (i + 1) + "out]",
@@ -583,8 +583,8 @@ public class StreamingService {
                         "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
                         "-sc_threshold", "0",
                         "-keyint_min", String.valueOf(fpsn),
-                        "-hls_segment_filename", Width + "x" + Height + "@" + fpsn + "_%v/data%02d.ts",
-                        "-hls_base_url", Width + "x" + Height + "@" + fpsn + "_" + i + "/"));
+                        "-hls_segment_filename", "stream_%v/data%02d.ts",
+                        "-hls_base_url", "stream_" + i + "/"));
             }
         }
 
@@ -610,7 +610,7 @@ public class StreamingService {
         // Crea el comando FFmpeg
         List<String> ffmpegCommand = new ArrayList<>();
         ffmpegCommand = new ArrayList<>(List.of(
-                "ffmpeg", "-loglevel", "warning"));
+                "ffmpeg", "-loglevel", "info"));
         if (live) {
             ffmpegCommand.add("-re");
         }

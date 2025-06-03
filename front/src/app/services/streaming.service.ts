@@ -82,8 +82,10 @@ export class StreamingService {
 			mimeType: 'video/webm; codecs=vp9',
 		});
 
+		// Manejamos los mensajes del WebSocket
 		this.ws.onmessage = (event) => {
 			const data = JSON.parse(event.data);
+			// Error de autenticación, refrescamos el token
 			if (data.type === 'auth') {
 				console.error('Error recibido del servidor:', data.message);
 				this.loginService.refreshToken().subscribe({
@@ -102,6 +104,7 @@ export class StreamingService {
 					},
 				});
 			}
+			// Recibimos el ID del stream, actualizamos el curso
 			if (data.type === 'streamId') {
 				console.log('ID del stream recibido:', data.streamId);
 				this.streamId = data.streamId;
@@ -125,6 +128,7 @@ export class StreamingService {
 							this.mediaRecorder.start(fps * 0.1); // Fragmentos de 100 ms
 							console.log('Grabación iniciada.');
 
+							// Manejamos los datos de la grabación
 							this.mediaRecorder.ondataavailable = (event) => {
 								if (event.data.size > 0) {
 									const blob = new Blob([event.data], { type: 'video/webm' });
