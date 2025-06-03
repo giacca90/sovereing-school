@@ -68,7 +68,7 @@ public class StreamingService {
 
             // Verificar que la dirección de la clase no esté vacía y que sea diferente dela
             // base
-            if (!clase.getDireccion_clase().isEmpty() && !clase.getDireccion_clase().equals(base.toString())
+            if (!clase.getDireccion_clase().isEmpty() && !clase.getDireccion_clase().contains(base.toString())
                     && !clase.getDireccion_clase().endsWith(".m3u8") && clase.getDireccion_clase().contains(".")) {
 
                 // Extraer el directorio y el nombre del archivo de entrada
@@ -107,6 +107,7 @@ public class StreamingService {
                     }
 
                     int exitCode = process.waitFor();
+                    System.out.println("Salida del proceso de FFmpeg: " + exitCode);
                     if (exitCode != 0) {
                         throw new IOException("El proceso de FFmpeg falló con el código de salida " + exitCode);
                     }

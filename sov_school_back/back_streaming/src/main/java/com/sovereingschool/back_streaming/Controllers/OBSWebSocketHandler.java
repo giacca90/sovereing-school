@@ -39,7 +39,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         try {
             String error = (String) session.getAttributes().get("Error");
             if (error != null) {
-                session.sendMessage(new TextMessage("{\"type\":\"error\",\"message\":\"" + error + "\"}"));
+                session.sendMessage(new TextMessage("{\"type\":\"auth\",\"message\":\"" + error + "\"}"));
                 session.close(CloseStatus.POLICY_VIOLATION);
                 return;
             }

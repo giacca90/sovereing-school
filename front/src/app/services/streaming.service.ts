@@ -16,7 +16,7 @@ export class StreamingService {
 	private mediaRecorder: MediaRecorder | null = null;
 	private rtmpUrl: string | null = null;
 	public UrlPreview: string = '';
-	private streanId: string | null = null;
+	private streamId: string | null = null;
 
 	constructor(
 		private http: HttpClient,
@@ -63,7 +63,7 @@ export class StreamingService {
 			return;
 		}
 
-		// Obterer los datos del mediaStream
+		// Obtener los datos del mediaStream
 		const width = stream.getVideoTracks()[0].getSettings().width;
 		const height = stream.getVideoTracks()[0].getSettings().height;
 		const fps = stream.getVideoTracks()[0].getSettings().frameRate;
@@ -103,7 +103,7 @@ export class StreamingService {
 			}
 			if (data.type === 'streamId') {
 				console.log('ID del stream recibido:', data.streamId);
-				this.streanId = data.streamId;
+				this.streamId = data.streamId;
 				this.enGrabacion = true;
 
 				// Actualizar el curso
@@ -459,7 +459,7 @@ export class StreamingService {
 	detenerWebcam() {
 		const status = document.getElementById('status') as HTMLParagraphElement;
 		if (this.ws) {
-			this.ws.send(JSON.stringify({ 'event': 'detenerStreamWebcam', 'streamId': this.streanId }));
+			this.ws.send(JSON.stringify({ 'event': 'detenerStreamWebcam', 'streamId': this.streamId }));
 			if (status) {
 				status.textContent = 'Deteniendo la emisión...';
 			}
