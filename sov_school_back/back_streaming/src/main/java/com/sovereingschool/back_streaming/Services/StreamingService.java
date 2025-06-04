@@ -583,8 +583,8 @@ public class StreamingService {
                         "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
                         "-sc_threshold", "0",
                         "-keyint_min", String.valueOf(fpsn),
-                        "-hls_segment_filename", "stream_%v/data%02d.ts",
-                        "-hls_base_url", "stream_" + i + "/"));
+                        "-hls_segment_filename", "%v/data%02d.ts",
+                        "-hls_base_url", Width + "x" + Height + "@" + fpsn + "/"));
             }
         }
 
@@ -627,10 +627,13 @@ public class StreamingService {
         ffmpegCommand.addAll(List.of("-master_pl_name", "master.m3u8", "-var_stream_map"));
         String streamMap = "";
         for (int i = 0; i < resolutionPairs.size(); i++) {
-            streamMap += " v:" + i + ",a:" + i;
+            int Width = Integer.parseInt(resolutionPairs.get(i).split(",")[0]);
+            int Height = Integer.parseInt(resolutionPairs.get(i).split(",")[1]);
+            int fpsn = Integer.parseInt(resolutionPairs.get(i).split(",")[2]);
+            streamMap += " v:" + i + ",a:" + i + ",name:" + Width + "x" + Height + "@" + fpsn;
         }
         ffmpegCommand.add(streamMap);
-        ffmpegCommand.addAll(List.of("stream_%v.m3u8"));
+        ffmpegCommand.addAll(List.of("%v.m3u8"));
 
         if (live) {
             ffmpegCommand.addAll(List.of("-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "aac", "original.mp4"));
