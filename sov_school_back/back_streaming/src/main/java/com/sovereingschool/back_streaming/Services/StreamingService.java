@@ -547,14 +547,22 @@ public class StreamingService {
         for (int i = 0; i < resolutionPairs.size(); i++) {
             filtro += "[v" + (i + 1) + "]";
         }
-        filtro += ";";
+        /*
+         * versión sin VAAPI
+         * 
+         * for (int i = 0; i < resolutionPairs.size(); i++) {
+         * if (i == 0) {
+         * filtro += " [v1]copy[v1out]";
+         * } else {
+         * filtro += "; [v" + (i + 1) + "]scale=w=" +
+         * resolutionPairs.get(i).split(",")[0] + ":h="
+         * + resolutionPairs.get(i).split(",")[1] + "[v" + (i + 1) + "out]";
+         * }
+         * }
+         */
         for (int i = 0; i < resolutionPairs.size(); i++) {
-            if (i == 0) {
-                filtro += " [v1]copy[v1out]";
-            } else {
-                filtro += "; [v" + (i + 1) + "]scale=w=" + resolutionPairs.get(i).split(",")[0] + ":h="
-                        + resolutionPairs.get(i).split(",")[1] + "[v" + (i + 1) + "out]";
-            }
+            filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).split(",")[0] + ":h="
+                    + resolutionPairs.get(i).split(",")[1] + "[v" + (i + 1) + "out]";
         }
         filters.add(filtro);
 
@@ -578,10 +586,11 @@ public class StreamingService {
             } else {
                 filters.addAll(Arrays.asList(
                         "-map", "[v" + (i + 1) + "out]",
-                        "-c:v:" + i, "libx264",
-                        "-preset", preset,
+                        "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
+                        "-qp", "24", // Calidad para VAAPI
+                        // "-preset", preset, // No sirve para VAAPI
                         "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
-                        "-sc_threshold", "0",
+                        // "-sc_threshold", "0", // No sirve para VAAPI
                         "-keyint_min", String.valueOf(fpsn),
                         "-hls_segment_filename", "%v/data%02d.ts",
                         "-hls_base_url", Width + "x" + Height + "@" + fpsn + "/"));
@@ -610,11 +619,14 @@ public class StreamingService {
         // Crea el comando FFmpeg
         List<String> ffmpegCommand = new ArrayList<>();
         ffmpegCommand = new ArrayList<>(List.of(
-                "ffmpeg", "-loglevel", "info"));
+                "ffmpeg", "-loglevel", "info",
+                "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
+                "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para VAAPI
+        ));
         if (live) {
             ffmpegCommand.add("-re");
         }
-        ;
+
         ffmpegCommand.addAll(List.of(
                 "-i", inputFilePath,
                 "-f", "hls",
@@ -636,7 +648,8 @@ public class StreamingService {
         ffmpegCommand.addAll(List.of("%v.m3u8"));
 
         if (live) {
-            ffmpegCommand.addAll(List.of("-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "aac", "original.mp4"));
+            ffmpegCommand.addAll(List.of("-map", "0:v", "-map", "0:a", "-c:v", "copy",
+                    "-c:a", "aac", "original.mp4"));
         }
 
         System.out.println("Comando FFmpeg: " + String.join(" ", ffmpegCommand));
