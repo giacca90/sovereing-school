@@ -403,7 +403,7 @@ public class StreamingService {
             throws IOException, InterruptedException, RuntimeException {
         String hls_playlist_type = live ? "event" : "vod";
         String hls_flags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
-        String preset = live ? "veryfast" : "fast";
+        // String preset = live ? "veryfast" : "fast"; // No se usa en VAAPI
         String width = null;
         String height = null;
         String fps = null;
