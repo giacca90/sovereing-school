@@ -570,31 +570,16 @@ public class StreamingService {
             int Width = Integer.parseInt(resolutionPairs.get(i).split(",")[0]);
             int Height = Integer.parseInt(resolutionPairs.get(i).split(",")[1]);
             int fpsn = Integer.parseInt(resolutionPairs.get(i).split(",")[2]);
-
-            if (fpsn > 60 || Width * Height >= 3840 * 2160) {
-                filters.addAll(Arrays.asList(
-                        "-map", "[v" + (i + 1) + "out]",
-                        "-c:v:" + i, "libaom-av1",
-                        "-crf", "30",
-                        "-b:v:" + i, "0",
-                        "-cpu-used", "4",
-                        "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
-                        "-sc_threshold", "0",
-                        "-keyint_min", String.valueOf(fpsn),
-                        "-hls_segment_filename", "stream_%v/data%02d.ts",
-                        "-hls_base_url", "stream_" + i + "/"));
-            } else {
-                filters.addAll(Arrays.asList(
-                        "-map", "[v" + (i + 1) + "out]",
-                        "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
-                        "-qp", "24", // Calidad para VAAPI
-                        // "-preset", preset, // No sirve para VAAPI
-                        "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
-                        // "-sc_threshold", "0", // No sirve para VAAPI
-                        "-keyint_min", String.valueOf(fpsn),
-                        "-hls_segment_filename", "%v/data%02d.ts",
-                        "-hls_base_url", Width + "x" + Height + "@" + fpsn + "/"));
-            }
+            filters.addAll(Arrays.asList(
+                    "-map", "[v" + (i + 1) + "out]",
+                    "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
+                    "-qp", "24", // Calidad para VAAPI
+                    // "-preset", preset, // No sirve para VAAPI
+                    "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
+                    // "-sc_threshold", "0", // No sirve para VAAPI
+                    "-keyint_min", String.valueOf(fpsn),
+                    "-hls_segment_filename", "%v/data%02d.ts",
+                    "-hls_base_url", Width + "x" + Height + "@" + fpsn + "/"));
         }
 
         for (int i = 0; i < resolutionPairs.size(); i++) {

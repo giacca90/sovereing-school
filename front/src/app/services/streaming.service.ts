@@ -79,7 +79,7 @@ export class StreamingService {
 			return;
 		}
 		this.mediaRecorder = new MediaRecorder(stream, {
-			mimeType: 'video/webm; codecs=vp9',
+			mimeType: 'video/webm; codecs=vp9,opus',
 		});
 
 		// Manejamos los mensajes del WebSocket
