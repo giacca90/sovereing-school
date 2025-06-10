@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -34,7 +33,6 @@ import com.sovereingschool.back_common.Repositories.ClaseRepository;
 @Transactional
 public class StreamingService {
     private final Map<String, Process> ffmpegProcesses = new ConcurrentHashMap<>();
-    private final Map<String, Process> previewProcesses = new ConcurrentHashMap<>();
 
     @Autowired
     private ClaseRepository claseRepo;
@@ -44,11 +42,6 @@ public class StreamingService {
 
     @Value("${variable.VIDEOS_DIR}")
     private String uploadDir;
-    private Path baseUploadDir;
-
-    public StreamingService(@Value("${variable.VIDEOS_DIR}") String uploadDir) {
-        this.baseUploadDir = Paths.get(uploadDir);
-    }
 
     /**
      * Función para convertir los videos de un curso
@@ -63,6 +56,7 @@ public class StreamingService {
         if (curso.getClases_curso() == null || curso.getClases_curso().isEmpty())
             throw new RuntimeException("Curso sin clases");
         for (Clase clase : curso.getClases_curso()) {
+            Path baseUploadDir = Paths.get(uploadDir);
             Path base = Paths.get(baseUploadDir.toString(), curso.getId_curso().toString(),
                     clase.getId_clase().toString());
 
@@ -141,6 +135,7 @@ public class StreamingService {
         Clase clase = claseOpt.get();
         Long idCurso = clase.getCurso_clase().getId_curso();
         Long idClase = clase.getId_clase();
+        Path baseUploadDir = Paths.get(uploadDir);
         Path outputDir = baseUploadDir.resolve(idCurso.toString()).resolve(idClase.toString());
         claseRepo.updateClase(idClase, clase.getNombre_clase(), clase.getTipo_clase(),
                 outputDir.toString() + "/master.m3u8",
@@ -244,144 +239,24 @@ public class StreamingService {
                 throw new RuntimeException("El proceso fue interrumpido: " + e.getMessage());
             }
         }
-
-        Process preProcess = previewProcesses.remove(sessionId);
-        if (preProcess != null && preProcess.isAlive()) {
-            try {
-                // Enviar una señal de terminación controlada
-                OutputStream os = preProcess.getOutputStream();
-                os.write('q'); // Enviar la letra 'q'
-                os.flush(); // Asegurarse de que se envíe
-                os.close();
-                // Esperar a que el proceso termine de forma controlada
-                // Esperar un segundo para que termine de manera controlada
-                boolean finished = preProcess.waitFor(1, TimeUnit.SECONDS);
-
-                if (finished) {
-                    // El proceso terminó correctamente
-                    int exitCode = preProcess.exitValue();
-                    if (exitCode == 0) {
-                    } else {
-                        System.err.println("FFmpeg preview terminó con un error. Código de salida: " + exitCode);
-                    }
-                } else {
-                    // Si no terminó en 1 segundo, forzar la terminación
-                    System.err.println(
-                            "El proceso FFmpeg preview no respondió en el tiempo esperado. Terminando de forma forzada...");
-                    preProcess.destroy(); // Intentar una terminación limpia
-                    if (preProcess.isAlive()) {
-                        preProcess.destroyForcibly(); // Forzar si sigue vivo
-                    }
-                }
-            } catch (InterruptedException e) {
-                System.err.println("El proceso fue interrumpido: " + e.getMessage());
-                Thread.currentThread().interrupt(); // Restaurar el estado de interrupción
-                throw new RuntimeException("El proceso fue interrumpido: " + e.getMessage());
-            }
-
-            // Elimina la carpeta de la preview
-            Path previewDir = baseUploadDir.resolve("previews").resolve(streamId);
-            if (!Files.exists(previewDir) || !Files.isDirectory(previewDir)) {
-                // Si la carpeta no existe, buscar la carpeta con el mismo nombre
-                String temp = streamId;
-                streamId = Files.walk(previewDir.getParent())
-                        .sorted(Comparator.reverseOrder())
-                        .filter(path -> path.getFileName().toString().contains(temp))
-                        .findFirst().get().toString();
-                previewDir = baseUploadDir.resolve("previews").resolve(streamId);
-            }
-            try {
-                Files.walk(previewDir)
-                        .sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
-            } catch (IOException e) {
-                System.err.println("Error al eliminar la carpeta de la previsualización: " + e.getMessage());
-                throw new RuntimeException("Error al eliminar la carpeta de la previsualización: " + e.getMessage());
-            }
-            Path m3u8 = baseUploadDir.resolve("previews").resolve(streamId + ".m3u8");
-            if (Files.exists(m3u8)) {
-                Files.delete(m3u8);
-            }
-        }
-    }
-
-    /**
-     * Función para iniciar la previsualización del flujo de RTMP
-     * 
-     * @param rtmpUrl
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    @Async
-    public void startPreview(String rtmpUrl) throws IOException, InterruptedException, RuntimeException {
-        String previewId = rtmpUrl.substring(rtmpUrl.lastIndexOf("/") + 1);
-        Path previewDir = baseUploadDir.resolve("previews");
-        // Crear el directorio de salida si no existe
-        if (!Files.exists(previewDir)) {
-            Files.createDirectories(previewDir);
-        }
-
-        Path outputDir = previewDir.resolve(previewId);
-        if (!Files.exists(outputDir)) {
-            Files.createDirectories(outputDir);
-        }
-
-        // preparar comando FFmpeg preview
-        List<String> ffmpegCommand = List.of(
-                "ffmpeg",
-                "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
-                "-re",
-                "-i", rtmpUrl,
-                "-vf", "format=nv12,hwupload", // Filtro para VAAPI
-                "-c:v", "h264_vaapi", // Codificador VAAPI
-                // "-preset", "veryfast", // No funciona con vaapi
-                "-qp", "24", // Calidad para vaapi
-                // "-tune", "zerolatency", // No funciona con vaapi
-                "-fflags", "nobuffer",
-                "-loglevel", "warning",
-                "-f", "hls",
-                "-hls_time", "0.5",
-                "-hls_list_size", "2",
-                "-hls_flags", "delete_segments+independent_segments+program_date_time",
-                "-hls_segment_type", "mpegts",
-                "-hls_segment_filename", outputDir + "/%03d.ts",
-                "-hls_base_url", previewId + "/",
-                "-g", "10",
-                previewDir + "/" + previewId + ".m3u8");
-
-        ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-        this.previewProcesses.put(previewId.substring(previewId.lastIndexOf("_") + 1), process);
-
-        // Capturar logs del proceso FFmpeg
-        Thread logReader = new Thread(() -> {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    System.err.println("FFmpeg preview: " + line); // Mostrar logs en la consola
-                }
-            } catch (IOException e) {
-                System.err.println("Error leyendo salida de FFmpeg preview: " + e.getMessage());
-                throw new RuntimeException("Error leyendo salida de FFmpeg preview: " + e.getMessage());
-            }
-        });
-        logReader.start();
-
-        logReader.join(); // Esperar a que se terminen de leer los logs
     }
 
     public Path getPreview(String id_preview) {
+        Path baseUploadDir = Paths.get(uploadDir);
         Path previewDir = baseUploadDir.resolve("previews");
         Path m3u8 = previewDir.resolve(id_preview + ".m3u8");
-        while (previewProcesses.containsKey(id_preview.substring(id_preview.lastIndexOf("_") + 1))) {
-            // Espera a que se genere el preview
-            if (Files.exists(m3u8)) {
-                return m3u8;
+        // Espera a que se genere el preview
+        while (!Files.exists(m3u8)) {
+            // Espera medio segundo y reintenta
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                System.err.println("Error al esperar a que se genere el preview: " + e.getMessage());
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Error al esperar a que se genere el preview: " + e.getMessage());
             }
         }
-        return null;
+        return m3u8;
     }
 
     /**

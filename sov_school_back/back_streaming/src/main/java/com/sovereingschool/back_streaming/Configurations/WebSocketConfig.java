@@ -35,6 +35,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Value("${variable.RTMP}")
     private String RTMP_URL;
 
+    @Value("${variable.VIDEOS_DIR}")
+    private String uploadDir;
+
     // Executor para tareas de ping-pong
     private final ScheduledExecutorService pingScheduler = Executors.newScheduledThreadPool(1);
 
@@ -46,7 +49,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .setAllowedOrigins("*")// Cambiar "*" por dominios específicos en producción
                 .addInterceptors(authHandshakeInterceptor);
         // Registrar el handler para OBS
-        registry.addHandler(new OBSWebSocketHandler(webSocketTaskExecutor(), streamingService, RTMP_URL + "/live/"),
+        registry.addHandler(
+                new OBSWebSocketHandler(webSocketTaskExecutor(), streamingService, RTMP_URL + "/live/", uploadDir),
                 "/live-obs")
                 .setAllowedOrigins("*") // Cambia "*" a los dominios permitidos en producción
                 .addInterceptors(authHandshakeInterceptor);

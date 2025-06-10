@@ -20,15 +20,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sovereingschool.back_streaming.Models.UserStreams;
 import com.sovereingschool.back_streaming.Services.StreamingService;
 
 public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
 
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
-    private final Map<String, UserStreams> userSessions = new ConcurrentHashMap<>();
     private final Map<String, Thread> ffmpegThreads = new ConcurrentHashMap<>();
     private final Map<String, String[]> sessionIdToStreamId = new ConcurrentHashMap<>();
+    private final Map<String, PipedOutputStream> ffmpegOutputStreams = new ConcurrentHashMap<>();
     private final Executor executor; // Executor inyectado
     private final StreamingService streamingService;
 
@@ -81,21 +80,6 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         if (t != null) {
             t.interrupt();
         }
-
-        try {
-            UserStreams userStreams = userSessions.remove(userId);
-            if (userStreams != null) {
-                userStreams.getFFprobeOutputStream().close();
-                userStreams.getFFprobeInputStream().close();
-                userStreams.getFFmpegOutputStream().close();
-                userStreams.getFFmpegInputStream().close();
-            }
-            this.streamingService.stopFFmpegProcessForUser(userId);
-
-        } catch (Exception e) {
-            System.err.println("Error al cerrar recursos para el usuario: " + e.getMessage());
-        }
-
         System.err.println("Conexión cerrada: " + userId + " Razón: " + status.getReason());
     }
 
@@ -145,70 +129,42 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         byte[] payload = message.getPayload().array();
         // System.out.println("payload: " + payload.length);
 
-        UserStreams userStreams = userSessions.computeIfAbsent(session.getId(), key -> {
+        PipedOutputStream ffmpegOutputStream = ffmpegOutputStreams.computeIfAbsent(session.getId(), key -> {
             try {
                 String[] streamIdAndSettings = this.sessionIdToStreamId.remove(session.getId());
                 String streamId = streamIdAndSettings[0];
                 String[] videoSettings = { streamIdAndSettings[1], streamIdAndSettings[2], streamIdAndSettings[3] };
-                PipedInputStream ffprobeInputStream = null;
-                PipedOutputStream ffprobeOutputStream = null;
-                if (streamIdAndSettings[1] == null || streamIdAndSettings[2] == null
-                        || streamIdAndSettings[3] == null) {
-                    ffprobeInputStream = new PipedInputStream(1024 * 1024);
-                    ffprobeOutputStream = new PipedOutputStream(ffprobeInputStream);
-                }
-                PipedInputStream ffmpegInputStream = new PipedInputStream(1024 * 1024);
-                PipedOutputStream ffmpegOutputStream = new PipedOutputStream(ffmpegInputStream);
-                startFFmpegProcessForUser(streamId, ffprobeInputStream, ffmpegInputStream, videoSettings);
-                return new UserStreams(ffprobeInputStream, ffprobeOutputStream, ffmpegInputStream, ffmpegOutputStream);
+                PipedInputStream ffmpegInputStream = new PipedInputStream(1024 * 1024 * 50);
+                startFFmpegProcessForUser(streamId, ffmpegInputStream, videoSettings);
+                return new PipedOutputStream(ffmpegInputStream);
             } catch (IOException e) {
                 System.err.println("Error al iniciar FFmpeg para usuario " + session.getId() + ": " + e.getMessage());
                 return null;
             }
         });
 
-        if (userStreams == null) {
-            try {
-                session.close(CloseStatus.SERVER_ERROR);
-            } catch (IOException e) {
-                System.err.println("Error al cerrar sesión WebSocket: " + e.getMessage());
-            }
+        if (ffmpegOutputStream == null) {
+            System.err.println("FFmpeg stream no disponible para sesión " + session.getId());
             return;
         }
 
+        // Escribir en el flujo de FFmpeg
         try {
-            // Escribir en el flujo de FFprobe
-            if (userStreams.getFFprobeOutputStream() != null) {
-                try {
-                    userStreams.getFFprobeOutputStream().write(payload.clone());
-                    userStreams.getFFprobeOutputStream().flush();
-                } catch (IOException e) {
-                    System.err.println("Error al escribir en el flujo de FFprobe: " + e.getMessage());
-                    userStreams.getFFprobeOutputStream().close();
-                }
-            }
-
-            // Escribir en el flujo de FFmpeg
+            ffmpegOutputStream.write(payload);
+            ffmpegOutputStream.flush();
+        } catch (IOException e) {
+            System.err.println("Error al escribir en el flujo de FFmpeg: " + e.getMessage());
             try {
-                userStreams.getFFmpegOutputStream().write(payload.clone());
-                userStreams.getFFmpegOutputStream().flush();
-            } catch (IOException e) {
-                System.err.println("Error al escribir en el flujo de FFmpeg: " + e.getMessage());
-                userStreams.getFFmpegOutputStream().close();
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error general al escribir en los flujos: " + e.getMessage());
-            try {
-                session.close(CloseStatus.SERVER_ERROR);
-            } catch (IOException ex) {
-                System.err.println("Error al cerrar sesión WebSocket: " + ex.getMessage());
+                ffmpegOutputStream.close();
+            } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
             }
         }
     }
 
-    private void startFFmpegProcessForUser(String streamId, PipedInputStream ffprobeInputStream,
-            PipedInputStream ffmpegInputStream, String[] videoSettings) {
+    private void startFFmpegProcessForUser(String streamId, PipedInputStream ffmpegInputStream,
+            String[] videoSettings) {
         String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         String userId = streamId.substring(0, streamId.lastIndexOf('_'));
         if (ffmpegThreads.containsKey(sessionId)) {
@@ -219,7 +175,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         // Usar el Executor para ejecutar el proceso FFmpeg en un hilo separado
         executor.execute(() -> {
             try {
-                this.streamingService.startLiveStreamingFromStream(streamId, ffprobeInputStream,
+                this.streamingService.startLiveStreamingFromStream(streamId, null,
                         ffmpegInputStream, videoSettings);
                 // Registrar el hilo en el mapa después de iniciar el proceso FFmpeg
                 Thread currentThread = Thread.currentThread();
