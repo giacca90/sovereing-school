@@ -21,7 +21,7 @@
 		"@angular/platform-browser-dynamic": "^20.0.2",
 		"@angular/platform-server": "^20.0.2",
 		"@angular/router": "^20.0.2",
-		"@angular/ssr": "^20.0.1",
+		"@angular/ssr": "^20.0.2",
 		"@stomp/stompjs": "^7.1.1",
 		"@tailwindcss/postcss": "^4.1.8",
 		"@types/video.js": "^7.3.58",
