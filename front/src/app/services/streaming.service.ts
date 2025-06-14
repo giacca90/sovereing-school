@@ -1,10 +1,9 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { firstValueFrom, Observable } from 'rxjs';
 import { VideoElement } from '../components/editor-curso/editor-clase/editor-webcam/editor-webcam.component';
 import { Clase } from '../models/Clase';
 import { Curso } from '../models/Curso';
-import { ClaseService } from './clase.service';
 import { CursosService } from './cursos.service';
 import { LoginService } from './login.service';
 
@@ -14,15 +13,14 @@ import { LoginService } from './login.service';
 export class StreamingService {
 	public enGrabacion: boolean = false;
 	private ws: WebSocket | null = null;
-	private mediaRecorder: MediaRecorder | null = null;
 	private rtmpUrl: string | null = null;
 	public UrlPreview: string = '';
 	private streamId: string | null = null;
+	private pc!: RTCPeerConnection;
 
 	constructor(
 		private http: HttpClient,
 		private cursoService: CursosService,
-		private claseService: ClaseService,
 		private loginService: LoginService,
 	) {}
 
@@ -78,12 +76,16 @@ export class StreamingService {
 			console.error('Token JWT no encontrado en localStorage');
 			return;
 		}
-		this.mediaRecorder = new MediaRecorder(stream, {
-			mimeType: 'video/webm; codecs=vp9,opus',
-		});
+
+		this.ws.onopen = () => {
+			console.log('Conexión WebSocket establecida.');
+			// Enviar el ID del usuario al servidor
+			const message = { type: 'userId', userId: this.loginService.usuario?.id_usuario, videoSettings: { width: width, height: height, fps: fps } };
+			this.ws?.send(JSON.stringify(message));
+		};
 
 		// Manejamos los mensajes del WebSocket
-		this.ws.onmessage = (event) => {
+		this.ws.onmessage = async (event) => {
 			const data = JSON.parse(event.data);
 			// Error de autenticación, refrescamos el token
 			if (data.type === 'auth') {
@@ -108,55 +110,90 @@ export class StreamingService {
 			if (data.type === 'streamId') {
 				console.log('ID del stream recibido:', data.streamId);
 				this.streamId = data.streamId;
-				this.enGrabacion = true;
 
 				// Actualizar el curso
-				if (!clase || !clase.curso_clase) return;
-				this.cursoService.getCurso(clase.curso_clase).then((curso) => {
+				try {
+					if (!clase || !clase.curso_clase) return;
+
+					const curso = await this.cursoService.getCurso(clase.curso_clase); // Asume que devuelve una Promesa
 					if (!curso) return;
+
 					clase.direccion_clase = data.streamId;
 					curso.clases_curso?.push(clase);
-					this.cursoService.updateCurso(curso).subscribe({
-						next: (success: Curso) => {
-							if (!success) {
-								console.error('Falló la actualización del curso');
-								return;
-							}
-							// Comenzar a grabar y enviar los datos
-							if (!this.mediaRecorder) return;
-							console.log('frame in service: ' + this.mediaRecorder.stream.getVideoTracks()[0].getSettings().frameRate);
-							this.mediaRecorder.start(fps * 0.1); // Fragmentos de 100 ms
-							console.log('Grabación iniciada.');
 
-							// Manejamos los datos de la grabación
-							this.mediaRecorder.ondataavailable = (event) => {
-								if (event.data.size > 0) {
-									const blob = new Blob([event.data], { type: 'video/webm' });
-									this.ws?.send(blob);
-								}
-							};
-						},
-						error: (error) => {
-							console.error('Error al actualizar el curso: ' + error);
-						},
-					});
+					const success = await firstValueFrom(this.cursoService.updateCurso(curso)); // Esperar Observable
+					if (!success) {
+						console.error('Falló la actualización del curso');
+						return;
+					}
+					console.log('Curso actualizado');
+				} catch (error) {
+					console.error('Error al actualizar el curso: ' + error);
+					this.ws?.close();
+					return;
+				}
+
+				// Preparamos WebRTC
+				this.pc = new RTCPeerConnection();
+
+				// Añadir los tracks del MediaStream a la conexión WebRTC
+				stream.getTracks().forEach((track) => {
+					const sender = this.pc.addTrack(track, stream);
+
+					// Solo aplicar a vídeo
+					if (track.kind === 'video') {
+						const parameters = sender.getParameters();
+
+						if (!parameters.encodings) {
+							parameters.encodings = [{}];
+						}
+
+						// Bloqueamos la resolución y bitrate
+						parameters.encodings[0].maxBitrate = 3_000_000; // 3 Mbps
+						parameters.encodings[0].maxFramerate = 60;
+						parameters.encodings[0].scaleResolutionDownBy = 1.0; // no escalar
+
+						sender.setParameters(parameters);
+					}
 				});
+
+				// Crea la oferta WebRTC
+				try {
+					const offer = await this.pc.createOffer();
+					await this.pc.setLocalDescription(offer);
+
+					// Envía oferta al backend con sessionId
+					const message = {
+						streamId: data.streamId,
+						sdp: offer.sdp,
+					};
+					this.ws?.send(JSON.stringify(message));
+				} catch (error) {
+					console.error('Error al crear oferta:', error);
+					this.ws?.close();
+					return;
+				}
 			}
-		};
 
-		this.mediaRecorder.onstop = () => {
-			console.log('Grabación detenida.');
-		};
-
-		this.mediaRecorder.onerror = (event) => {
-			console.error('Error en MediaRecorder:', event);
-		};
-
-		this.ws.onopen = () => {
-			console.log('Conexión WebSocket establecida.');
-			// Enviar el ID del usuario al servidor
-			const message = { type: 'userId', userId: this.loginService.usuario?.id_usuario, videoSettings: { width: width, height: height, fps: fps } };
-			this.ws?.send(JSON.stringify(message));
+			// Recibimos la respuesta WebRTC (SDP answer)
+			if (data.type === 'webrtc-answer') {
+				try {
+					if (!this.pc) {
+						console.error('RTCPeerConnection no inicializada');
+						return;
+					}
+					await this.pc.setRemoteDescription({
+						type: 'answer',
+						sdp: data.sdp,
+					});
+					console.log('Conexión WebRTC completada con éxito');
+					this.enGrabacion = true;
+				} catch (error) {
+					console.error('Error al establecer la descripción remota:', error);
+					this.ws?.close();
+					return;
+				}
+			}
 		};
 
 		this.ws.onerror = (event: Event) => {
@@ -167,9 +204,6 @@ export class StreamingService {
 
 		this.ws.onclose = () => {
 			console.log('Cerrando MediaRecorder y WebSocket.');
-			if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-				this.mediaRecorder.stop();
-			}
 			this.enGrabacion = false;
 		};
 	}
@@ -178,13 +212,7 @@ export class StreamingService {
 	stopMediaStreaming() {
 		const status = document.getElementById('status') as HTMLParagraphElement;
 		this.detenerWebcam();
-
-		if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-			this.mediaRecorder.stop(); // Detener la grabación
-			console.log('Grabación detenida.');
-		} else {
-			this.detenerOBS();
-		}
+		this.detenerOBS();
 
 		if (this.ws) {
 			this.ws.close(); // Cerrar WebSocket

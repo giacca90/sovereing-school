@@ -1,13 +1,13 @@
 package com.sovereingschool.back_streaming.Services;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
+import java.net.DatagramSocket;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,6 +44,35 @@ public class StreamingService {
     private String uploadDir;
 
     /**
+     * Función que devuelve un puerto libre en el rango 8010-8059
+     */
+    public int[] getFreePorts() throws IOException {
+        int videoPort = 0;
+        int audioPort = 0;
+
+        for (int port = 8010; port <= 8058; port++) { // 8058 porque necesitamos 2 puertos consecutivos
+            try (
+                    ServerSocket tcp1 = new ServerSocket(port);
+                    DatagramSocket udp1 = new DatagramSocket(port);
+                    ServerSocket tcp2 = new ServerSocket(port + 1);
+                    DatagramSocket udp2 = new DatagramSocket(port + 1)) {
+                tcp1.setReuseAddress(true);
+                udp1.setReuseAddress(true);
+                tcp2.setReuseAddress(true);
+                udp2.setReuseAddress(true);
+
+                // Si no lanza excepción, ambos puertos están libres
+                videoPort = port;
+                audioPort = port + 1;
+                return new int[] { videoPort, audioPort };
+            } catch (IOException ignored) {
+                // Alguno de los puertos está ocupado, seguimos buscando
+            }
+        }
+        throw new IOException("No hay puertos libres disponibles entre 8010 y 8059.");
+    }
+
+    /**
      * Función para convertir los videos de un curso
      * 
      * @param curso
@@ -77,7 +106,7 @@ public class StreamingService {
                     continue;
                 }
                 List<String> ffmpegCommand = null;
-                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null, null);
+                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null);
                 if (ffmpegCommand != null) {
                     // Ejecutar el comando FFmpeg
                     ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
@@ -116,18 +145,15 @@ public class StreamingService {
     /**
      * Función para iniciar la transmisión en vivo
      * 
-     * @param streamId          String: identificador del streamong en directo
-     *                          (isUsuario_idSession)
-     * @param inputStream       Object: flujo de entrada del video para ffmpeg
-     * @param ffmpegInputStream PipedInputStream: flujo de entrada del video para
-     *                          ffprobe
-     * @param videoSetting      String[]: configuración del video (ancho, alto, fps)
+     * @param streamId     String: identificador del streaming en directo
+     *                     (idUsuario_idSession)
+     * @param inputStream  String: flujo de entrada del video para ffmpeg
+     * @param videoSetting String[]: configuración del video (ancho, alto, fps)
      * @throws IOException
      * @throws InterruptedException
      * @throws Exception
      */
-    public void startLiveStreamingFromStream(String streamId, Object inputStream,
-            PipedInputStream ffmpegInputStream, String[] videoSetting)
+    public void startLiveStreamingFromStream(String streamId, Object inputStream, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException, IllegalArgumentException {
         Optional<Clase> claseOpt = claseRepo.findByDireccionClase(streamId);
         if (!claseOpt.isPresent())
@@ -145,28 +171,16 @@ public class StreamingService {
             Files.createDirectories(outputDir);
         }
 
-        // Determinar el origen: PipedInputStream o RTMP URL
-        String inputSpecifier;
-        List<String> ffmpegCommand = null;
-        try {
-            if (inputStream instanceof PipedInputStream) {
-                inputSpecifier = "pipe:0"; // Entrada desde el pipe
-                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, (InputStream) inputStream,
-                        streamId, videoSetting);
-            } else if (inputStream == null) {
-                inputSpecifier = "pipe:0"; // Entrada desde el pipe
-                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, ffmpegInputStream, streamId, videoSetting);
-            } else if (inputStream instanceof String) {
-                inputSpecifier = RTMP + "/live/" + streamId;// Entrada desde una URL RTMP
-                ffmpegCommand = this.creaComandoFFmpeg(inputSpecifier, true, null, streamId, null);
-            } else {
-                throw new IllegalArgumentException("Fuente de entrada no soportada");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
-        }
-
         // Comando FFmpeg para procesar el streaming
+        List<String> ffmpegCommand;
+        if (inputStream instanceof String) {
+            ffmpegCommand = this.creaComandoFFmpeg((String) inputStream, true, streamId, videoSetting);
+        } else if (inputStream instanceof InputStream) {
+            ffmpegCommand = this.creaComandoFFmpeg("pipe:0", true, streamId, videoSetting);
+        } else {
+            System.err.println("Tipo de entrada no soportado");
+            return;
+        }
         ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
         processBuilder.redirectErrorStream(true);
         processBuilder.directory(outputDir.toFile());
@@ -174,10 +188,33 @@ public class StreamingService {
         // Guardar el proceso en el mapa
         ffmpegProcesses.put(streamId.substring(streamId.lastIndexOf("_") + 1), process);
 
-        BufferedOutputStream ffmpegInput = new BufferedOutputStream(process.getOutputStream());
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        // Hilo para escribir en el stdin de FFmpeg (solo para InputStream)
+        if (inputStream instanceof InputStream) {
+            System.out.println("Iniciando hilo de escritura en stdin de FFmpeg");
+            new Thread(() -> {
+                try {
+                    InputStream IS = (InputStream) inputStream; // Input desde el proceso Go
+                    OutputStream OS = process.getOutputStream(); // Salida hacia ffmpeg
+
+                    byte[] buffer = new byte[40960];
+                    int bytesRead;
+
+                    while ((bytesRead = IS.read(buffer)) != -1) {
+                        System.out.println("Enviando paquete a ffmpeg: " + bytesRead + " bytes");
+                        OS.write(buffer, 0, bytesRead);
+                        OS.flush();
+                    }
+
+                    // NO cerramos OS si quieres mantener ffmpeg activo
+
+                } catch (IOException e) {
+                    System.err.println("Error al escribir en el stdin de FFmpeg: " + e.getMessage());
+                }
+            }).start();
+        }
 
         // Hilo para leer los logs de FFmpeg
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         Thread logReader = new Thread(() -> {
             try {
                 String line;
@@ -186,22 +223,12 @@ public class StreamingService {
                 }
             } catch (IOException e) {
                 System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
-                throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
+                throw new RuntimeException("Error leyendo salida de FFmpeg: " +
+                        e.getMessage());
             }
         });
         logReader.start();
-
-        // Escribir datos en el proceso (solo WebCam)
-        if (inputStream instanceof PipedInputStream || inputStream == null && ffmpegInputStream != null) {
-            InputStream inStream = (InputStream) ffmpegInputStream;
-            byte[] buffer = new byte[1024 * 1024];
-            int bytesRead;
-            while ((bytesRead = inStream.read(buffer)) != -1) {
-                ffmpegInput.write(buffer, 0, bytesRead);
-                ffmpegInput.flush();
-            }
-        }
-        logReader.join(); // Esperar a que se terminen de leer los logs
+        // logReader.join(); // Esperar a que se terminen de leer los logs
     }
 
     public void stopFFmpegProcessForUser(String streamId) throws IOException, RuntimeException {
@@ -265,7 +292,6 @@ public class StreamingService {
      * 
      * @param inputFilePath String: dirección del video original
      * @param live          Boolean: bandera para eventos en vivo
-     * @param inputStream   InputStream: flujo de entrada del video para ffprobe
      * @param streamId      String: identificador del streamong en directo
      *                      (isUsuario_idSession)
      * @param videoSetting  String[]: configuración del video (ancho, alto, fps)
@@ -273,8 +299,7 @@ public class StreamingService {
      * @throws IOException
      * @throws InterruptedException
      */
-    private List<String> creaComandoFFmpeg(String inputFilePath, Boolean live, InputStream inputStream,
-            String streamId, String[] videoSetting)
+    private List<String> creaComandoFFmpeg(String inputFilePath, Boolean live, String streamId, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException {
         String hls_playlist_type = live ? "event" : "vod";
         String hls_flags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
@@ -297,32 +322,6 @@ public class StreamingService {
                     "-of", "csv=p=0", inputFilePath);
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
-            Thread ffprobeThread = null;
-
-            // Escribe datos en el proceso (solo webcam)
-            if (inputFilePath.contains("pipe:0")) {
-                ffprobeThread = new Thread(() -> {
-                    BufferedOutputStream ffprobeInput = new BufferedOutputStream(process.getOutputStream());
-                    try {
-                        byte[] buffer = new byte[1024 * 1024];
-                        int bytesRead;
-                        while ((bytesRead = inputStream.read(buffer)) != -1) {
-                            ffprobeInput.write(buffer, 0, bytesRead);
-                            ffprobeInput.flush();
-                        }
-                        ffprobeInput.close();
-                    } catch (IOException e) {
-                        System.err.println("Error en escribir datos a ffprobe: " + e.getMessage());
-                        try {
-                            ffprobeInput.close();
-                        } catch (IOException e1) {
-                            System.err.println("Error en cerrar flujo de escritura: " + e1.getMessage());
-                        }
-                        throw new RuntimeException("No se pudo obtener la resolución del streaming");
-                    }
-                });
-                ffprobeThread.start();
-            }
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
@@ -343,9 +342,6 @@ public class StreamingService {
                 break;
             }
 
-            if (ffprobeThread != null) {
-                ffprobeThread.join();
-            }
             process.waitFor();
             if (width == "0" || height == "0" || fps == "0") {
                 System.err.println("La resolución es 0");
@@ -353,7 +349,7 @@ public class StreamingService {
             }
             if (width == null || height == null || fps == null) {
                 System.err.println("La resolución es null, reintentando con ffprobe");
-                this.creaComandoFFmpeg(inputFilePath, live, inputStream, streamId, videoSetting);
+                this.creaComandoFFmpeg(inputFilePath, live, streamId, videoSetting);
             }
             System.out.println("Resolución: " + width + "x" + height + "@" + fps);
         }
@@ -482,7 +478,9 @@ public class StreamingService {
                 "ffmpeg", "-loglevel", "info",
                 "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
                 "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para VAAPI
+        // "-analyzeduration", "10M", "-probesize", "10M"
         ));
+
         if (live) {
             ffmpegCommand.add("-re");
         }
@@ -508,7 +506,7 @@ public class StreamingService {
         ffmpegCommand.addAll(List.of("%v.m3u8"));
 
         if (live) {
-            ffmpegCommand.addAll(List.of("-map", "0:v", "-map", "0:a", "-c:v", "copy",
+            ffmpegCommand.addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy",
                     "-c:a", "aac", "original.mp4"));
         }
 

@@ -316,7 +316,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             Thread currentThread = Thread.currentThread();
             ffmpegThreads.put(sessionId, currentThread); // Añadir el hilo al mapa
             try {
-                this.streamingService.startLiveStreamingFromStream(streamId, rtmpUrl, null, null);
+                this.streamingService.startLiveStreamingFromStream(streamId, rtmpUrl, null);
             } catch (Exception e) {
                 currentThread.interrupt();
                 ffmpegThreads.remove(sessionId);
