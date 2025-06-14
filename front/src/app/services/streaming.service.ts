@@ -136,24 +136,25 @@ export class StreamingService {
 				// Preparamos WebRTC
 				this.pc = new RTCPeerConnection();
 
-				// Añadir los tracks del MediaStream a la conexión WebRTC
 				stream.getTracks().forEach((track) => {
 					const sender = this.pc.addTrack(track, stream);
 
-					// Solo aplicar a vídeo
 					if (track.kind === 'video') {
 						const parameters = sender.getParameters();
 
-						if (!parameters.encodings) {
+						if (!parameters.encodings || parameters.encodings.length === 0) {
 							parameters.encodings = [{}];
 						}
 
-						// Bloqueamos la resolución y bitrate
-						parameters.encodings[0].maxBitrate = 3_000_000; // 3 Mbps
-						parameters.encodings[0].maxFramerate = 60;
-						parameters.encodings[0].scaleResolutionDownBy = 1.0; // no escalar
+						parameters.encodings[0].maxBitrate = 5_000_000; // 5 Mbps
+						parameters.encodings[0].scaleResolutionDownBy = 1.0; // Sin reducción de resolución
+						// parameters.encodings[0].minBitrate = 2_000_000; // Opcional, para Chrome
 
-						sender.setParameters(parameters);
+						parameters.degradationPreference = 'maintain-resolution';
+
+						sender.setParameters(parameters).catch((e) => {
+							console.warn('Error aplicando parámetros:', e);
+						});
 					}
 				});
 

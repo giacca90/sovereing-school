@@ -478,7 +478,6 @@ public class StreamingService {
                 "ffmpeg", "-loglevel", "info",
                 "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
                 "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para VAAPI
-        // "-analyzeduration", "10M", "-probesize", "10M"
         ));
 
         if (live) {

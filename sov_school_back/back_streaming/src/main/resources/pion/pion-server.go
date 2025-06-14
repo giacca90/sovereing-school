@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -85,7 +86,38 @@ func handleOffer(api *webrtc.API, req OfferRequest) {
 
 		if !muxStarted && videoTrack != nil && audioTrack != nil {
 			muxStarted = true
-			go startFFmpeg(req.SessionID, videoTrack, audioTrack, req.Width, req.Height, req.FPS)
+
+			// Enviar RTCP PLI para pedir keyframe ANTES de arrancar ffmpeg
+			go func() {
+				fmt.Fprintf(os.Stderr, "[%s] Enviando RTCP PLI para forzar keyframe...\n", req.SessionID)
+
+				for {
+					// Envía PLI solo si la conexión está abierta
+					if pc.ConnectionState() == webrtc.PeerConnectionStateClosed {
+						return
+					}
+
+					// Envía RTCP PLI con el SSRC del track de video
+					err := pc.WriteRTCP([]rtcp.Packet{
+						&rtcp.PictureLossIndication{
+							MediaSSRC: uint32(videoTrack.SSRC()),
+						},
+					})
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "[%s] Error enviando RTCP PLI: %v\n", req.SessionID, err)
+					} else {
+						fmt.Fprintf(os.Stderr, "[%s] RTCP PLI enviado\n", req.SessionID)
+					}
+
+					// Espera 1 segundo antes de intentar otra vez si fuera necesario
+					time.Sleep(1 * time.Second)
+				}
+			}()
+
+			// Dale 3 segundos para que llegue el keyframe y luego arranca ffmpeg
+			time.AfterFunc(3*time.Second, func() {
+				startFFmpeg(req.SessionID, videoTrack, audioTrack, req.Width, req.Height, req.FPS)
+			})
 		}
 	})
 
@@ -116,8 +148,7 @@ func handleOffer(api *webrtc.API, req OfferRequest) {
 }
 
 func startFFmpeg(sessionID string, videoTrack, audioTrack *webrtc.TrackRemote, width, height, fps int) {
-	fmt.Fprintf(os.Stderr, "[%s] Esperando 3 segundos para estabilizar el stream...\n", sessionID)
-	time.Sleep(3 * time.Second)
+	fmt.Fprintf(os.Stderr, "[%s] Arrancando ffmpeg tras esperar keyframe...\n", sessionID)
 
 	videoPort, audioPort, err := getTwoFreeUDPPorts()
 	if err != nil {
@@ -148,26 +179,16 @@ func startFFmpeg(sessionID string, videoTrack, audioTrack *webrtc.TrackRemote, w
 
 	// Generar SDP
 	sdp := fmt.Sprintf(`v=0
-`+
-		`o=- 0 0 IN IP4 127.0.0.1
-`+
-		`s=WebRTC Stream
-`+
-		`c=IN IP4 127.0.0.1
-`+
-		`t=0 0
-`+
-		`m=audio %d RTP/AVP %d
-`+
-		`a=rtpmap:%d %s
-`+
-		`m=video %d RTP/AVP %d
-`+
-		`a=rtpmap:%d %s
-`+
-		`a=framerate:%d
-`+
-		`a=framesize:%d %d-%d
+o=- 0 0 IN IP4 127.0.0.1
+s=WebRTC Stream
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio %d RTP/AVP %d
+a=rtpmap:%d %s
+m=video %d RTP/AVP %d
+a=rtpmap:%d %s
+a=framerate:%d
+a=framesize:%d %d-%d
 `,
 		audioPort, audioPT, audioPT, audioCodec,
 		videoPort, videoPT, videoPT, videoCodec,
@@ -187,7 +208,6 @@ func startFFmpeg(sessionID string, videoTrack, audioTrack *webrtc.TrackRemote, w
 		"-protocol_whitelist", "file,udp,rtp",
 		"-use_wallclock_as_timestamps", "1",
 		"-fflags", "+genpts",
-		"-analyzeduration", "20M", "-probesize", "20M",
 		"-i", sdpFile,
 		"-vf", fmt.Sprintf("scale=%d:%d", width, height),
 		"-r", fmt.Sprintf("%d", fps),
@@ -229,23 +249,19 @@ func startFFmpeg(sessionID string, videoTrack, audioTrack *webrtc.TrackRemote, w
 	}
 	defer audioConn.Close()
 
-	// Enviar RTP
+	// Enviar RTP video
 	go func() {
-		sentKey := false
 		for {
 			pkt, _, err := videoTrack.ReadRTP()
 			if err != nil {
 				break
-			}
-			if !sentKey {
-				// esperar primer keyframe (opcional)
-				sentKey = true
 			}
 			raw, _ := pkt.Marshal()
 			videoConn.Write(raw)
 		}
 	}()
 
+	// Enviar RTP audio
 	go func() {
 		for {
 			pkt, _, err := audioTrack.ReadRTP()
