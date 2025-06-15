@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
+import com.sovereingschool.back_streaming.Models.ResolutionProfile;
 
 @Service
 @Transactional
@@ -354,67 +356,33 @@ public class StreamingService {
             System.out.println("Resolución: " + width + "x" + height + "@" + fps);
         }
 
-        // Calcular las partes necesarias según la resolución
-        List<String> resolutionPairs = new ArrayList<>();
-        resolutionPairs.add(width + "," + height + "," + fps);
-        int tempWidth = Integer.parseInt(width);
-        int tempHeight = Integer.parseInt(height);
-        while ((tempWidth - tempWidth / 3) * (tempHeight - tempHeight / 3) >= 320 * 180) {
-            tempWidth = tempWidth - tempWidth / 3;
-            tempHeight = tempHeight - tempHeight / 3;
+        int inputWidth = Integer.parseInt(width);
+        int inputHeight = Integer.parseInt(height);
+        int inputFps = Integer.parseInt(fps);
+        int totalPixels = inputWidth * inputHeight;
 
-            // Asegurarse de que las dimensiones sean pares
-            if (tempWidth % 2 != 0) {
-                tempWidth--;
-            }
-            if (tempHeight % 2 != 0) {
-                tempHeight--;
-            }
+        // Filtra todos los perfiles cuya área sea ≤ la del input
+        // y cuyo fps sea 30 (fallback) o menor o igual al input
+        List<ResolutionProfile> resolutionPairs = Arrays.stream(ResolutionProfile.values())
+                .filter(r -> r.getWidth() * r.getHeight() <= totalPixels &&
+                        (r.getFps() == 30 || r.getFps() <= inputFps))
+                // Ordena de mayor a menor resolución
+                .sorted((a, b) -> Integer.compare(
+                        b.getWidth() * b.getHeight(),
+                        a.getWidth() * a.getHeight()))
+                // Elimina duplicados si los hubiera
+                .distinct()
+                .collect(Collectors.toList());
 
-            resolutionPairs.add(tempWidth + "," + tempHeight + "," + fps);
-        }
-
-        if (Integer.parseInt(fps) > 90) {
-            int tempWidth2 = Integer.parseInt(width);
-            int tempHeight2 = Integer.parseInt(height);
-            resolutionPairs.add(tempWidth2 + "," + tempHeight2 + "," + "90");
-            while ((tempWidth2 - tempWidth2 / 3) * (tempHeight2 - tempHeight2 / 3) >= 320 * 180) {
-                tempWidth2 = tempWidth2 - tempWidth2 / 3;
-                tempHeight2 = tempHeight2 - tempHeight2 / 3;
-                // Asegurarse de que las dimensiones sean pares
-                if (tempWidth2 % 2 != 0) {
-                    tempWidth2--;
-                }
-                if (tempHeight2 % 2 != 0) {
-                    tempHeight2--;
-                }
-                resolutionPairs.add(tempWidth2 + "," + tempHeight2 + "," + "90");
-            }
-
-        }
-
-        if (Integer.parseInt(fps) > 60) {
-            int tempWidth2 = Integer.parseInt(width);
-            int tempHeight2 = Integer.parseInt(height);
-            resolutionPairs.add(tempWidth2 + "," + tempHeight2 + "," + "60");
-            while ((tempWidth2 - tempWidth2 / 3) * (tempHeight2 - tempHeight2 / 3) >= 320 * 180) {
-                tempWidth2 = tempWidth2 - tempWidth2 / 3;
-                tempHeight2 = tempHeight2 - tempHeight2 / 3;
-                // Asegurarse de que las dimensiones sean pares
-                if (tempWidth2 % 2 != 0) {
-                    tempWidth2--;
-                }
-                if (tempHeight2 % 2 != 0) {
-                    tempHeight2--;
-                }
-                resolutionPairs.add(tempWidth2 + "," + tempHeight2 + "," + "60");
-            }
-        }
+        // Debug
+        resolutionPairs.forEach(r -> System.out.println("Perfil: " +
+                r.getWidth() + "x" + r.getHeight() +
+                "@" + r.getFps() + "fps → br=" + r.getBitrate() + "kbps"));
 
         // Crear los filtros
         List<String> filters = new ArrayList<>();
 
-        String filtro = "[0:v]split=" + resolutionPairs.size();
+        String filtro = "[0:v]format=nv12,hwupload,split=" + resolutionPairs.size();
         for (int i = 0; i < resolutionPairs.size(); i++) {
             filtro += "[v" + (i + 1) + "]";
         }
@@ -432,41 +400,34 @@ public class StreamingService {
          * }
          */
         for (int i = 0; i < resolutionPairs.size(); i++) {
-            filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).split(",")[0] + ":h="
-                    + resolutionPairs.get(i).split(",")[1] + "[v" + (i + 1) + "out]";
+            filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).getWidth() + ":h="
+                    + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
         }
         filters.add(filtro);
 
         for (int i = 0; i < resolutionPairs.size(); i++) {
-            int Width = Integer.parseInt(resolutionPairs.get(i).split(",")[0]);
-            int Height = Integer.parseInt(resolutionPairs.get(i).split(",")[1]);
-            int fpsn = Integer.parseInt(resolutionPairs.get(i).split(",")[2]);
+            int Width = resolutionPairs.get(i).getWidth();
+            int Height = resolutionPairs.get(i).getHeight();
+            int fpsn = resolutionPairs.get(i).getFps();
             filters.addAll(Arrays.asList(
                     "-map", "[v" + (i + 1) + "out]",
                     "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
-                    "-qp", "24", // Calidad para VAAPI
+                    "-qp:v:" + i, "4", // Constante de calidad
+                    "-profile:v:" + i, resolutionPairs.get(i).getProfile(),
+                    "-level:v:" + i, resolutionPairs.get(i).getLevel(),
+                    "-b:v:" + i, resolutionPairs.get(i).getBitrate(),
+                    "-maxrate:v:" + i, resolutionPairs.get(i).getMaxrate(),
+                    "-bufsize:v:" + i, resolutionPairs.get(i).getBufsize(),
                     // "-preset", preset, // No sirve para VAAPI
                     "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
                     // "-sc_threshold", "0", // No sirve para VAAPI
                     "-keyint_min", String.valueOf(fpsn),
-                    "-hls_segment_filename", "%v/data%02d.ts",
-                    "-hls_base_url", Width + "x" + Height + "@" + fpsn + "/"));
+                    "-hls_segment_filename", "%v/data%02d.ts"));
         }
 
         for (int i = 0; i < resolutionPairs.size(); i++) {
-            int Width = Integer.parseInt(resolutionPairs.get(i).split(",")[0]);
-            int Height = Integer.parseInt(resolutionPairs.get(i).split(",")[1]);
-            int fpsn = Integer.parseInt(resolutionPairs.get(i).split(",")[2]);
-            String audioBitrate = (Width * Height >= 1920 * 1080) ? "96k"
-                    : (Width * Height >= 1280 * 720) ? "64k" : "48k";
-
-            if (fpsn > 60) {
-                filters.addAll(Arrays.asList(
-                        "-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i, audioBitrate));
-            } else {
-                filters.addAll(Arrays.asList(
-                        "-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i, audioBitrate));
-            }
+            filters.addAll(Arrays.asList("-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i,
+                    resolutionPairs.get(i).getAudioBitrate()));
             if (i == 0) {
                 filters.addAll(Arrays.asList("-ac", "2"));
             }
@@ -476,8 +437,9 @@ public class StreamingService {
         List<String> ffmpegCommand = new ArrayList<>();
         ffmpegCommand = new ArrayList<>(List.of(
                 "ffmpeg", "-loglevel", "info",
-                "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
-                "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para VAAPI
+                "-vaapi_device", "/dev/dri/renderD128" // Dispositivo VAAPI
+        // "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para
+        // VAAPI
         ));
 
         if (live) {
@@ -491,14 +453,15 @@ public class StreamingService {
                 "-hls_playlist_type", hls_playlist_type,
                 "-hls_flags", hls_flags,
                 "-hls_segment_type", "mpegts",
+                "-hls_base_url", "%v/",
                 "-filter_complex"));
         ffmpegCommand.addAll(filters);
         ffmpegCommand.addAll(List.of("-master_pl_name", "master.m3u8", "-var_stream_map"));
         String streamMap = "";
         for (int i = 0; i < resolutionPairs.size(); i++) {
-            int Width = Integer.parseInt(resolutionPairs.get(i).split(",")[0]);
-            int Height = Integer.parseInt(resolutionPairs.get(i).split(",")[1]);
-            int fpsn = Integer.parseInt(resolutionPairs.get(i).split(",")[2]);
+            int Width = resolutionPairs.get(i).getWidth();
+            int Height = resolutionPairs.get(i).getHeight();
+            int fpsn = resolutionPairs.get(i).getFps();
             streamMap += " v:" + i + ",a:" + i + ",name:" + Width + "x" + Height + "@" + fpsn;
         }
         ffmpegCommand.add(streamMap);
