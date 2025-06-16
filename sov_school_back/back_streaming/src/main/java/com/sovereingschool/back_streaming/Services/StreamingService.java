@@ -406,23 +406,18 @@ public class StreamingService {
         filters.add(filtro);
 
         for (int i = 0; i < resolutionPairs.size(); i++) {
-            int Width = resolutionPairs.get(i).getWidth();
-            int Height = resolutionPairs.get(i).getHeight();
             int fpsn = resolutionPairs.get(i).getFps();
             filters.addAll(Arrays.asList(
                     "-map", "[v" + (i + 1) + "out]",
                     "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
-                    "-qp:v:" + i, "4", // Constante de calidad
+                    // "-qp:v:" + i, "4", // Constante de calidad
                     "-profile:v:" + i, resolutionPairs.get(i).getProfile(),
                     "-level:v:" + i, resolutionPairs.get(i).getLevel(),
                     "-b:v:" + i, resolutionPairs.get(i).getBitrate(),
                     "-maxrate:v:" + i, resolutionPairs.get(i).getMaxrate(),
                     "-bufsize:v:" + i, resolutionPairs.get(i).getBufsize(),
-                    // "-preset", preset, // No sirve para VAAPI
                     "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
-                    // "-sc_threshold", "0", // No sirve para VAAPI
-                    "-keyint_min", String.valueOf(fpsn),
-                    "-hls_segment_filename", "%v/data%02d.ts"));
+                    "-keyint_min", String.valueOf(fpsn)));
         }
 
         for (int i = 0; i < resolutionPairs.size(); i++) {
@@ -448,15 +443,9 @@ public class StreamingService {
 
         ffmpegCommand.addAll(List.of(
                 "-i", inputFilePath,
-                "-f", "hls",
-                "-hls_time", "5",
-                "-hls_playlist_type", hls_playlist_type,
-                "-hls_flags", hls_flags,
-                "-hls_segment_type", "mpegts",
-                "-hls_base_url", "%v/",
                 "-filter_complex"));
         ffmpegCommand.addAll(filters);
-        ffmpegCommand.addAll(List.of("-master_pl_name", "master.m3u8", "-var_stream_map"));
+        ffmpegCommand.addAll(List.of("-var_stream_map"));
         String streamMap = "";
         for (int i = 0; i < resolutionPairs.size(); i++) {
             int Width = resolutionPairs.get(i).getWidth();
@@ -465,7 +454,15 @@ public class StreamingService {
             streamMap += " v:" + i + ",a:" + i + ",name:" + Width + "x" + Height + "@" + fpsn;
         }
         ffmpegCommand.add(streamMap);
-        ffmpegCommand.addAll(List.of("%v.m3u8"));
+
+        ffmpegCommand.addAll(List.of("-master_pl_name", "master.m3u8",
+                "-f", "hls",
+                "-hls_time", "2",
+                "-hls_playlist_type", hls_playlist_type,
+                "-hls_flags", hls_flags,
+                "-hls_segment_type", "mpegts",
+                "-hls_segment_filename", "%v/data%03d.ts",
+                "%v/stream.m3u8"));
 
         if (live) {
             ffmpegCommand.addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy",
