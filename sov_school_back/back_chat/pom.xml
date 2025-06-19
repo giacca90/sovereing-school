@@ -34,7 +34,7 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-messaging</artifactId>
-			<version>6.5.0</version>
+			<version>6.5.1</version>
 		</dependency>
 
 		<dependency>
@@ -65,7 +65,7 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webflux</artifactId>
 			<scope>test</scope>
-			<version>6.2.7</version>
+			<version>6.2.8</version>
 		</dependency>
 
 		<dependency>
@@ -78,7 +78,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.19.0</version>
+			<version>2.19.1</version>
 		</dependency>
 	</dependencies>
 

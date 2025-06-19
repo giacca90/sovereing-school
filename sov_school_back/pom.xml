@@ -63,7 +63,7 @@
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
-      <version>6.5.0</version>
+      <version>6.5.1</version>
     </dependency>
 
     <dependency>
@@ -103,7 +103,7 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
-      <version>42.7.6</version>
+      <version>42.7.7</version>
     </dependency>
 
     <dependency>

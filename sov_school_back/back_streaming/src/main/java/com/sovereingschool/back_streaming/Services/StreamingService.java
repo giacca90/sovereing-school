@@ -198,7 +198,7 @@ public class StreamingService {
                     InputStream IS = (InputStream) inputStream; // Input desde el proceso Go
                     OutputStream OS = process.getOutputStream(); // Salida hacia ffmpeg
 
-                    byte[] buffer = new byte[40960];
+                    byte[] buffer = new byte[409600];
                     int bytesRead;
 
                     while ((bytesRead = IS.read(buffer)) != -1) {
@@ -461,7 +461,7 @@ public class StreamingService {
                 "-hls_playlist_type", hls_playlist_type,
                 "-hls_flags", hls_flags,
                 "-hls_segment_type", "mpegts",
-                "-hls_segment_filename", "%v/data%03d.ts",
+                "-hls_segment_filename", "%v/data%05d.ts",
                 "%v/stream.m3u8"));
 
         if (live) {

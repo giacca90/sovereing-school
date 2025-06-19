@@ -204,23 +204,39 @@ a=framesize:%d %d-%d
 	fmt.Fprintf(os.Stderr, "[%s] Archivo SDP: %s\n", sessionID, sdpFile)
 
 	// Llamar ffmpeg
-	cmd := exec.Command("ffmpeg",
+	/* cmd := exec.Command("ffmpeg",
 		"-protocol_whitelist", "file,udp,rtp",
 		"-use_wallclock_as_timestamps", "1",
 		"-fflags", "+genpts",
 		"-i", sdpFile,
 		"-r", fmt.Sprintf("%d", fps),
 		"-c:v", "libx264",
-		//		"-preset", "ultrafast",
-		//		"-tune", "zerolatency",
-		//"-profile:v", "high",
-		//"-x264-params", "level=6.0:vbv-maxrate=50000:vbv-bufsize=100000",
+		"-crf", "0",
+		"-preset", "veryslow", // Usa slow o veryslow para calidad
+		"-tune", "psnr",
 		"-filter:a", "aresample=async=1",
 		"-c:a", "aac",
 		"-b:a", "128k",
 		"-f", "mpegts",
 		"pipe:1",
-	)
+	) */
+
+	cmd := exec.Command(
+		"ffmpeg",
+		"-hwaccel", "vaapi",
+		"-vaapi_device", "/dev/dri/renderD128",
+		"-protocol_whitelist", "file,udp,rtp",
+		"-use_wallclock_as_timestamps", "1",
+		"-fflags", "+genpts",
+		"-i", sdpFile,
+		"-vf", "format=nv12,hwupload",
+		"-filter:a", "aresample=async=1,asetpts=N/SR/TB",
+		"-c:v", "h264_vaapi",
+		"-qp", "10",
+		"-r", "30",
+		"-c:a", "aac",
+		"-b:a", "128k",
+		"-f", "mpegts", "pipe:1")
 
 	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
