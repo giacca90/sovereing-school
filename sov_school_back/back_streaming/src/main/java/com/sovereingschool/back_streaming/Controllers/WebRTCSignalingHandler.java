@@ -38,6 +38,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
     private BufferedWriter pionWriter;
     private BufferedReader pionReader;
     private BufferedReader pionErrorReader;
+    private Thread pionErrorReaderThread;
 
     // Constructor modificado para aceptar Executor y StreamingService
     public WebRTCSignalingHandler(Executor executor, StreamingService streamingService) {
@@ -84,6 +85,30 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         String userId = session.getId();
         sessions.remove(userId);
 
+        if (pionWriter != null) {
+            try {
+                pionWriter.close();
+            } catch (IOException e) {
+                System.err.println("Error al cerrar pionWriter: " + e.getMessage());
+            }
+        }
+
+        if (pionReader != null) {
+            try {
+                pionReader.close();
+            } catch (IOException e) {
+                System.err.println("Error al cerrar pionReader: " + e.getMessage());
+            }
+        }
+
+        if (pionProcess != null) {
+            pionProcess.destroy();
+        }
+
+        if (pionErrorReaderThread != null) {
+            pionErrorReaderThread.interrupt();
+        }
+
         Thread t = ffmpegThreads.remove(userId);
         if (t != null) {
             t.interrupt();
@@ -120,6 +145,11 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                     session.sendMessage(new TextMessage("{\"type\":\"streamId\",\"streamId\":\"" + streamId + "\"}"));
                 } catch (IOException e) {
                     System.err.println("Error al enviar streamId: " + e.getMessage());
+                    try {
+                        session.close();
+                    } catch (IOException ex) {
+                        System.err.println("Errorn en cerrar la sesión: " + ex.getMessage());
+                    }
                     return;
                 }
 
@@ -137,6 +167,18 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                 String streamId = json.get("streamId").asText();
                 if (!streamId.contains(session.getId())) {
                     System.err.println("El streamId no coincide con el sessionId");
+                    try {
+                        session.sendMessage(new TextMessage(
+                                "{\"type\":\"error\",\"message\":\"El streamId no coincide con el sessionId \"}"));
+                    } catch (IOException e) {
+                        System.err.println("Error al enviar el mensaje de error: " + e.getMessage());
+                    }
+
+                    try {
+                        session.close();
+                    } catch (IOException ex) {
+                        System.err.println("Errorn en cerrar la sesión: " + ex.getMessage());
+                    }
                     return;
                 }
 
@@ -152,6 +194,19 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                         pionProcess = pb.start();
                     } catch (IOException e) {
                         System.out.println("Error al iniciar proceso Go: " + e.getMessage());
+                        try {
+                            session.sendMessage(new TextMessage(
+                                    "{\"type\":\"error\",\"message\":\"Error al iniciar proceso Go: \"" + e.getMessage()
+                                            + "\"}"));
+                        } catch (IOException ex) {
+                            System.err.println("Error al enviar mensaje de error: " + ex.getMessage());
+                        }
+
+                        try {
+                            session.close();
+                        } catch (IOException ex) {
+                            System.err.println("Error en cerrar la sesión: " + ex.getMessage());
+                        }
                         return;
                     }
 
@@ -160,7 +215,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                     pionErrorReader = new BufferedReader(new InputStreamReader(pionProcess.getErrorStream()));
 
                     // Leer logs del proceso Pion
-                    new Thread(() -> {
+                    this.pionErrorReaderThread = new Thread(() -> {
                         String line;
                         try {
                             while ((line = pionErrorReader.readLine()) != null) {
@@ -169,7 +224,8 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                         } catch (IOException e) {
                             System.err.println("Error en stderr PION: " + e.getMessage());
                         }
-                    }).start();
+                    });
+                    this.pionErrorReaderThread.start();
                 }
 
                 // Enviar JSON con SDP offer al proceso Go
@@ -197,6 +253,19 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                     answerLine = pionReader.readLine();
                 } catch (IOException e) {
                     System.err.println("Error al leer la respuesta del proceso Go: " + e.getMessage());
+                    try {
+                        session.sendMessage(new TextMessage(
+                                "{\"type\":\"error\",\"message\":\"Error al leer la respuesta del proceso Go: \""
+                                        + e.getMessage() + "\"}"));
+                    } catch (IOException ex) {
+                        System.err.println("Error al enviar mensaje de error: " + ex.getMessage());
+                    }
+
+                    try {
+                        session.close();
+                    } catch (IOException ex) {
+                        System.err.println("Error en cerrar la sesión: " + ex.getMessage());
+                    }
                     return;
                 }
 
@@ -212,6 +281,19 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                     session.sendMessage(new TextMessage(response.toString()));
                 } catch (IOException e) {
                     System.out.println("Error al enviar la respuesta al frontend: " + e.getMessage());
+                    try {
+                        session.sendMessage(new TextMessage(
+                                "{\"type\":\"error\",\"message\":\"Error al enviar la respuesta al frontend: \""
+                                        + e.getMessage() + "\"}"));
+                    } catch (IOException ex) {
+                        System.err.println("Error al enviar mensaje de error: " + ex.getMessage());
+                    }
+
+                    try {
+                        session.close();
+                    } catch (IOException ex) {
+                        System.err.println("Error en cerrar la sesión: " + ex.getMessage());
+                    }
                     return;
                 }
 
@@ -234,7 +316,9 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                     }
                 });
             }
-        } catch (JsonProcessingException e) {
+        } catch (
+
+        JsonProcessingException e) {
             System.err.println("Error al parsear el mensaje JSON: " + e.getMessage());
         }
     }
