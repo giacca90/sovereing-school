@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.Map;
@@ -165,6 +164,23 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                         try {
                             while ((line = pionErrorReader.readLine()) != null) {
                                 System.err.println("PION: " + line);
+                                if (line.contains("SDP generado:")) {
+                                    // Iniciar el hilo de FFmpeg
+                                    executor.execute(() -> {
+                                        try {
+                                            // Ejecutar ffmpeg y pasarle el stream
+                                            streamingService.startLiveStreamingFromStream(
+                                                    streamId,
+                                                    "/tmp/" + streamId + ".sdp",
+                                                    videoSetting);
+                                            ffmpegThreads.put(session.getId(), Thread.currentThread());
+                                        } catch (Exception e) {
+                                            System.err
+                                                    .println("Error al iniciar FFmpeg para el stream " + streamId + ": "
+                                                            + e.getMessage());
+                                        }
+                                    });
+                                }
                             }
                         } catch (IOException e) {
                             System.err.println("Error en stderr PION: " + e.getMessage());
@@ -214,25 +230,6 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                     System.out.println("Error al enviar la respuesta al frontend: " + e.getMessage());
                     return;
                 }
-
-                // Iniciar el hilo de FFmpeg
-                executor.execute(() -> {
-                    try {
-                        InputStream pionBinaryStream = pionProcess.getInputStream(); // ahora contiene el flujo binario
-
-                        // Ejecutar ffmpeg y pasarle el stream
-                        streamingService.startLiveStreamingFromStream(
-                                streamId,
-                                pionBinaryStream,
-                                videoSetting);
-
-                        ffmpegThreads.put(session.getId(), Thread.currentThread());
-
-                    } catch (Exception e) {
-                        System.err
-                                .println("Error al iniciar FFmpeg para el stream " + streamId + ": " + e.getMessage());
-                    }
-                });
             }
         } catch (JsonProcessingException e) {
             System.err.println("Error al parsear el mensaje JSON: " + e.getMessage());

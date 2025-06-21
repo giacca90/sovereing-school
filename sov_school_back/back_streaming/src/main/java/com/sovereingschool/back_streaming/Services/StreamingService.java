@@ -3,7 +3,6 @@ package com.sovereingschool.back_streaming.Services;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
@@ -155,7 +154,7 @@ public class StreamingService {
      * @throws InterruptedException
      * @throws Exception
      */
-    public void startLiveStreamingFromStream(String streamId, Object inputStream, String[] videoSetting)
+    public void startLiveStreamingFromStream(String streamId, String inputStream, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException, IllegalArgumentException {
         Optional<Clase> claseOpt = claseRepo.findByDireccionClase(streamId);
         if (!claseOpt.isPresent())
@@ -175,45 +174,15 @@ public class StreamingService {
 
         // Comando FFmpeg para procesar el streaming
         List<String> ffmpegCommand;
-        if (inputStream instanceof String) {
-            ffmpegCommand = this.creaComandoFFmpeg((String) inputStream, true, streamId, videoSetting);
-        } else if (inputStream instanceof InputStream) {
-            ffmpegCommand = this.creaComandoFFmpeg("pipe:0", true, streamId, videoSetting);
-        } else {
-            System.err.println("Tipo de entrada no soportado");
-            return;
-        }
+        ffmpegCommand = this.creaComandoFFmpeg((String) inputStream, true, streamId, videoSetting);
+
         ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
         processBuilder.redirectErrorStream(true);
         processBuilder.directory(outputDir.toFile());
         Process process = processBuilder.start();
+
         // Guardar el proceso en el mapa
         ffmpegProcesses.put(streamId.substring(streamId.lastIndexOf("_") + 1), process);
-
-        // Hilo para escribir en el stdin de FFmpeg (solo para InputStream)
-        if (inputStream instanceof InputStream) {
-            System.out.println("Iniciando hilo de escritura en stdin de FFmpeg");
-            new Thread(() -> {
-                try {
-                    InputStream IS = (InputStream) inputStream; // Input desde el proceso Go
-                    OutputStream OS = process.getOutputStream(); // Salida hacia ffmpeg
-
-                    byte[] buffer = new byte[409600];
-                    int bytesRead;
-
-                    while ((bytesRead = IS.read(buffer)) != -1) {
-                        System.out.println("Enviando paquete a ffmpeg: " + bytesRead + " bytes");
-                        OS.write(buffer, 0, bytesRead);
-                        OS.flush();
-                    }
-
-                    // NO cerramos OS si quieres mantener ffmpeg activo
-
-                } catch (IOException e) {
-                    System.err.println("Error al escribir en el stdin de FFmpeg: " + e.getMessage());
-                }
-            }).start();
-        }
 
         // Hilo para leer los logs de FFmpeg
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -403,44 +372,61 @@ public class StreamingService {
             filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).getWidth() + ":h="
                     + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
         }
+        filtro += "; [0:a]aresample=async=1,asetpts=N/SR/TB,asplit=" + resolutionPairs.size();
+        for (int i = 0; i < resolutionPairs.size(); i++) {
+            filtro += "[a" + (i + 1) + "]";
+        }
         filters.add(filtro);
 
         for (int i = 0; i < resolutionPairs.size(); i++) {
             int fpsn = resolutionPairs.get(i).getFps();
+            // -map [v1out] -map [audio_clean] -c:v:0 h264_vaapi -b:v:0 10000k -maxrate:v:0
+            // 11000k -bufsize:v:0 22000k -g 30 -keyint_min 30 -profile:v:0 high -level:v:0
+            // 4.1 -c:a:0 aac -b:a:0 96k \
             filters.addAll(Arrays.asList(
                     "-map", "[v" + (i + 1) + "out]",
+                    "-map", "[a" + (i + 1) + "]",
                     "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
-                    // "-qp:v:" + i, "4", // Constante de calidad
-                    "-profile:v:" + i, resolutionPairs.get(i).getProfile(),
-                    "-level:v:" + i, resolutionPairs.get(i).getLevel(),
                     "-b:v:" + i, resolutionPairs.get(i).getBitrate(),
                     "-maxrate:v:" + i, resolutionPairs.get(i).getMaxrate(),
                     "-bufsize:v:" + i, resolutionPairs.get(i).getBufsize(),
                     "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
-                    "-keyint_min", String.valueOf(fpsn)));
+                    "-keyint_min", String.valueOf(fpsn),
+                    "-profile:v:" + i, resolutionPairs.get(i).getProfile(),
+                    "-level:v:" + i, resolutionPairs.get(i).getLevel(),
+                    "-c:a:" + i, "aac", "-b:a:" + i, resolutionPairs.get(i).getAudioBitrate().toString()));
         }
 
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            filters.addAll(Arrays.asList("-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i,
-                    resolutionPairs.get(i).getAudioBitrate()));
-            if (i == 0) {
-                filters.addAll(Arrays.asList("-ac", "2"));
-            }
-        }
+        /*
+         * for (int i = 0; i < resolutionPairs.size(); i++) {
+         * filters.addAll(Arrays.asList("-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i,
+         * resolutionPairs.get(i).getAudioBitrate()));
+         * if (i == 0) {
+         * filters.addAll(Arrays.asList("-ac", "2"));
+         * }
+         * }
+         */
 
         // Crea el comando FFmpeg
         List<String> ffmpegCommand = new ArrayList<>();
         ffmpegCommand = new ArrayList<>(List.of(
                 "ffmpeg", "-loglevel", "info",
-                "-vaapi_device", "/dev/dri/renderD128" // Dispositivo VAAPI
-        // "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para
-        // VAAPI
-        ));
+                "-hwaccel", "vaapi",
+                "-vaapi_device", "/dev/dri/renderD128"));
 
-        if (live) {
-            ffmpegCommand.add("-re");
+        if (inputFilePath.startsWith("/tmp/")) {
+            ffmpegCommand.addAll(List.of(
+                    "-protocol_whitelist", "file,udp,rtp",
+                    "-use_wallclock_as_timestamps", "1",
+                    "-fflags", "+genpts",
+                    "-thread_queue_size", "2048"));
         }
 
+        /*
+         * if (live) {
+         * ffmpegCommand.add("-re");
+         * }
+         */
         ffmpegCommand.addAll(List.of(
                 "-i", inputFilePath,
                 "-filter_complex"));
@@ -464,10 +450,12 @@ public class StreamingService {
                 "-hls_segment_filename", "%v/data%05d.ts",
                 "%v/stream.m3u8"));
 
-        if (live) {
-            ffmpegCommand.addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy",
-                    "-c:a", "aac", "original.mp4"));
-        }
+        /*
+         * if (live) {
+         * ffmpegCommand.addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy",
+         * "-c:a", "aac", "original.mp4"));
+         * }
+         */
 
         System.out.println("Comando FFmpeg: " + String.join(" ", ffmpegCommand));
         return ffmpegCommand;

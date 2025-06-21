@@ -4,15 +4,19 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
-	"os"
-	"os/exec"
-	"strings"
-	"sync"
 	"time"
 
+	//"io"
+	"net"
+	"os"
+
+	//"os/exec"
+	"strings"
+	"sync"
+
 	"github.com/pion/rtcp"
+	"github.com/pion/rtp"
+	"github.com/pion/rtp/codecs"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -36,6 +40,7 @@ func main() {
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ERROR] No se pudo leer la entrada: %v\n", err)
 			return
 		}
 		lineStr := strings.TrimSpace(string(line))
@@ -86,38 +91,7 @@ func handleOffer(api *webrtc.API, req OfferRequest) {
 
 		if !muxStarted && videoTrack != nil && audioTrack != nil {
 			muxStarted = true
-
-			// Enviar RTCP PLI para pedir keyframe ANTES de arrancar ffmpeg
-			go func() {
-				fmt.Fprintf(os.Stderr, "[%s] Enviando RTCP PLI para forzar keyframe...\n", req.SessionID)
-
-				for {
-					// Envía PLI solo si la conexión está abierta
-					if pc.ConnectionState() == webrtc.PeerConnectionStateClosed {
-						return
-					}
-
-					// Envía RTCP PLI con el SSRC del track de video
-					err := pc.WriteRTCP([]rtcp.Packet{
-						&rtcp.PictureLossIndication{
-							MediaSSRC: uint32(videoTrack.SSRC()),
-						},
-					})
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "[%s] Error enviando RTCP PLI: %v\n", req.SessionID, err)
-					} else {
-						fmt.Fprintf(os.Stderr, "[%s] RTCP PLI enviado\n", req.SessionID)
-					}
-
-					// Espera 1 segundo antes de intentar otra vez si fuera necesario
-					time.Sleep(1 * time.Second)
-				}
-			}()
-
-			// Dale 3 segundos para que llegue el keyframe y luego arranca ffmpeg
-			time.AfterFunc(3*time.Second, func() {
-				startFFmpeg(req.SessionID, videoTrack, audioTrack, req.Width, req.Height, req.FPS)
-			})
+			startFFmpeg(req.SessionID, videoTrack, audioTrack, req.Width, req.Height, req.FPS, pc)
 		}
 	})
 
@@ -147,8 +121,8 @@ func handleOffer(api *webrtc.API, req OfferRequest) {
 	close(ready)
 }
 
-func startFFmpeg(sessionID string, videoTrack, audioTrack *webrtc.TrackRemote, width, height, fps int) {
-	fmt.Fprintf(os.Stderr, "[%s] Arrancando ffmpeg tras esperar keyframe...\n", sessionID)
+func startFFmpeg(sessionID string, videoTrack, audioTrack *webrtc.TrackRemote, width, height, fps int, pc *webrtc.PeerConnection) {
+	fmt.Fprintf(os.Stderr, "[%s] Arrancando ffmpeg\n", sessionID)
 
 	videoPort, audioPort, err := getTwoFreeUDPPorts()
 	if err != nil {
@@ -177,22 +151,30 @@ func startFFmpeg(sessionID string, videoTrack, audioTrack *webrtc.TrackRemote, w
 		videoCodec = "H264/90000"
 	}
 
-	// Generar SDP
 	sdp := fmt.Sprintf(`v=0
 o=- 0 0 IN IP4 127.0.0.1
 s=WebRTC Stream
 c=IN IP4 127.0.0.1
 t=0 0
+a=tool:libavformat
 m=audio %d RTP/AVP %d
 a=rtpmap:%d %s
+a=recvonly
+b=AS:12
 m=video %d RTP/AVP %d
 a=rtpmap:%d %s
+a=recvonly
 a=framerate:%d
-a=framesize:%d %d-%d
+a=fmtp:%d max-fr=%d;max-fs=%d
+a=imageattr:%d send * recv [x=%d,y=%d]
+a=rtcp-fb:%d nack pli
+b=AS:3000
 `,
 		audioPort, audioPT, audioPT, audioCodec,
 		videoPort, videoPT, videoPT, videoCodec,
-		fps, videoPT, width, height)
+		fps, videoPT, fps, (width * height / 256),
+		videoPT, width, height,
+		videoPT)
 
 	fmt.Fprintf(os.Stderr, "[%s] SDP generado:\n%s\n", sessionID, sdp)
 
@@ -203,94 +185,102 @@ a=framesize:%d %d-%d
 	}
 	fmt.Fprintf(os.Stderr, "[%s] Archivo SDP: %s\n", sessionID, sdpFile)
 
-	// Llamar ffmpeg
-	/* cmd := exec.Command("ffmpeg",
-		"-protocol_whitelist", "file,udp,rtp",
-		"-use_wallclock_as_timestamps", "1",
-		"-fflags", "+genpts",
-		"-i", sdpFile,
-		"-r", fmt.Sprintf("%d", fps),
-		"-c:v", "libx264",
-		"-crf", "0",
-		"-preset", "veryslow", // Usa slow o veryslow para calidad
-		"-tune", "psnr",
-		"-filter:a", "aresample=async=1",
-		"-c:a", "aac",
-		"-b:a", "128k",
-		"-f", "mpegts",
-		"pipe:1",
-	) */
+	time.Sleep(3 * time.Second)
 
-	cmd := exec.Command(
-		"ffmpeg",
-		"-hwaccel", "vaapi",
-		"-vaapi_device", "/dev/dri/renderD128",
-		"-protocol_whitelist", "file,udp,rtp",
-		"-use_wallclock_as_timestamps", "1",
-		"-fflags", "+genpts",
-		"-i", sdpFile,
-		"-vf", "format=nv12,hwupload",
-		"-filter:a", "aresample=async=1,asetpts=N/SR/TB",
-		"-c:v", "h264_vaapi",
-		"-qp", "10",
-		"-r", "30",
-		"-c:a", "aac",
-		"-b:a", "128k",
-		"-f", "mpegts", "pipe:1")
+	// Enviar RTCP PLI para pedir keyframe
+	go func() {
+		fmt.Fprintf(os.Stderr, "[%s] Enviando RTCP PLI para forzar keyframe...\n", sessionID)
 
-	cmd.Stderr = os.Stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[%s] Error creando stdout pipe ffmpeg: %v\n", sessionID, err)
-		return
-	}
-	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "[%s] Error lanzando ffmpeg: %v\n", sessionID, err)
-		return
-	}
+		for {
+			if pc.ConnectionState() == webrtc.PeerConnectionStateClosed {
+				return
+			}
 
-	// Conexiones UDP
+			err := pc.WriteRTCP([]rtcp.Packet{
+				&rtcp.PictureLossIndication{
+					MediaSSRC: uint32(videoTrack.SSRC()),
+				},
+			})
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[%s] Error enviando RTCP PLI: %v\n", sessionID, err)
+			} else {
+				fmt.Fprintf(os.Stderr, "[%s] RTCP PLI enviado\n", sessionID)
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
 	videoConn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: videoPort})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[%s] Error UDP video: %v\n", sessionID, err)
 		return
 	}
-	defer videoConn.Close()
 
 	audioConn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: audioPort})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[%s] Error UDP audio: %v\n", sessionID, err)
 		return
 	}
-	defer audioConn.Close()
 
-	// Enviar RTP video
+	videoBuffer := make(chan []byte, 500) // ajusta capacidad según necesidades
+	audioBuffer := make(chan []byte, 500)
+
+	// Consumidor de video: toma UN paquete, reintenta hasta éxito, luego pasa al siguiente
 	go func() {
-		for {
-			pkt, _, err := videoTrack.ReadRTP()
-			if err != nil {
+		for pkt := range videoBuffer {
+			for {
+				if _, err := videoConn.Write(pkt); err != nil {
+					fmt.Fprintf(os.Stderr, "[%s] Reintentando paquete de video: %v\n", sessionID, err)
+					time.Sleep(100 * time.Millisecond)
+					continue
+				}
 				break
 			}
-			raw, _ := pkt.Marshal()
-			videoConn.Write(raw)
 		}
 	}()
 
-	// Enviar RTP audio
+	// Consumidor de audio: idéntico
 	go func() {
-		for {
-			pkt, _, err := audioTrack.ReadRTP()
-			if err != nil {
+		for pkt := range audioBuffer {
+			for {
+				if _, err := audioConn.Write(pkt); err != nil {
+					fmt.Fprintf(os.Stderr, "[%s] Reintentando paquete de audio: %v\n", sessionID, err)
+					time.Sleep(100 * time.Millisecond)
+					continue
+				}
 				break
 			}
-			raw, _ := pkt.Marshal()
-			audioConn.Write(raw)
 		}
 	}()
 
-	fmt.Fprintf(os.Stderr, "[%s] Transmitiendo stdout de ffmpeg...\n", sessionID)
+	// Productor de video: encola **todo** (bloqueando si el buffer está lleno)
+	go func() {
+		for {
+			p, _, err := videoTrack.ReadRTP()
+			if err != nil {
+				return
+			}
+			raw, _ := p.Marshal()
+			videoBuffer <- raw
+		}
+	}()
+
+	// Productor de audio: idem
+	go func() {
+		for {
+			p, _, err := audioTrack.ReadRTP()
+			if err != nil {
+				return
+			}
+			raw, _ := p.Marshal()
+			audioBuffer <- raw
+		}
+	}()
+
+	/* fmt.Fprintf(os.Stderr, "[%s] Transmitiendo stdout de ffmpeg...\n", sessionID)
 	io.Copy(os.Stdout, stdout)
-	cmd.Wait()
+	cmd.Wait() */
 }
 
 func getTwoFreeUDPPorts() (int, int, error) {
@@ -310,4 +300,31 @@ func getTwoFreeUDPPorts() (int, int, error) {
 	addr2 := conn2.LocalAddr().(*net.UDPAddr)
 
 	return addr1.Port, addr2.Port, nil
+}
+
+func isKeyframe(pkt *rtp.Packet, mime string) bool {
+	switch mime {
+	case "video/vp8":
+		var vp8 codecs.VP8Packet
+		if _, err := vp8.Unmarshal(pkt.Payload); err != nil {
+			return false
+		}
+		if len(vp8.Payload) < 1 {
+			return false
+		}
+		return (vp8.Payload[0] & 0x01) == 0
+	case "video/h264":
+		if len(pkt.Payload) < 1 {
+			return false
+		}
+		nalType := pkt.Payload[0] & 0x1F
+		return nalType == 5
+	case "video/vp9":
+		if len(pkt.Payload) < 1 {
+			return false
+		}
+		return (pkt.Payload[0] & 0x01) == 0
+	default:
+		return false
+	}
 }
