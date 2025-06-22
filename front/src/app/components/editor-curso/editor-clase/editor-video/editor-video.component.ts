@@ -1,6 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
-import videojs from 'video.js';
 import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
 import { ClaseService } from '../../../../services/clase.service';
@@ -24,7 +23,7 @@ export class EditorVideoComponent implements AfterViewInit {
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
 
-	ngAfterViewInit(): void {
+	async ngAfterViewInit(): Promise<void> {
 		if (this.isBrowser && this.clase.direccion_clase) {
 			this.backStream = (window as any).__env?.BACK_STREAM ?? '';
 			const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
@@ -32,31 +31,35 @@ export class EditorVideoComponent implements AfterViewInit {
 				console.error('No se pudo obtener el elemento videoPlayer');
 				return;
 			}
-			const player = videojs(videoPlayer, {
-				aspectRatio: '16:9',
+			const videojsModule = await import('video.js');
+			const videojs = videojsModule.default;
+
+			// Destruye el player anterior si existe
+			if (this.player) {
+				this.player.dispose();
+			}
+
+			this.player = videojs(videoPlayer, {
 				controls: true,
-				autoplay: false,
+				autoplay: true,
 				preload: 'auto',
+				techOrder: ['html5'],
 				html5: {
-					hls: {
-						overrideNative: true,
-						enableLowLatency: true,
-					},
 					vhs: {
-						lowLatencyMode: true,
+						withCredentials: true,
 					},
 				},
 			});
 
 			console.log('cursoUrl:', this.clase.curso_clase);
 
-			player.src({
+			this.player.src({
 				src: `${this.backStream}/${this.clase.curso_clase}/${this.clase.id_clase}/master.m3u8`,
 				type: 'application/x-mpegURL',
 				withCredentials: true,
 			});
 
-			player.on('loadeddata', () => {
+			this.player.on('loadeddata', () => {
 				console.log('Archivo .m3u8 cargado correctamente');
 			});
 		}

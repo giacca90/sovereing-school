@@ -335,43 +335,6 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 				this.streamingService.emitirWebcam(event, this.clase);
 			}
 		}
-
-		/* 
-		emiteWebcam(event: MediaStream | null) {
-		if (this.editar) {
-			if (event === null) {
-				this.detenerEmision();
-				this.ready.next(false);
-				return;
-			}
-			this.streamWebcam = event;
-			if (this.editar.nombre_clase == null || this.editar.nombre_clase == '') {
-				alert('Debes poner un nombre para la clase');
-				this.ready.next(false);
-				return;
-			}
-			if (this.editar.descriccion_clase == null || this.editar.descriccion_clase == '') {
-				alert('Debes poner una descripción para la clase');
-				this.ready.next(false);
-				return;
-			}
-			if (this.editar.contenido_clase == null || this.editar.contenido_clase == '') {
-				alert('Debes poner contenido para la clase');
-				this.ready.next(false);
-				return;
-			}
-			if (!this.streamWebcam) {
-				alert('Debes conectarte primero con la webcam');
-				this.ready.next(false);
-				return;
-			} else {
-				this.ready.next(true);
-				this.streamingService.emitirWebcam(this.streamWebcam, this.editar);
-				this.editado = true;
-			}
-		}
-	}
- */
 	}
 
 	savePresets(data: any) {

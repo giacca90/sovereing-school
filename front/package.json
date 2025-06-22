@@ -32,6 +32,7 @@
 		"swiper": "^11.2.8",
 		"tslib": "^2.8.1",
 		"video.js": "^8.23.3",
+		"videojs-http-source-selector": "^1.1.6",
 		"zone.js": "~0.15.1"
 	},
 	"devDependencies": {

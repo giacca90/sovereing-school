@@ -1,4 +1,4 @@
-<video id="videoPlayer" controls src="" class="video-js vjs-default-skin vjs-big-play-centered vjs-fill dark:border dark:border-gray-400"></video>
+<video id="videoPlayer" class="video-js vjs-default-skin vjs-big-play-centered mx-auto block aspect-video w-full max-w-3xl" controls preload="auto"></video>
 <div class="flex">
 	<label for="video-upload" id="video-upload-button" class="m-2 grow cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" tabindex="0" (keydown)="keyEvent($event)"> Sube un Video </label>
 	<input id="video-upload" type="file" accept="video/mp4,video/x-m4v,video/avi,video/webm" class="hidden" (change)="cargaVideo($event)" />
