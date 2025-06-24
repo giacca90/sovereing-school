@@ -34,6 +34,9 @@ export class EditorVideoComponent implements AfterViewInit {
 			const videojsModule = await import('video.js');
 			const videojs = videojsModule.default;
 
+			// Importar quality-levels
+			await import('videojs-contrib-quality-levels');
+
 			// Destruye el player anterior si existe
 			if (this.player) {
 				this.player.dispose();
@@ -57,6 +60,136 @@ export class EditorVideoComponent implements AfterViewInit {
 				src: `${this.backStream}/${this.clase.curso_clase}/${this.clase.id_clase}/master.m3u8`,
 				type: 'application/x-mpegURL',
 				withCredentials: true,
+			});
+
+			this.player.ready(() => {
+				const qualityLevels = (this.player as any).qualityLevels();
+				qualityLevels.on('addqualitylevel', () => {
+					// ⚙️ Mostrar todas las resoluciones disponibles
+					const availableQualities = [];
+					for (let i = 0; i < qualityLevels.length; i++) {
+						const q = qualityLevels[i];
+						availableQualities.push({ index: i, height: q.height, width: q.width });
+					}
+				});
+
+				const controlBar = this.player?.getChild('ControlBar');
+				// ❗ Verificar que el botón no exista ya
+				if (controlBar?.el().querySelector('#vjs-quality-selector')) return;
+
+				// 👉 Crear contenedor del botón
+				const wrapper = document.createElement('div');
+				wrapper.id = 'vjs-quality-selector';
+				wrapper.style.position = 'relative';
+				wrapper.style.marginLeft = '10px';
+
+				// 🎯 Botón principal
+				const button = document.createElement('button');
+				button.textContent = 'Auto ▾';
+				button.style.padding = '4px';
+				button.style.margin = '4px';
+				button.style.background = '#222';
+				button.style.color = 'white';
+				button.style.border = '1px solid #444';
+				button.style.borderRadius = '4px';
+				button.style.cursor = 'pointer';
+				button.style.fontSize = '12px';
+
+				// 📋 Menú
+				const menu = document.createElement('div');
+				menu.style.position = 'absolute';
+				menu.style.bottom = '120%';
+				menu.style.left = '0';
+				menu.style.background = '#222';
+				menu.style.border = '1px solid #444';
+				menu.style.borderRadius = '4px';
+				menu.style.padding = '4px 0';
+				menu.style.display = 'none';
+				menu.style.zIndex = '1000';
+				menu.style.minWidth = '80px';
+
+				// Estado actual
+				let currentSelection = 'auto';
+
+				// 👉 Función para actualizar botón y menú
+				const updateMenuHighlight = () => {
+					const items = menu.querySelectorAll('[data-quality]');
+					items.forEach((item) => {
+						const isActive = item.getAttribute('data-quality') === currentSelection;
+						item.setAttribute(
+							'style',
+							`
+			padding: 6px 12px;
+			cursor: pointer;
+			background: ${isActive ? '#555' : 'transparent'};
+			font-weight: ${isActive ? 'bold' : 'normal'};
+			color: white;
+		`,
+						);
+					});
+					// Actualizar texto del botón
+					button.textContent = `${currentSelection === 'auto' ? 'Auto' : currentSelection + 'p'} ▾`;
+				};
+
+				// 👉 Toggle del menú
+				button.onclick = (e) => {
+					e.stopPropagation();
+					menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+				};
+
+				// ❌ Cerrar al hacer clic fuera
+				document.addEventListener('click', () => {
+					menu.style.display = 'none';
+				});
+
+				// 🔁 Escuchar calidades disponibles
+				qualityLevels.on('addqualitylevel', () => {
+					menu.innerHTML = '';
+
+					// Auto
+					const autoItem = document.createElement('div');
+					autoItem.textContent = 'Auto';
+					autoItem.setAttribute('data-quality', 'auto');
+					autoItem.onclick = () => {
+						currentSelection = 'auto';
+						for (let i = 0; i < qualityLevels.length; i++) {
+							qualityLevels[i].enabled = true;
+						}
+						updateMenuHighlight();
+						menu.style.display = 'none';
+					};
+					menu.appendChild(autoItem);
+
+					// Resolutions específicas
+					const added = new Set();
+					for (let i = 0; i < qualityLevels.length; i++) {
+						const q = qualityLevels[i];
+						const height = q.height;
+						if (added.has(height)) continue; // evitar duplicados
+						added.add(height);
+
+						const item = document.createElement('div');
+						item.textContent = `${height}p`;
+						item.setAttribute('data-quality', `${height}`);
+						item.onclick = () => {
+							currentSelection = `${height}`;
+							for (let j = 0; j < qualityLevels.length; j++) {
+								qualityLevels[j].enabled = qualityLevels[j].height === height;
+							}
+							updateMenuHighlight();
+							menu.style.display = 'none';
+						};
+
+						menu.appendChild(item);
+					}
+
+					updateMenuHighlight(); // aplicar por primera vez
+				});
+
+				// 🧱 Insertar en la barra de controles
+				wrapper.appendChild(button);
+				wrapper.appendChild(menu);
+				controlBar?.el().appendChild(wrapper);
 			});
 
 			this.player.on('loadeddata', () => {
