@@ -27,6 +27,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	public clase: Clase | null = null;
 	@ViewChild(ChatComponent, { static: false }) chatComponent!: ChatComponent;
 	backStream: string = '';
+	player: Player | null = null;
 
 	constructor(
 		private route: ActivatedRoute,
@@ -110,7 +111,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 			// Importar quality-levels
 			await import('videojs-contrib-quality-levels');
 
-			const player = videojs(video, {
+			this.player = videojs(video, {
 				controls: true,
 				autoplay: true,
 				preload: 'auto',
@@ -118,41 +119,39 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				html5: {
 					vhs: {
 						withCredentials: true,
+						enableLowInitialPlaylist: false,
+						maxBufferLength: 3, // segundos de buffer máximo (prueba con 10-20)
 					},
 				},
 			});
 
-			player.src({
+			this.player.src({
 				src: `${this.backStream}/${this.id_curso}/${this.id_clase}/master.m3u8`,
 				type: 'application/x-mpegURL',
 				withCredentials: true,
 			});
 
-			player.ready(() => {
-				const qualityLevels = (player as any).qualityLevels();
-				qualityLevels.on('addqualitylevel', () => {
-					// ⚙️ Mostrar todas las resoluciones disponibles
-					const availableQualities = [];
-					for (let i = 0; i < qualityLevels.length; i++) {
-						const q = qualityLevels[i];
-						availableQualities.push({ index: i, height: q.height, width: q.width });
-					}
-				});
+			this.player.ready(() => {
+				const qualityLevels = (this.player as any).qualityLevels();
+				const vhs = (this.player?.tech() as any).vhs;
 
-				const controlBar = player.getChild('ControlBar');
+				// ✅ Activar modo automático desde el inicio
+				for (let i = 0; i < qualityLevels.length; i++) {
+					qualityLevels[i].enabled = true;
+				}
+				vhs.autoLevelEnabled = true;
+
+				const controlBar = this.player?.getChild('ControlBar');
 				const progressControl = controlBar?.getChild('ProgressControl');
 				const seekBar = progressControl?.getChild('SeekBar');
 
-				// ❗ Verificar que el botón no exista ya
 				if (controlBar?.el().querySelector('#vjs-quality-selector')) return;
 
-				// 👉 Crear contenedor del botón
 				const wrapper = document.createElement('div');
 				wrapper.id = 'vjs-quality-selector';
 				wrapper.style.position = 'relative';
 				wrapper.style.marginLeft = '10px';
 
-				// 🎯 Botón principal
 				const button = document.createElement('button');
 				button.textContent = 'Auto ▾';
 				button.style.padding = '4px';
@@ -164,7 +163,6 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				button.style.cursor = 'pointer';
 				button.style.fontSize = '12px';
 
-				// 📋 Menú
 				const menu = document.createElement('div');
 				menu.style.position = 'absolute';
 				menu.style.bottom = '120%';
@@ -177,10 +175,8 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				menu.style.zIndex = '1000';
 				menu.style.minWidth = '80px';
 
-				// Estado actual
 				let currentSelection = 'auto';
 
-				// 👉 Función para actualizar botón y menú
 				const updateMenuHighlight = () => {
 					const items = menu.querySelectorAll('[data-quality]');
 					items.forEach((item) => {
@@ -188,31 +184,37 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 						item.setAttribute(
 							'style',
 							`
-			padding: 6px 12px;
-			cursor: pointer;
-			background: ${isActive ? '#555' : 'transparent'};
-			font-weight: ${isActive ? 'bold' : 'normal'};
-			color: white;
-		`,
+								padding: 6px 12px;
+								cursor: pointer;
+								background: ${isActive ? '#555' : 'transparent'};
+								font-weight: ${isActive ? 'bold' : 'normal'};
+								color: white;
+							`,
 						);
 					});
-					// Actualizar texto del botón
 					button.textContent = `${currentSelection === 'auto' ? 'Auto' : currentSelection + 'p'} ▾`;
 				};
 
-				// 👉 Toggle del menú
 				button.onclick = (e) => {
 					e.stopPropagation();
 					menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 				};
 
-				// ❌ Cerrar al hacer clic fuera
 				document.addEventListener('click', () => {
 					menu.style.display = 'none';
 				});
 
-				// 🔁 Escuchar calidades disponibles
+				const added = new Set();
 				qualityLevels.on('addqualitylevel', () => {
+					let changes = false;
+					for (let i = 0; i < qualityLevels.length; i++) {
+						if (!added.has(qualityLevels[i].height)) {
+							added.add(qualityLevels[i].height);
+							changes = true;
+						}
+					}
+					if (!changes) return;
+
 					menu.innerHTML = '';
 
 					// Auto
@@ -224,51 +226,91 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 						for (let i = 0; i < qualityLevels.length; i++) {
 							qualityLevels[i].enabled = true;
 						}
+						vhs.autoLevelEnabled = true;
+
+						// Forzar el estimador de ancho de banda a un valor alto (ejemplo: 5 Mbps)
+						if (vhs && vhs.bandwidthEstimator && typeof vhs.bandwidthEstimator.sample === 'function') {
+							vhs.bandwidthEstimator.sample(5_000_000, 1000); // 5 Mbps en 1s
+						}
+
 						updateMenuHighlight();
 						menu.style.display = 'none';
 					};
 					menu.appendChild(autoItem);
 
-					// Resolutions específicas
-					const added = new Set();
-					for (let i = 0; i < qualityLevels.length; i++) {
-						const q = qualityLevels[i];
-						const height = q.height;
-						if (added.has(height)) continue; // evitar duplicados
-						added.add(height);
+					Array.from(added)
+						.sort((a: any, b: any) => b - a)
+						.forEach((height) => {
+							const item = document.createElement('div');
+							item.textContent = `${height}p`;
+							item.setAttribute('data-quality', `${height}`);
+							item.onclick = () => {
+								currentSelection = `${height}`;
+								for (let j = 0; j < qualityLevels.length; j++) {
+									qualityLevels[j].enabled = qualityLevels[j].height === height;
+								}
+								if (vhs && typeof vhs.autoLevelEnabled !== 'undefined') {
+									vhs.autoLevelEnabled = false;
+								}
+								const player = this.player;
+								const originalTime = player?.currentTime();
+								const buffered = player?.buffered();
+								let seeked = false;
+								let jump = null;
 
-						const item = document.createElement('div');
-						item.textContent = `${height}p`;
-						item.setAttribute('data-quality', `${height}`);
-						item.onclick = () => {
-							currentSelection = `${height}`;
-							for (let j = 0; j < qualityLevels.length; j++) {
-								qualityLevels[j].enabled = qualityLevels[j].height === height;
-							}
-							updateMenuHighlight();
-							menu.style.display = 'none';
-						};
+								if (buffered && buffered.length && originalTime) {
+									for (let i = 0; i < buffered.length; i++) {
+										const start = buffered.start(i);
+										const end = buffered.end(i);
+										if (originalTime >= start && originalTime <= end) {
+											const duration = player?.duration();
+											jump = end + 0.05;
+											if (duration && jump >= duration) {
+												jump = start > 0.05 ? start - 0.05 : 0;
+											}
+											player?.currentTime(jump);
+											seeked = true;
+											break;
+										}
+									}
+								}
+								if (!seeked && typeof originalTime === 'number') {
+									const duration = player?.duration();
+									if (duration) {
+										jump = originalTime + 0.1 < duration ? originalTime + 0.1 : originalTime - 0.1;
+										player?.currentTime(jump);
+									}
+								}
 
-						menu.appendChild(item);
-					}
+								// Volver al punto original tras el seek
+								if (typeof originalTime === 'number') {
+									player?.one('seeked', () => {
+										setTimeout(() => {
+											player.currentTime(originalTime);
+										}, 100); // pequeño retardo para asegurar el cambio de calidad
+									});
+								}
 
-					updateMenuHighlight(); // aplicar por primera vez
+								updateMenuHighlight();
+								menu.style.display = 'none';
+							};
+							menu.appendChild(item);
+						});
+
+					updateMenuHighlight();
 				});
 
-				// 🧱 Insertar en la barra de controles
 				wrapper.appendChild(button);
 				wrapper.appendChild(menu);
 				controlBar?.el().appendChild(wrapper);
 
-				// Parte de gestión de las preguntas
 				if (seekBar) {
 					seekBar.on('contextmenu', (event: MouseEvent) => {
 						event.preventDefault();
 						const rect = seekBar.el().getBoundingClientRect();
 						const clickPosition = event.clientX - rect.left;
 						const clickRatio = clickPosition / rect.width;
-						const duration = player.duration();
-
+						const duration = this.player?.duration?.();
 						if (duration) {
 							const timeInSeconds = clickRatio * duration;
 							this.muestraCortina(event.clientX, event.clientY, timeInSeconds);
@@ -279,7 +321,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				this.loading = false;
 
 				if (this.momento) {
-					player.currentTime(this.momento > 3 ? this.momento - 3 : this.momento);
+					this.player?.currentTime(this.momento > 3 ? this.momento - 3 : this.momento);
 					this.router.navigate([], {
 						queryParams: { momento: null },
 						queryParamsHandling: 'merge',
@@ -290,8 +332,10 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				this.cdr.detectChanges();
 			});
 
-			player.on('play', () => {
-				this.esperarChatComponent(player);
+			this.player.on('play', () => {
+				if (this.player) {
+					this.esperarChatComponent(this.player);
+				}
 			});
 		} catch (error) {
 			console.error('Error loading video:', error);
