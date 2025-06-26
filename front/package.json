@@ -19,7 +19,7 @@
 		"@angular/forms": "^20.0.4",
 		"@angular/platform-browser": "^20.0.4",
 		"@angular/platform-browser-dynamic": "^20.0.4",
-		"@angular/platform-server": "^20.0.4",
+		"@angular/platform-server": "^20.0.5",
 		"@angular/router": "^20.0.4",
 		"@angular/ssr": "^20.0.3",
 		"@stomp/stompjs": "^7.1.1",
