@@ -23,7 +23,7 @@
 		"@angular/router": "^20.0.5",
 		"@angular/ssr": "^20.0.4",
 		"@stomp/stompjs": "^7.1.1",
-		"@tailwindcss/postcss": "^4.1.10",
+		"@tailwindcss/postcss": "^4.1.11",
 		"@types/video.js": "^7.3.58",
 		"@videojs/http-streaming": "^3.15.0",
 		"express": "^5.1.0",
