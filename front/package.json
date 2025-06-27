@@ -62,7 +62,7 @@
 		"prettier": "^3.6.1",
 		"prettier-plugin-tailwindcss": "^0.6.13",
 		"tailwind-scrollbar": "^4.0.2",
-		"tailwindcss": "^4.1.10",
+		"tailwindcss": "^4.1.11",
 		"ts-node": "^10.9.2",
 		"typescript": "~5.8.3"
 	},
