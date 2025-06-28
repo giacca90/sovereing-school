@@ -188,6 +188,9 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 					// Webcam
 					// Recuperar los presets del usuario
 					if (this.savedPresets === null) {
+						this.preparaWebcam();
+					}
+					if (this.savedPresets === null) {
 						this.streamingService.getPresets().subscribe({
 							next: (res) => {
 								try {
@@ -217,43 +220,6 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 		}, 100);
 	}
 
-	// TODO: Mover al componente que lo necesite
-	/* async startVideoJS() {
-		if (!this.isBrowser) return;
-
-		// Dinámicamente importa video.js solo en el navegador
-		const videojsModule = await import('video.js');
-		const videojs = videojsModule.default;
-
-		window.scrollTo(0, 0);
-		document.body.style.overflow = 'hidden';
-
-		const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
-
-		if (videoPlayer && this.clase.direccion_clase && this.clase.direccion_clase.endsWith('.m3u8')) {
-			this.player = videojs(videoPlayer, {
-				aspectRatio: '16:9',
-				controls: true,
-				autoplay: false,
-				preload: 'auto',
-			});
-
-			this.player.src({
-				src: `${this.backBase}/${this.loginService.usuario?.id_usuario}/${this.clase.curso_clase}/${this.clase.id_clase}/master.m3u8`,
-				type: 'application/x-mpegURL',
-				withCredentials: true,
-			});
-		} else {
-			console.error('No se pudo obtener video.js');
-		}
-	}
- */
-	/* ngAfterViewInit(): void {
-		if (this.isBrowser) {
-			this.videojs = require('video.js'); // 👈 importante: cargarlo dinámicamente
-		}
-	} */
-
 	ngOnDestroy(): void {
 		this.subscription.unsubscribe();
 		document.body.style.overflow = 'auto';
@@ -264,8 +230,8 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 	}
 
 	// Recuperar imagenes del curso y del usuario para el componente WebOBS
-	preparaWebcam() {
-		/* if (this.curso && this.curso.imagen_curso) {
+	async preparaWebcam() {
+		if (this.curso && this.curso.imagen_curso) {
 			fetch(this.curso.imagen_curso, { credentials: 'include' }).then((response) => {
 				response.blob().then((blob) => {
 					if (!this.curso) return;
@@ -281,10 +247,7 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 					}
 				});
 			});
-		} */
-
-		// TODO: Crear una función en claseService para obtener todo lo necesario
-		this.cursoService.cursos.filter((curso) => curso.id_curso === this.clase.curso_clase).forEach((curso) => {});
+		}
 
 		this.loginService.usuario?.foto_usuario.forEach((foto) => {
 			console.log('Foto del usuario:', foto);

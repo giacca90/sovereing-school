@@ -108,18 +108,19 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 		const drawFrame = () => {
 			if (!this.canvas || !this.context) return;
 			this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-			this.videosElements.forEach((elemento) => {
-				if (!elemento.painted || !elemento.position || !this.context) return;
-				if (elemento.element instanceof HTMLVideoElement) {
-					const videoWidth = elemento.element.videoWidth * elemento.scale;
-					const videoHeight = elemento.element.videoHeight * elemento.scale;
-					this.context.drawImage(elemento.element, elemento.position.x, elemento.position.y, videoWidth, videoHeight);
-				} else if (elemento.element instanceof HTMLImageElement) {
-					const imageWidth = elemento.element.naturalWidth * elemento.scale;
-					const imageHeight = elemento.element.naturalHeight * elemento.scale;
-					this.context.drawImage(elemento.element, elemento.position.x, elemento.position.y, imageWidth, imageHeight);
-				}
-			});
+			this.videosElements
+				.filter((elemento) => elemento.painted && elemento.position && elemento.element)
+				.forEach((elemento) => {
+					if (elemento.element instanceof HTMLVideoElement && elemento.position) {
+						const videoWidth = elemento.element.videoWidth * elemento.scale;
+						const videoHeight = elemento.element.videoHeight * elemento.scale;
+						this.context?.drawImage(elemento.element, elemento.position.x, elemento.position.y, videoWidth, videoHeight);
+					} else if (elemento.element instanceof HTMLImageElement && elemento.position) {
+						const imageWidth = elemento.element.naturalWidth * elemento.scale;
+						const imageHeight = elemento.element.naturalHeight * elemento.scale;
+						this.context?.drawImage(elemento.element, elemento.position.x, elemento.position.y, imageWidth, imageHeight);
+					}
+				});
 		};
 
 		this.drawInterval = setInterval(drawFrame, 1000 / this.canvasFPS);
