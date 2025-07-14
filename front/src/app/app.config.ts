@@ -2,7 +2,7 @@ import { ApplicationConfig, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { provideClientHydration } from '@angular/platform-browser';
+import { provideClientHydration, withHttpTransferCacheOptions } from '@angular/platform-browser';
 
 import { routes } from './app.routes';
 import { jwtRefreshInterceptor } from './interceptors/jwt-refresh.interceptor';
@@ -14,7 +14,11 @@ import { InitService } from './services/init.service';
 export const appConfig: ApplicationConfig = {
 	providers: [
 		provideRouter(routes),
-		provideClientHydration(),
+		provideClientHydration(
+			withHttpTransferCacheOptions({
+				includePostRequests: true,
+			}),
+		),
 		provideHttpClient(withFetch(), withInterceptors([jwtInterceptor, jwtRefreshInterceptor])),
 
 		provideAppInitializer(() => {

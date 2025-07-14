@@ -46,6 +46,8 @@ export class HomeComponent {
 		pauseOnMouseEnter: true, // pausa cuando el mouse está encima (ideal en desktop)
 	};
 
+	isBrowser = typeof window !== 'undefined';
+
 	constructor(
 		public cursoService: CursosService,
 		private usuarioService: UsuariosService,
