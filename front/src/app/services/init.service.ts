@@ -33,7 +33,7 @@ export class InitService {
 		if (typeof window !== 'undefined' && (window as any).__env) {
 			return (window as any).__env.BACK_BASE + '/init';
 		}
-		return 'http://sovschool-back-base:8080/init'; // o usar process.env si querés algo más flexible
+		return 'https://localhost:8080/init'; // o usar process.env si querés algo más flexible
 	}
 
 	async carga(): Promise<boolean> {
@@ -50,6 +50,7 @@ export class InitService {
 		}
 
 		try {
+			console.log('RUTA: ', this.apiUrl);
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {

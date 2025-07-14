@@ -1,5 +1,5 @@
 <div class="h-80 w-full sm:h-64">
-	@if (this.cursoService.cursos.length > 0) {
+	@if (isBrowser && this.cursoService.cursos.length > 0) {
 		<swiper-container #swiper [breakpoints]="responsiveOptions" [autoplay]="autoplayOptions" loop="true" class="h-80 w-full sm:h-64">
 			@for (curso of this.cursoService.cursos; track curso.id_curso) {
 				<swiper-slide>
