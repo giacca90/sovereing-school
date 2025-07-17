@@ -32,31 +32,39 @@ export class InitService {
 	get apiUrl(): string {
 		if (typeof window !== 'undefined' && (window as any).__env) {
 			return (window as any).__env.BACK_BASE + '/init';
+		} else if (process.env['BACK_BASE']) {
+			return process.env['BACK_BASE'] + '/init';
 		}
 		return 'https://localhost:8080/init'; // o usar process.env si querés algo más flexible
 	}
 
 	async carga(): Promise<boolean> {
 		if (this.initDataCache) {
+			console.log('>>> Usando initCache en memoria');
 			this.cargarEnServicios(this.initDataCache);
 			return true;
 		}
 
 		if (this.transferState.hasKey(INIT_KEY)) {
+			console.log('>>> Usando transferState en memoria');
 			const data = this.transferState.get(INIT_KEY, null as any);
-			this.transferState.remove(INIT_KEY);
+			//this.transferState.remove(INIT_KEY);
 			this.cargarEnServicios(data);
 			return true;
+		} else {
 		}
 
 		try {
-			console.log('RUTA: ', this.apiUrl);
+			console.log('>>> Pidiendo /init al backend');
+			console.log('TransferState: ', this.transferState.toJson().toString());
+
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {
 				this.initDataCache = response;
 				this.transferState.set(INIT_KEY, response);
 				console.log('[InitService] Datos cargados en cache:', response);
+				console.log('TransferState: ', this.transferState.toJson().toString());
 			}
 
 			this.cargarEnServicios(response);

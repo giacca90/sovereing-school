@@ -2,8 +2,8 @@
 	"name": "front",
 	"version": "0.0.1",
 	"scripts": {
+		"dev": "clear; NODE_TLS_REJECT_UNAUTHORIZED=0 ng serve --ssl --ssl-cert ./cert.pem --ssl-key ./key.pem --no-hmr",
 		"ng": "ng",
-		"dev": "clear; ng serve --ssl --ssl-cert ./cert.pem --ssl-key ./key.pem --no-hmr",
 		"start": "ng serve",
 		"build": "ng build",
 		"watch": "ng build --watch --configuration development",
@@ -27,6 +27,7 @@
 		"@tailwindcss/postcss": "^4.1.11",
 		"@types/video.js": "^7.3.58",
 		"@videojs/http-streaming": "^3.15.0",
+		"axios": "^1.10.0",
 		"express": "^5.1.0",
 		"rxjs": "~7.8.2",
 		"sockjs-client": "^1.6.1",
