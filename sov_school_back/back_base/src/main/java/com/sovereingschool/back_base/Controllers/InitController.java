@@ -25,6 +25,7 @@ public class InitController {
 
     @GetMapping()
     public ResponseEntity<?> getInit() {
+        System.out.println("Llegada solicitud de inicialización");
         Object response = new Object();
         try {
             response = this.initAppService.getInit();
