@@ -2,10 +2,6 @@
 	color: rgb(150, 150, 150);
 }
 
-::ng-deep input {
-	padding-left: 10px;
-}
-
 :host {
 	min-height: 100%;
 	max-height: 500%;

@@ -1,10 +1,11 @@
 import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output, QueryList, ViewChildren } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 
 @Component({
 	selector: 'WebOBS',
 	standalone: true,
-	imports: [],
+	imports: [FormsModule],
 	templateUrl: './editor-webcam.component.html',
 	styleUrls: ['./editor-webcam.component.css'],
 })
@@ -36,6 +37,7 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 	tiempoGrabacion: string = '00:00:00';
 	ready: boolean | undefined;
 	private drawInterval: any;
+	selectedVideoForFilter: VideoElement | null = null;
 	@ViewChildren('videoElement') videoElements!: QueryList<ElementRef<HTMLVideoElement>>;
 	@Input() savedFiles?: File[] | null; // Files guardados del usuario
 	@Input() savedPresets?: Map<string, { elements: VideoElement[]; shortcut: string }> | null; //Presets guardados del usuario
@@ -114,10 +116,24 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 					if (elemento.element instanceof HTMLVideoElement && elemento.position) {
 						const videoWidth = elemento.element.videoWidth * elemento.scale;
 						const videoHeight = elemento.element.videoHeight * elemento.scale;
+						if (this.context) {
+							if (elemento.filters) {
+								this.context.filter = `brightness(${elemento.filters.brightness}%) contrast(${elemento.filters.contrast}%) saturate(${elemento.filters.saturation}%)`;
+							} else {
+								this.context.filter = '';
+							}
+						}
 						this.context?.drawImage(elemento.element, elemento.position.x, elemento.position.y, videoWidth, videoHeight);
 					} else if (elemento.element instanceof HTMLImageElement && elemento.position) {
 						const imageWidth = elemento.element.naturalWidth * elemento.scale;
 						const imageHeight = elemento.element.naturalHeight * elemento.scale;
+						if (this.context) {
+							if (elemento.filters) {
+								this.context.filter = `brightness(${elemento.filters.brightness}%) contrast(${elemento.filters.contrast}%) saturate(${elemento.filters.saturation}%)`;
+							} else {
+								this.context.filter = '';
+							}
+						}
 						this.context?.drawImage(elemento.element, elemento.position.x, elemento.position.y, imageWidth, imageHeight);
 					}
 				});
@@ -321,11 +337,11 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 			let capabilities = null;
 			if (typeof videoTrack.getCapabilities === 'function') {
 				capabilities = videoTrack.getCapabilities(); // Capacidades del dispositivo
-				console.log('Capabilities:', capabilities.width?.max, 'x', capabilities.height?.max);
+				//console.log('Capabilities:', capabilities.width?.max, 'x', capabilities.height?.max);
 			}
 			let settings = videoTrack.getSettings(); // Configuración actual
 
-			console.log('Current Settings:', settings.width, 'x', settings.height);
+			//console.log('Current Settings:', settings.width, 'x', settings.height);
 
 			stream.getTracks().forEach((track) => {
 				track.stop();
@@ -377,6 +393,7 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 					position: null,
 				};
 				this.videosElements.push(ele);
+				div.style.filter = ele.filters ? `brightness(${ele.filters.brightness}%) contrast(${ele.filters.contrast}%) saturate(${ele.filters.saturation}%)` : '';
 			}
 		} catch (error) {
 			console.error('Error al obtener el stream de video:', error);
@@ -890,6 +907,7 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 	// Empieza el arrastre de un elemento
 	mousedown(event: MouseEvent, deviceId: string): void {
 		event.preventDefault();
+
 		const videoElement = document.getElementById(deviceId) as HTMLVideoElement;
 		if (!videoElement) {
 			console.error('No hay videoElement');
@@ -1121,6 +1139,63 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 			document.body.classList.remove('cursor-grabbing');
 		};
 		document.addEventListener('mouseup', mouseup);
+	}
+
+	// Método para mostrar el menú de filtros
+	showFilterMenu(event: MouseEvent, ele: VideoElement) {
+		event.preventDefault(); // Bloquea el menú contextual del navegador
+		event.stopPropagation();
+
+		if (!ele.filters) {
+			ele.filters = {
+				brightness: 100,
+				contrast: 100,
+				saturation: 100,
+			};
+		}
+
+		const filterMenu = document.querySelector('#filterMenu') as HTMLDivElement;
+		if (!filterMenu) return;
+
+		// Mostrar el menú
+		filterMenu.style.display = 'flex';
+
+		// Calcular posición evitando que se salga de la pantalla
+		const menuWidth = filterMenu.offsetWidth;
+		const menuHeight = filterMenu.offsetHeight;
+		const screenWidth = window.innerWidth;
+		const screenHeight = window.innerHeight;
+
+		let left = event.pageX;
+		let top = event.pageY;
+
+		if (left + menuWidth > screenWidth) {
+			left = screenWidth - menuWidth - 5; // margen de 5px
+		}
+		if (top + menuHeight > screenHeight) {
+			top = screenHeight - menuHeight - 5;
+		}
+
+		filterMenu.style.left = `${left}px`;
+		filterMenu.style.top = `${top}px`;
+
+		// Función para cerrar el menú
+		const closeFilterMenu = (e: Event) => {
+			if (!filterMenu.contains(e.target as Node)) {
+				this.selectedVideoForFilter = null;
+				filterMenu.style.display = 'none';
+				document.removeEventListener('pointerdown', closeFilterMenu);
+				window.removeEventListener('scroll', closeFilterMenu);
+				window.removeEventListener('resize', closeFilterMenu);
+			}
+		};
+
+		// Escuchar clics fuera, scroll y resize para cerrar
+		setTimeout(() => {
+			document.addEventListener('pointerdown', closeFilterMenu);
+			window.addEventListener('scroll', closeFilterMenu);
+			window.addEventListener('resize', closeFilterMenu);
+		}, 0);
 	}
 
 	canvasMouseMove(event: MouseEvent) {
@@ -1695,6 +1770,12 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 				controllers.appendChild(control);
 			}
 
+			// Añade el evento contextmenu
+			capa.addEventListener('contextmenu', (event) => {
+				this.selectedVideoForFilter = elemento;
+				this.showFilterMenu(event, elemento);
+			});
+
 			div.appendChild(capa);
 		}
 	}
@@ -2092,6 +2173,33 @@ export class EditorWebcamComponent implements OnInit, AfterViewInit, OnDestroy {
 	savePresetsFunction() {
 		this.savePresets.emit(this.presets);
 	}
+
+	onContextMenu($event: MouseEvent, deviceId: string) {
+		$event.preventDefault();
+		const videoElement = document.getElementById(deviceId) as HTMLVideoElement;
+		if (!videoElement) {
+			console.error('No hay videoElement');
+			return;
+		}
+		const ele = this.videosElements.find((el) => el.id === deviceId);
+		if (!ele || !this.canvas) {
+			console.error('No hay elemento');
+			return;
+		}
+		this.selectedVideoForFilter = ele;
+		this.showFilterMenu($event, ele);
+	}
+
+	updateStyleElement() {
+		if (!this.selectedVideoForFilter) return;
+		const videoElement = document.getElementById(this.selectedVideoForFilter.id) as HTMLVideoElement;
+		if (!videoElement) return;
+		if (this.selectedVideoForFilter.filters) {
+			videoElement.style.filter = `brightness(${this.selectedVideoForFilter.filters.brightness}%) contrast(${this.selectedVideoForFilter.filters.contrast}%) saturate(${this.selectedVideoForFilter.filters.saturation}%)`;
+		} else {
+			videoElement.style.filter = '';
+		}
+	}
 }
 
 // Interface para el elemento de video
@@ -2101,6 +2209,11 @@ export interface VideoElement {
 	painted: boolean;
 	scale: number;
 	position: { x: number; y: number } | null;
+	filters?: {
+		brightness: number;
+		contrast: number;
+		saturation: number;
+	};
 }
 
 // Interface para el elemento de audio
