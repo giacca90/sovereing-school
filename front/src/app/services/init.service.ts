@@ -63,8 +63,8 @@ export class InitService {
 			if (isPlatformServer(this.platformId)) {
 				this.initDataCache = response;
 				this.transferState.set(INIT_KEY, response);
-				console.log('[InitService] Datos cargados en cache:', response);
-				console.log('TransferState: ', this.transferState.toJson().toString());
+				/* console.log('[InitService] Datos cargados en cache:', response);
+				console.log('TransferState: ', this.transferState.toJson().toString()); */
 			}
 
 			this.cargarEnServicios(response);
