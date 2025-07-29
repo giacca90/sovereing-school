@@ -1,4 +1,3 @@
-// src/app/services/init.service.ts
 import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID, TransferState, makeStateKey } from '@angular/core';
@@ -11,6 +10,9 @@ import { CursosService } from './cursos.service';
 import { UsuariosService } from './usuarios.service';
 
 const INIT_KEY = makeStateKey<Init>('init-data');
+
+// Caché global para SSR (vive mientras dure el proceso del servidor)
+const globalCache: { init?: Init; timestamp?: number } = {};
 
 @Injectable({ providedIn: 'root' })
 export class InitService {
@@ -35,40 +37,57 @@ export class InitService {
 		} else if (process.env['BACK_BASE']) {
 			return process.env['BACK_BASE'] + '/init';
 		}
-		return 'https://localhost:8080/init'; // o usar process.env si querés algo más flexible
+		return 'https://localhost:8080/init';
 	}
 
 	async carga(): Promise<boolean> {
+		// 1. Cache en memoria del cliente (SPA)
 		if (this.initDataCache) {
 			console.log('>>> Usando initCache en memoria');
-			console.log('initDataCache: ', this.initDataCache);
 			this.cargarEnServicios(this.initDataCache);
 			return true;
 		}
 
+		// 2. TransferState (del SSR al browser)
 		if (this.transferState.hasKey(INIT_KEY)) {
-			console.log('>>> Usando transferState en memoria');
+			console.log('>>> Usando TransferState');
 			const data = this.transferState.get(INIT_KEY, null as any);
-			//this.transferState.remove(INIT_KEY);
+
+			// Hacemos la llamada para que el backend setee la cookie en el browser
 			if (isPlatformBrowser(this.platformId)) {
-				this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }).subscribe((res) => {
-					console.log('Auth: ', res);
-				});
+				this.http.get<string>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }).subscribe();
 			}
+
 			this.cargarEnServicios(data);
 			return true;
 		}
 
+		// 3. Caché global para SSR (evita llamar al backend en cada request)
+		if (isPlatformServer(this.platformId)) {
+			const isValid = globalCache.init && Date.now() - (globalCache.timestamp ?? 0) < 5 * 60 * 1000; // 5 minutos
+			if (isValid) {
+				console.log('>>> Usando cache global SSR');
+				this.cargarEnServicios(globalCache.init!);
+				this.transferState.set(INIT_KEY, globalCache.init!);
+				return true;
+			}
+		}
+
+		// 4. Fetch real al backend
 		try {
 			console.log('>>> Pidiendo /init al backend');
-
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {
-				this.initDataCache = response;
+				// Guardamos en cache global SSR
+				globalCache.init = response;
+				globalCache.timestamp = Date.now();
+
+				// Pasamos datos al browser
 				this.transferState.set(INIT_KEY, response);
-				/* console.log('[InitService] Datos cargados en cache:', response);
-				console.log('TransferState: ', this.transferState.toJson().toString()); */
+			} else {
+				// Guardamos en cache local del cliente
+				this.initDataCache = response;
 			}
 
 			this.cargarEnServicios(response);
@@ -81,9 +100,9 @@ export class InitService {
 
 	private cargarEnServicios(data: Init) {
 		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.id_usuario, profe.nombre_usuario, profe.foto_usuario, profe.presentacion));
+
 		this.cursoService.cursos = data.cursosInit.map((curso) => {
 			const profes = curso.profesores_curso.map((id) => this.usuarioService.profes.find((p) => p.id_usuario === id)).filter(Boolean) as Usuario[];
-
 			return new Curso(curso.id_curso, curso.nombre_curso, profes, curso.descriccion_corta, curso.imagen_curso);
 		});
 
