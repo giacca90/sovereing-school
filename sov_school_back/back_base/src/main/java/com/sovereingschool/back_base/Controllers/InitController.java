@@ -46,4 +46,20 @@ public class InitController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/auth")
+    public ResponseEntity<?> auth() {
+        String initToken = this.initAppService.getInitToken();
+        ResponseCookie initTokenCookie = ResponseCookie.from("initToken", initToken)
+                .httpOnly(true) // No accesible desde JavaScript
+                .secure(true) // Solo por HTTPS
+                .path("/") // Ruta donde será accesible
+                .sameSite("None") // Cambia a "None" si trabajas con frontend separado
+                .build();
+
+        return ResponseEntity.ok()
+                .header("Set-Cookie", initTokenCookie.toString())
+                .body("OK");
+    }
+
 }

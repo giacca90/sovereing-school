@@ -1,5 +1,5 @@
 // src/app/services/init.service.ts
-import { isPlatformServer } from '@angular/common';
+import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID, TransferState, makeStateKey } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
@@ -41,6 +41,7 @@ export class InitService {
 	async carga(): Promise<boolean> {
 		if (this.initDataCache) {
 			console.log('>>> Usando initCache en memoria');
+			console.log('initDataCache: ', this.initDataCache);
 			this.cargarEnServicios(this.initDataCache);
 			return true;
 		}
@@ -49,14 +50,17 @@ export class InitService {
 			console.log('>>> Usando transferState en memoria');
 			const data = this.transferState.get(INIT_KEY, null as any);
 			//this.transferState.remove(INIT_KEY);
+			if (isPlatformBrowser(this.platformId)) {
+				this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }).subscribe((res) => {
+					console.log('Auth: ', res);
+				});
+			}
 			this.cargarEnServicios(data);
 			return true;
-		} else {
 		}
 
 		try {
 			console.log('>>> Pidiendo /init al backend');
-			console.log('TransferState: ', this.transferState.toJson().toString());
 
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
@@ -77,7 +81,6 @@ export class InitService {
 
 	private cargarEnServicios(data: Init) {
 		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.id_usuario, profe.nombre_usuario, profe.foto_usuario, profe.presentacion));
-
 		this.cursoService.cursos = data.cursosInit.map((curso) => {
 			const profes = curso.profesores_curso.map((id) => this.usuarioService.profes.find((p) => p.id_usuario === id)).filter(Boolean) as Usuario[];
 
