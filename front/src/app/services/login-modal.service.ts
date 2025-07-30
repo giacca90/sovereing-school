@@ -15,5 +15,4 @@ export class LoginModalService {
 	hide() {
 		this.isVisible.next(false);
 	}
-
 }

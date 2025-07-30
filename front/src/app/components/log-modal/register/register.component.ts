@@ -16,6 +16,14 @@ export class RegisterComponent implements OnDestroy {
 
 	private nuevoUsuario: NuevoUsuario = new NuevoUsuario();
 	private fase: number = 0;
+	private keyEvent = (e: KeyboardEvent) => {
+		if (e.key === 'Enter') {
+			this.fase === 0 ? this.compruebaCorreo() : this.fase === 1 ? this.compruebaPassword() : this.close();
+		}
+		if (e.key === 'Escape') {
+			this.close();
+		}
+	};
 
 	constructor(
 		private modalService: LoginModalService,
@@ -23,19 +31,13 @@ export class RegisterComponent implements OnDestroy {
 		private registerService: RegisterService,
 	) {
 		afterNextRender(() => {
-			document.addEventListener('keydown', (e: KeyboardEvent) => {
-				if (e.key === 'Enter') {
-					this.fase === 0 ? this.compruebaCorreo() : this.fase === 1 ? this.compruebaPassword() : this.close();
-				}
-				if (e.key === 'Escape') {
-					this.close();
-				}
-			});
+			document.addEventListener('keydown', this.keyEvent);
 		});
 	}
 
 	ngOnDestroy(): void {
 		this.nuevoUsuario = new NuevoUsuario();
+		document.removeEventListener('keydown', this.keyEvent);
 	}
 
 	close() {

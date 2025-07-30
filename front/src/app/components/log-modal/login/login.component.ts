@@ -1,4 +1,4 @@
-import { afterNextRender, Component, EventEmitter, Output } from '@angular/core';
+import { afterNextRender, Component, EventEmitter, OnDestroy, Output } from '@angular/core';
 import { LoginModalService } from '../../../services/login-modal.service';
 import { LoginService } from '../../../services/login.service';
 
@@ -9,24 +9,26 @@ import { LoginService } from '../../../services/login.service';
 	templateUrl: './login.component.html',
 	styleUrl: './login.component.css',
 })
-export class LoginComponent {
+export class LoginComponent implements OnDestroy {
 	@Output() oauth2: EventEmitter<string> = new EventEmitter<string>();
 	private fase: number = 0;
+	private keyEvent = (e: KeyboardEvent) => {
+		if (e.key === 'Enter') {
+			this.fase === 0 ? this.compruebaCorreo() : this.compruebaPassword();
+		} else if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'Delete') {
+			this.close();
+		}
+	};
 	constructor(
 		private modalService: LoginModalService,
 		private loginService: LoginService,
 	) {
 		afterNextRender(() => {
-			document.addEventListener('keydown', (e: KeyboardEvent) => {
-				if (e.key === 'Enter') {
-					this.fase === 0 ? this.compruebaCorreo() : this.compruebaPassword();
-					this.compruebaCorreo();
-				}
-				if (e.key === 'Escape') {
-					this.close();
-				}
-			});
+			document.addEventListener('keydown', this.keyEvent);
 		});
+	}
+	ngOnDestroy(): void {
+		document.removeEventListener('keydown', this.keyEvent);
 	}
 
 	close() {

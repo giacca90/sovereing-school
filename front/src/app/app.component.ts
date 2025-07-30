@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { LogModalComponent } from './components/log-modal/log-modal.component';
@@ -25,6 +25,7 @@ export class AppComponent implements OnInit, OnDestroy {
 		private modalService: LoginModalService,
 		public loginService: LoginService,
 		public router: Router,
+		private cdr: ChangeDetectorRef,
 	) {}
 
 	ngOnInit() {
@@ -40,6 +41,7 @@ export class AppComponent implements OnInit, OnDestroy {
 		this.subscription.add(
 			this.modalService.isVisible$.subscribe((isVisible) => {
 				this.isModalVisible = isVisible;
+				this.cdr.detectChanges();
 			}),
 		);
 	}
