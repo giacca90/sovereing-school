@@ -59,6 +59,7 @@ export class LogModalComponent implements AfterViewInit {
 	}
 
 	close() {
+		alert('close externo');
 		this.modalService.hide();
 	}
 

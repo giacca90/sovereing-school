@@ -1,4 +1,4 @@
-import { afterNextRender, Component, EventEmitter, OnDestroy, Output } from '@angular/core';
+import { afterNextRender, Component, EventEmitter, Output } from '@angular/core';
 import { LoginModalService } from '../../../services/login-modal.service';
 import { LoginService } from '../../../services/login.service';
 
@@ -9,7 +9,7 @@ import { LoginService } from '../../../services/login.service';
 	templateUrl: './login.component.html',
 	styleUrl: './login.component.css',
 })
-export class LoginComponent implements OnDestroy {
+export class LoginComponent {
 	@Output() oauth2: EventEmitter<string> = new EventEmitter<string>();
 	private fase: number = 0;
 	private keyEvent = (e: KeyboardEvent) => {
@@ -24,14 +24,13 @@ export class LoginComponent implements OnDestroy {
 		private loginService: LoginService,
 	) {
 		afterNextRender(() => {
-			document.addEventListener('keydown', this.keyEvent);
+			document.getElementById('modal')?.addEventListener('keydown', this.keyEvent);
+			document.getElementById('correo')?.focus();
 		});
-	}
-	ngOnDestroy(): void {
-		document.removeEventListener('keydown', this.keyEvent);
 	}
 
 	close() {
+		document.getElementById('modal')?.removeEventListener('keydown', this.keyEvent);
 		this.modalService.hide();
 	}
 
@@ -67,6 +66,7 @@ export class LoginComponent implements OnDestroy {
 			`;
 			const nextButton = document.getElementById('nextButton') as HTMLButtonElement;
 			const cancelButton = document.getElementById('cancelButton') as HTMLButtonElement;
+			document.getElementById('password')?.focus();
 
 			if (nextButton) {
 				nextButton.addEventListener('click', () => this.compruebaPassword());
@@ -75,18 +75,6 @@ export class LoginComponent implements OnDestroy {
 			if (cancelButton) {
 				cancelButton.addEventListener('click', () => this.close());
 			}
-
-			document.removeEventListener('keydown', (e: KeyboardEvent) => {
-				if (e.key === 'Enter') {
-					this.compruebaCorreo();
-				}
-			});
-
-			document.addEventListener('keydown', (e: KeyboardEvent) => {
-				if (e.key === 'Enter') {
-					this.compruebaPassword();
-				}
-			});
 		} else {
 			const mex: HTMLParagraphElement = document.createElement('p');
 			mex.textContent = 'Este correo no está registrado!!!';
