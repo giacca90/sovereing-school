@@ -43,14 +43,14 @@ export class InitService {
 	async carga(): Promise<boolean> {
 		// 1. Cache en memoria del cliente (SPA)
 		if (this.initDataCache) {
-			console.log('>>> Usando initCache en memoria');
+			//console.log('>>> Usando initCache en memoria');
 			this.cargarEnServicios(this.initDataCache);
 			return true;
 		}
 
 		// 2. TransferState (del SSR al browser)
 		if (this.transferState.hasKey(INIT_KEY)) {
-			console.log('>>> Usando TransferState');
+			//console.log('>>> Usando TransferState');
 			const data = this.transferState.get(INIT_KEY, null as any);
 
 			// Hacemos la llamada para que el backend setee la cookie en el browser
@@ -66,7 +66,7 @@ export class InitService {
 		if (isPlatformServer(this.platformId)) {
 			const isValid = globalCache.init && Date.now() - (globalCache.timestamp ?? 0) < 5 * 60 * 1000; // 5 minutos
 			if (isValid) {
-				console.log('>>> Usando cache global SSR');
+				//console.log('>>> Usando cache global SSR');
 				this.cargarEnServicios(globalCache.init!);
 				this.transferState.set(INIT_KEY, globalCache.init!);
 				return true;
@@ -75,7 +75,7 @@ export class InitService {
 
 		// 4. Fetch real al backend
 		try {
-			console.log('>>> Pidiendo /init al backend');
+			//console.log('>>> Pidiendo /init al backend');
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {

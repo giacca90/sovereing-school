@@ -145,11 +145,11 @@ public class UsuarioController {
 		}
 
 		// Configurar cache control
-		CacheControl cacheControl = CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic(); // 30 días de caché
+		CacheControl cacheControl = CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic();
 
 		HttpHeaders headers = new HttpHeaders();
-		headers.setCacheControl(cacheControl.toString());
-		headers.set("Pragma", "cache"); // Compatibilidad con HTTP 1.0
+		headers.setCacheControl(cacheControl.getHeaderValue());
+		headers.set("Pragma", "cache");
 		headers.set("Expires", ZonedDateTime.now().plusDays(30).format(DateTimeFormatter.RFC_1123_DATE_TIME));
 		headers.setContentType(
 				contentType != null ? MediaType.parseMediaType(contentType) : MediaType.APPLICATION_OCTET_STREAM);
