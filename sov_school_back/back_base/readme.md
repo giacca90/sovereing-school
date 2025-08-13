@@ -2,12 +2,14 @@
 
 ## Microservicio de gestión general de la plataforma
 
-> Hecho con Spring 3.4.0.
+> Hecho con SpringBoot 3.5.
 
 > Arquitectura de micro-servicios.
+
+> Utiliza un modulo compartido entre los microservicios, para mantener las versiónes iguales, y para reutilizar objectos comunes.
 
 > Utiliza base de datos PostgreSQL.
 
 > Utiliza Hibernate con JPA y consultas JPQL.
 
-> Conversión y servicio de videos HLS con FFMPEG.
+> Utiliza el framework de seguridad Spring Security con JSON Web Tokens.

@@ -7,3 +7,11 @@
 		width: 50%;
 	}
 }
+
+.adaptive-text {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	line-clamp: 5;
+	-webkit-line-clamp: 5; /* un número grande */
+	overflow: hidden;
+}

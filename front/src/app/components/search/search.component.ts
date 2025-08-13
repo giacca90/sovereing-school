@@ -4,12 +4,14 @@ import { Curso } from '../../models/Curso';
 import { CursosService } from '../../services/cursos.service';
 
 @Component({
-    selector: 'app-search',
+	selector: 'app-search',
 	standalone: true,
-    imports: [],
-    templateUrl: './search.component.html',
-    styleUrl: './search.component.css'
+	imports: [],
+	templateUrl: './search.component.html',
+	styleUrl: './search.component.css',
 })
+
+// TODO: Añadir busqueda por profesor
 export class SearchComponent {
 	result: boolean = false;
 

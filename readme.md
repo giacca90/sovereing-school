@@ -6,17 +6,17 @@
 
 #### Front-end
 
-> Hecho con Angular 17.
+> Hecho con Angular 20.
 
 > Con Server Side Rendering.
 
-> Utiliza TailwindCSS 3.
+> Utiliza TailwindCSS 4.
 
 > Reproducción de videos adaptativo con Video.js.
 
 #### Back-end
 
-> Hecho con Spring 3.4.0.
+> Hecho con Spring 3.5.
 
 > Arquitectura de micro-servicios.
 
@@ -25,3 +25,5 @@
 > Utiliza Hibernate con JPA y consultas JPQL.
 
 > Conversión y servicio de videos HLS con FFMPEG.
+
+> Utiliza el framework de seguridad Spring Security con JSON Web Tokens.
