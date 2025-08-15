@@ -1,5 +1,5 @@
 # Imagen base de Node.js 22.14 slim
-FROM node:24.2-slim AS build
+FROM node:24.5-slim AS build
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN npm install
 RUN npm run build
 
 # Servir la aplicación utilizando un servidor Node.js
-FROM node:24.2-slim AS production
+FROM node:24.5-slim AS production
 
 RUN apt update && apt upgrade -y && rm -rf /var/lib/apt/lists/*
 

@@ -55,7 +55,7 @@ export class InitService {
 
 			// Hacemos la llamada para que el backend setee la cookie en el browser
 			if (isPlatformBrowser(this.platformId)) {
-				this.http.get<string>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }).subscribe();
+				this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true, responseType: 'text' as 'json' }).subscribe();
 			}
 
 			this.cargarEnServicios(data);

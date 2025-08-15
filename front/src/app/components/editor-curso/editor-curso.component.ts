@@ -28,14 +28,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	editado: boolean = false;
 	claseEditar: Clase | null = null;
 	isBrowser: boolean;
-	//editar: Clase | null = null;
-	//streamWebcam: MediaStream | null = null;
-	//m3u8Loaded: boolean = false;
-	//player: Player | null = null;
-	//ready: Subject<boolean> = new Subject<boolean>();
-	//savedFiles: File[] = [];
-	//savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
-	//videojs: any;
 
 	constructor(
 		private route: ActivatedRoute,
@@ -56,8 +48,13 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	}
 
 	async ngOnInit() {
-		if (this.idCurso === 0 && this.loginService.usuario) {
-			this.curso = new Curso(0, '', [this.loginService.usuario], '', '', new Date(), [], [], '', 0);
+		if (this.idCurso == 0) {
+			if (this.loginService.usuario) {
+				this.curso = new Curso(0, '', [this.loginService.usuario], '', '', new Date(), [], [], '', 0);
+			} else {
+				console.error('No hay usuario logueado');
+				this.router.navigate(['/']);
+			}
 		} else {
 			await this.cursoService.getCurso(this.idCurso).then((curso) => {
 				this.curso = JSON.parse(JSON.stringify(curso));
@@ -95,15 +92,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	ngOnDestroy(): void {
 		this.subscription.unsubscribe();
 	}
-
-	/* @HostListener('window:beforeunload', ['$event'])
-	unloadNotification($event: { returnValue: string }): void {
-		if (!this.isBrowser) return;
-
-		if (this.editado) {
-			$event.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
-		}
-	} */
 
 	onDragStart(event: Event, id: number) {
 		const event2: DragEvent = event as DragEvent;

@@ -24,6 +24,10 @@ export class ProfGuard implements CanActivate {
 
 		const id_curso = route.params['id_curso'];
 
+		if (id_curso === '0') {
+			return true;
+		}
+
 		try {
 			const curso = await this.cursoService.getCurso(id_curso);
 			if (!curso) {

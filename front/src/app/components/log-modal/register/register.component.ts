@@ -17,7 +17,6 @@ export class RegisterComponent implements OnDestroy {
 	private nuevoUsuario: NuevoUsuario = new NuevoUsuario();
 	private fase: number = 0;
 	private keyEvent = (e: KeyboardEvent) => {
-		console.log(e.key);
 		if (e.key === 'Enter') {
 			this.fase === 0 ? this.compruebaCorreo() : this.fase === 1 ? this.compruebaPassword() : this.close();
 		}

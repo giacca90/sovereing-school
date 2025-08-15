@@ -2,11 +2,11 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 
 export const serverRoutes: ServerRoute[] = [
 	{
-		path: '', // Página principal renderizada en el cliente
+		path: '',
 		renderMode: RenderMode.Server,
 	},
 	{
-		path: 'privacy', // Páginas estáticas que se pueden prerender
+		path: 'privacy',
 		renderMode: RenderMode.Prerender,
 	},
 	{
@@ -14,8 +14,8 @@ export const serverRoutes: ServerRoute[] = [
 		renderMode: RenderMode.Prerender,
 	},
 	{
-		path: 'curso/:id_curso', // Páginas públicas con datos dinámicos
-		renderMode: RenderMode.Client, // Cambiado a Server en lugar de Prerender
+		path: 'curso/:id_curso',
+		renderMode: RenderMode.Client,
 	},
 	{
 		path: 'chat/:id_curso',
@@ -50,7 +50,7 @@ export const serverRoutes: ServerRoute[] = [
 		renderMode: RenderMode.Client,
 	},
 	{
-		path: '**', // Todas las demás rutas se renderizan en el servidor
+		path: '**',
 		renderMode: RenderMode.Server,
 	},
 ];
