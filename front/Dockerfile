@@ -22,12 +22,10 @@ WORKDIR /app
 # Copiar la aplicación compilada desde la etapa de construcción
 COPY --from=build /app/dist /app/dist
 
-# Copiar el script de inicio al contenedor
-COPY /init.sh /init.sh
-
-# Dar permisos de ejecución al script
-RUN chmod +x /init.sh
-
 EXPOSE 4200
 
-ENTRYPOINT ["/init.sh"]
+# Establece la variable de entorno para todo el contenedor
+# TODO: Quitar en producción
+ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+
+ENTRYPOINT ["node", "dist/front/server/server.mjs"]

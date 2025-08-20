@@ -9,6 +9,10 @@ services:
             - ../front/.env
         ports:
             - "4200:4200"
+        volumes:
+            - /etc/letsencrypt/live/giacca90.ddns.net/cert.pem:/certs/cert.pem:ro
+            - /etc/letsencrypt/live/giacca90.ddns.net/key.pem:/certs/key.pem:ro
+
         networks:
             - sovschool-network
         depends_on:
@@ -73,6 +77,7 @@ services:
         volumes:
             - sovschool-fotos:/Fotos
             - sovschool-videos:/Videos
+            - /etc/letsencrypt/live/giacca90.ddns.net/keystore.p12:/certs/keystore.p12:ro
         depends_on:
             - sovschool-postgres
             - sovschool-mongo
@@ -89,6 +94,8 @@ services:
             - "8070:8070"
         networks:
             - sovschool-network
+        volumes:
+            - /etc/letsencrypt/live/giacca90.ddns.net/keystore.p12:/certs/keystore.p12:ro
         depends_on:
             - sovschool-postgres
             - sovschool-mongo
@@ -107,6 +114,7 @@ services:
             - sovschool-network
         volumes:
             - sovschool-videos:/Videos
+            - /etc/letsencrypt/live/giacca90.ddns.net/keystore.p12:/certs/keystore.p12:ro
         depends_on:
             - sovschool-postgres
             - sovschool-mongo

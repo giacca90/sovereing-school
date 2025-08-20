@@ -137,7 +137,7 @@ VALUES (
 		'Que es la REML y como se creó??',
 		'Contenido de la clase',
 		0,
-		'http://corso1/clase3',
+		'http://curso1/clase3',
 		3,
 		1
 	),
@@ -146,7 +146,7 @@ VALUES (
 		'El convenio de Montevideo y otros',
 		'Contenido de la clase',
 		0,
-		'http://corso1/clase4',
+		'http://curso1/clase4',
 		4,
 		1
 	),
@@ -155,7 +155,7 @@ VALUES (
 		'Entendemos el Fideicomiso',
 		'Contenido de la clase',
 		0,
-		'http://corso2/clase1',
+		'http://curso2/clase1',
 		1,
 		2
 	),
@@ -164,7 +164,7 @@ VALUES (
 		'Fideicomitente, Fideicomisario y Beneficiario',
 		'Contenido de la clase',
 		0,
-		'http://corso2/clase2',
+		'http://curso2/clase2',
 		2,
 		2
 	),
@@ -173,7 +173,7 @@ VALUES (
 		'Presentación del profesor',
 		'Contenido de la clase',
 		0,
-		'http://corso3/clase1',
+		'http://curso3/clase1',
 		1,
 		3
 	),
@@ -182,7 +182,7 @@ VALUES (
 		'Muchas es mejor!!',
 		'Contenido de la clase',
 		0,
-		'http://corso3/clase2',
+		'http://curso3/clase2',
 		2,
 		3
 	),
@@ -191,7 +191,7 @@ VALUES (
 		'Tu nombre, tu marca',
 		'Contenido de la clase',
 		0,
-		'http://corso4/clase1',
+		'http://curso4/clase1',
 		1,
 		4
 	),
@@ -200,7 +200,7 @@ VALUES (
 		'En common law se hace publico',
 		'Contenido de la clase',
 		0,
-		'http://corso4/clase2',
+		'http://curso4/clase2',
 		2,
 		4
 	);

@@ -110,8 +110,9 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
  */
 if (isMainModule(import.meta.url)) {
 	const projectRoot = process.cwd();
-	const key = fs.readFileSync(join(projectRoot, 'key.pem'));
-	const cert = fs.readFileSync(join(projectRoot, 'cert.pem'));
+
+	const key = fs.readFileSync('/certs/key.pem'); // ruta absoluta en contenedor
+	const cert = fs.readFileSync('/certs/cert.pem'); // ruta absoluta en contenedor
 
 	// HTTP → HTTPS redirection
 	http.createServer((req, res) => {

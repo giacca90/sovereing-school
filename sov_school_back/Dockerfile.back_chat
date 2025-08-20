@@ -29,12 +29,6 @@ RUN apt update && apt upgrade -y && rm -rf /var/lib/apt/lists/*
 # Copiar el JAR compilado desde el build
 COPY --from=build /app/back_chat/target/*.jar app.jar
 
-# Copiar el script de inicio al contenedor
-COPY /init.sh /init.sh
-
-# Dar permisos de ejecución al script
-RUN chmod +x /init.sh
-
 EXPOSE 8070
 
-ENTRYPOINT ["/init.sh"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

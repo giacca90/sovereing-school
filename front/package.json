@@ -9,7 +9,10 @@
 		"watch": "ng build --watch --configuration development",
 		"test": "ng test",
 		"serve:ssr:front": "node dist/front/server/server.mjs",
-		"lint": "ng lint"
+		"lint": "ng lint",
+		"release:patch": "npm version patch",
+		"release:minor": "npm version minor",
+		"release:major": "npm version major"
 	},
 	"private": true,
 	"dependencies": {
