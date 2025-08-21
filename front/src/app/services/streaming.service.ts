@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom, Observable } from 'rxjs';
-import { VideoElement } from '../components/editor-curso/editor-clase/editor-webcam/editor-webcam.component';
+import { VideoElement } from 'web-obs';
 import { Clase } from '../models/Clase';
 import { Curso } from '../models/Curso';
 import { CursosService } from './cursos.service';

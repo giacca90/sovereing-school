@@ -3,6 +3,7 @@ import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, Outpu
 import { FormsModule } from '@angular/forms';
 import { NavigationStart, Router } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
+import { VideoElement, WebOBS } from 'web-obs';
 import { Clase } from '../../../models/Clase';
 import { Curso } from '../../../models/Curso';
 import { ClaseService } from '../../../services/clase.service';
@@ -11,11 +12,10 @@ import { LoginService } from '../../../services/login.service';
 import { StreamingService } from '../../../services/streaming.service';
 import { EditorObsComponent } from './editor-obs/editor-obs.component';
 import { EditorVideoComponent } from './editor-video/editor-video.component';
-import { EditorWebcamComponent, VideoElement } from './editor-webcam/editor-webcam.component';
 
 @Component({
 	selector: 'app-editor-clase',
-	imports: [FormsModule, EditorObsComponent, EditorVideoComponent, EditorWebcamComponent],
+	imports: [FormsModule, EditorObsComponent, EditorVideoComponent, WebOBS],
 	templateUrl: './editor-clase.component.html',
 	styleUrl: './editor-clase.component.css',
 })
@@ -122,9 +122,9 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 			this.close();
 		}
 		/* this.streamWebcam?.getTracks().forEach((track) => track.stop());
-		this.streamWebcam = null;
-		this.player?.dispose();
-		document.body.style.overflow = 'auto'; */
+			this.streamWebcam = null;
+			this.player?.dispose();
+			document.body.style.overflow = 'auto'; */
 	}
 
 	close() {
@@ -170,7 +170,6 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 
 			//this.player?.dispose();
 			//this.player = null;
-
 			switch (tipo) {
 				case 0: {
 					// Video estatico
