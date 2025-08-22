@@ -297,7 +297,9 @@ public class UsuarioCursosService implements IUsuarioCursosService {
 
         // Convertir los videos del curso
         try {
-            this.streamingService.convertVideos(curso);
+            if (curso.getClases_curso() != null && curso.getClases_curso().size() > 0) {
+                this.streamingService.convertVideos(curso);
+            }
         } catch (IOException | InterruptedException e) {
             System.err.println("Error en convertir los videos del curso: " + e.getMessage());
             throw new RuntimeException("Error en convertir los videos del curso: " + e.getMessage());

@@ -1,4 +1,4 @@
-<div id="contenedor" class="relative m-2 flex cursor-default flex-col items-center rounded-lg border border-black p-2 dark:border-gray-400">
+<div id="contenedor" class="relative m-2 flex w-full cursor-default flex-col items-center rounded-lg border border-black p-2 dark:border-gray-400">
 	@if (this.curso?.imagen_curso) {
 		<img class="absolute -z-10 h-full content-center opacity-20" [src]="this.curso?.imagen_curso" alt="curso" />
 	}
@@ -17,17 +17,41 @@
 		</div>
 	}
 
-	<div>
+	<div class="flex items-center justify-center">
 		<span class="font-bold">Precio: {{ curso?.precio_curso }}€</span>
-		@if (this.loginService.usuario && this.loginService.usuario.roll_usuario !== undefined && curso && curso.clases_curso) {
-			@if (this.loginService.usuario.roll_usuario === 'ADMIN' || this.loginService.usuario.roll_usuario === 'PROF' || this.loginService.usuario.cursos_usuario?.includes(curso) || compruebaPlan(this.loginService.usuario.plan_usuario) !== null) {
+		@if (this.loginService.usuario && this.loginService.usuario.roll_usuario !== undefined && curso) {
+			@if (loginService.usuario.roll_usuario === 'ADMIN' || loginService.usuario.roll_usuario === 'PROF' || hasCurso(curso) || compruebaPlan(loginService.usuario.plan_usuario) !== null) {
 				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + this.curso.id_curso + '/0'])">Ir al curso</button>
 			} @else {
-				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400">Compra este curso</button>]
+				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="compraCurso(curso)">Compra este curso</button>
 			}
 		}
 		@if (compruebaPlan(this.loginService.usuario?.plan_usuario)) {
-			<p class="font-bold">Este curso es parte de tu plan {{ compruebaPlan(this.loginService.usuario?.plan_usuario)?.nombre_plan }}</p>
+			<p class="ml-4 font-bold">Este curso es parte de tu plan {{ compruebaPlan(this.loginService.usuario?.plan_usuario)?.nombre_plan }}</p>
+		}
+		@if (!this.loginService.usuario) {
+			<p class="ml-4 font-bold">Para comprar este curso debes estar registrado!!</p>
 		}
 	</div>
 </div>
+
+@if (modalCourse) {
+	<div class="fixed top-0 left-0 z-20 h-full w-full bg-black opacity-70">
+		<h1 class="p-4 text-center text-2xl font-bold text-gray-200">Estás a punto de comprar: {{ modalCourse.nombre_curso }}</h1>
+
+		@if (modalCourse.precio_curso !== null && modalCourse.precio_curso !== undefined) {
+			@if (modalCourse.precio_curso > 0) {
+				<app-compra-curso></app-compra-curso>
+			} @else {
+				<div class="flex flex-col items-center justify-center">
+					<p class="p-4 text-center text-xl text-gray-200">¡Este curso es gratis!</p>
+					<p class="p-4 text-center text-xl text-gray-200">Si quieres inscribirte, confirma la compra.</p>
+					<button class="mt-4 cursor-pointer rounded-lg bg-green-700 px-6 py-2 text-white" (click)="cursoComprado(modalCourse)">Comprar</button>
+				</div>
+			}
+		}
+		<svg (click)="closeModal()" class="absolute top-4 right-4 h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M20.7457 3.32851C20.3552 2.93798 19.722 2.93798 19.3315 3.32851L12.0371 10.6229L4.74275 3.32851C4.35223 2.93798 3.71906 2.93798 3.32854 3.32851C2.93801 3.71903 2.93801 4.3522 3.32854 4.74272L10.6229 12.0371L3.32856 19.3314C2.93803 19.722 2.93803 20.3551 3.32856 20.7457C3.71908 21.1362 4.35225 21.1362 4.74277 20.7457L12.0371 13.4513L19.3315 20.7457C19.722 21.1362 20.3552 21.1362 20.7457 20.7457C21.1362 20.3551 21.1362 19.722 20.7457 19.3315L13.4513 12.0371L20.7457 4.74272C21.1362 4.3522 21.1362 3.71903 20.7457 3.32851Z" fill="currentColor" />
+		</svg>
+	</div>
+}

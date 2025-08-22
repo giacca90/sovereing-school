@@ -44,7 +44,7 @@ services:
         container_name: sovschool-mongo
         ports:
             - "27017:27017"
-        command: ["--replSet", "rs0"]
+        command: ["mongod", "--replSet", "rs0", "--quiet", "--setParameter", "logLevel=0"]
         networks:
             - sovschool-network
         volumes:

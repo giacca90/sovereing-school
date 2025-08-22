@@ -29,7 +29,7 @@ app.use(
  * Inject environment variables
  */
 app.use((req, res, next) => {
-	/* const envScript = `
+	/* 	const envScript = `
     <script id="env">
       window.__env = {
         BACK_BASE: '${process.env['BACK_BASE'] || 'https://localhost:8080'}',

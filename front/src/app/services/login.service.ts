@@ -102,7 +102,7 @@ export class LoginService {
 	}
 
 	loginWithToken(token: string): void {
-		this.http.post<Usuario>(this.apiUrl + 'loginWithToken', token, { observe: 'response' }).subscribe({
+		this.http.post<Usuario>(this.apiUrl + 'loginWithToken', token, { observe: 'response', withCredentials: true }).subscribe({
 			next: (response: HttpResponse<Usuario>) => {
 				if (response.ok && response.body) {
 					this.usuario = response.body;
@@ -119,7 +119,7 @@ export class LoginService {
 		this.usuario = null;
 		this.id_usuario = null;
 		localStorage.clear();
-		this.http.get<string>(this.apiUrl + 'logout', { observe: 'response', withCredentials: true }).subscribe({
+		this.http.get<string>(this.apiUrl + 'logout', { observe: 'response', responseType: 'text' as 'json', withCredentials: true }).subscribe({
 			next: (response: HttpResponse<string>) => {
 				if (response.status !== 200) {
 					console.error('Error en logout: ' + response.status);

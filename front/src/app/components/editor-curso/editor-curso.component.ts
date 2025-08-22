@@ -174,6 +174,10 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 					if (success) {
 						this.initService.carga();
 						this.editado = false;
+						if (this.idCurso == 0) {
+							this.cursoService.cursos.push(success);
+						}
+
 						this.router.navigate(['/cursosUsuario']);
 					} else {
 						console.error('Falló la actualización del curso');

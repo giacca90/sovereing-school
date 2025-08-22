@@ -482,14 +482,16 @@ public class CursoChatService {
             List<Clase> clases = curso.getClases_curso();
             List<ClaseChat> clasesChat = cursoChat.getClases();
             // Comprueba si las clases del curso es nueva
-            for (Clase clase : clases) {
-                ClaseChat claseChat = clasesChat.stream()
-                        .filter(c -> c.getIdClase() == clase.getId_clase())
-                        .findFirst()
-                        .orElse(null);
-                if (claseChat == null) {
-                    claseChat = new ClaseChat(clase.getId_clase(), curso.getId_curso(), new ArrayList<>());
-                    clasesChat.add(claseChat);
+            if (clases != null && clases.size() > 0) {
+                for (Clase clase : clases) {
+                    ClaseChat claseChat = clasesChat.stream()
+                            .filter(c -> c.getIdClase() == clase.getId_clase())
+                            .findFirst()
+                            .orElse(null);
+                    if (claseChat == null) {
+                        claseChat = new ClaseChat(clase.getId_clase(), curso.getId_curso(), new ArrayList<>());
+                        clasesChat.add(claseChat);
+                    }
                 }
             }
             cursoChat.setClases(clasesChat);

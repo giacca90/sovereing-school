@@ -69,10 +69,8 @@ export class LogModalComponent implements AfterViewInit {
 		const left = (window.innerWidth - width) / 2 + window.screenX;
 		const top = (window.innerHeight - height) / 2 + window.screenY;
 		if (provider === 'google') {
-			console.log('open google');
 			window.open(this.backBase + '/oauth2/authorization/google', '_blank', `width=${width},height=${height},top=${top},left=${left}`);
 		} else if (provider === 'github') {
-			console.log('open github');
 			window.open(this.backBase + '/oauth2/authorization/github', '_blank', `width=${width},height=${height},top=${top},left=${left}`);
 		}
 
@@ -85,7 +83,9 @@ export class LogModalComponent implements AfterViewInit {
 			const authResponse: Auth = event.data;
 			// Guarda el token en localStorage
 			localStorage.setItem('Token', authResponse.accessToken);
-			localStorage.setItem('Usuario', JSON.stringify(authResponse.usuario));
+			// Hacemos la llamada para que el backend setee la cookie en el browser
+			this.loginService.loginWithToken(localStorage.getItem('Token') ?? '');
+			//localStorage.setItem('Usuario', JSON.stringify(authResponse.usuario));
 			this.loginService.usuario = authResponse.usuario;
 
 			// Puedes emitir un evento o redirigir

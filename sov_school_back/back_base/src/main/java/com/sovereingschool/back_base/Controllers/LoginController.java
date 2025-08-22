@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,7 @@ import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.ChangePassword;
 import com.sovereingschool.back_base.Services.LoginService;
 import com.sovereingschool.back_common.Models.Login;
+import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Utils.JwtUtil;
 
 @RestController
@@ -227,7 +229,19 @@ public class LoginController {
 		}
 		try {
 			response = this.loginService.loginWithToken(token);
-			return new ResponseEntity<>(response, HttpStatus.OK);
+			Usuario usuario = (Usuario) response;
+			Authentication auth = jwtUtil.createAuthenticationFromToken(token);
+			String refreshToken = jwtUtil.generateToken(auth, "refresh", usuario.getId_usuario());
+			ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
+					.httpOnly(true) // No accesible desde JavaScript
+					.secure(true) // Solo por HTTPS
+					.path("/") // Ruta donde será accesible
+					.maxAge(15 * 24 * 60 * 60) // 15 días
+					.sameSite("None") // Cambia a "None" si trabajas con frontend separado
+					.build();
+			return ResponseEntity.ok()
+					.header("Set-Cookie", refreshTokenCookie.toString())
+					.body(response);
 		} catch (JWTVerificationException e) {
 			System.err.println(e.getMessage());
 			response = e.getMessage();

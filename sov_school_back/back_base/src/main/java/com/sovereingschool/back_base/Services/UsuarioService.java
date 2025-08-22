@@ -374,6 +374,7 @@ public class UsuarioService implements IUsuarioService {
                 }
             }
         }
+
         return this.repo.save(usuario);
     }
 
@@ -415,7 +416,7 @@ public class UsuarioService implements IUsuarioService {
     public Integer changeCursosUsuario(Usuario usuario) {
         Optional<Usuario> old_usuario = this.repo.findUsuarioForId(usuario.getId_usuario());
         if (old_usuario.isEmpty()) {
-            return 0;
+            throw new IllegalArgumentException("El usuario no existe");
         }
         old_usuario.get().setCursos_usuario(usuario.getCursos_usuario());
 

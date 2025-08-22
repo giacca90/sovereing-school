@@ -108,4 +108,8 @@ export class InitService {
 
 		this.estadistica = data.estadistica;
 	}
+
+	auth() {
+		this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true, responseType: 'text' as 'json' }).subscribe();
+	}
 }

@@ -1,14 +1,19 @@
 import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { catchError, map, of } from 'rxjs';
+import { catchError, map, Observable, of } from 'rxjs';
+import { Curso } from '../models/Curso';
 import { Usuario } from '../models/Usuario';
+import { LoginService } from './login.service';
 
 @Injectable({
 	providedIn: 'root',
 })
 export class UsuariosService {
 	public profes: Usuario[] = [];
-	constructor(private http: HttpClient) {}
+	constructor(
+		private http: HttpClient,
+		private loginService: LoginService,
+	) {}
 
 	get apiUrl(): string {
 		if (typeof window !== 'undefined' && (window as any).__env) {
@@ -35,11 +40,11 @@ export class UsuariosService {
 		});
 	}
 
-	getNombreProfe(id: number) {
+	getNombreProfe(id: number): string | undefined {
 		return this.profes.find((profe: Usuario) => profe.id_usuario === id)?.nombre_usuario.toString();
 	}
 
-	save(formData: FormData) {
+	save(formData: FormData): Observable<string[] | null> {
 		return this.http.post<string[]>(this.apiUrl + 'subeFotos', formData, { observe: 'response' }).pipe(
 			map((response: HttpResponse<string[]>) => {
 				if (response.status === 200) {
@@ -54,7 +59,7 @@ export class UsuariosService {
 		);
 	}
 
-	actualizaUsuario(temp: Usuario) {
+	actualizaUsuario(temp: Usuario): Observable<boolean> {
 		return this.http.put<string>(this.apiUrl + 'edit', temp, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
 				if (response.status === 200) {
@@ -69,7 +74,7 @@ export class UsuariosService {
 		);
 	}
 
-	getAllUsuarios() {
+	getAllUsuarios(): Observable<Usuario[] | null> {
 		return this.http.get<Usuario[]>(this.apiUrl + 'getAll', { observe: 'response' }).pipe(
 			map((response: HttpResponse<Usuario[]>) => {
 				if (response.status === 200) {
@@ -84,7 +89,7 @@ export class UsuariosService {
 		);
 	}
 
-	eliminaUsuario(usuario: Usuario) {
+	eliminaUsuario(usuario: Usuario): Observable<boolean> {
 		return this.http.delete<string>(this.apiUrl + usuario.id_usuario, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
 				if (response.ok) {
@@ -98,5 +103,45 @@ export class UsuariosService {
 				return of(false);
 			}),
 		);
+	}
+
+	cursoComprado(curso: Curso): Observable<boolean> {
+		const usuario = JSON.parse(JSON.stringify(this.loginService.usuario));
+		if (!usuario) {
+			console.error('Usuario no inicializado');
+			return of(false);
+		}
+
+		if (!usuario.cursos_usuario) {
+			usuario.cursos_usuario = [];
+		}
+
+		// Si el curso ya está comprado
+		if (usuario.cursos_usuario.some((cur: Curso) => cur.id_curso === curso.id_curso)) {
+			return of(true);
+		}
+
+		// Si no estaba comprado → añadir y enviar al backend
+		usuario.cursos_usuario.push(curso);
+
+		return this.http
+			.put<string>(this.apiUrl + 'cursos', usuario, {
+				observe: 'response',
+				responseType: 'text' as 'json',
+				withCredentials: true,
+			})
+			.pipe(
+				map((response: HttpResponse<string>) => {
+					if (response.status === 200) {
+						this.loginService.usuario = usuario;
+						return true;
+					}
+					return false;
+				}),
+				catchError((e: any) => {
+					console.error('Error en actualizar el usuario:', e.message);
+					return of(false);
+				}),
+			);
 	}
 }
