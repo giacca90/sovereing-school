@@ -2,6 +2,7 @@ import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID, TransferState, makeStateKey } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { getGlobalInitCache, setGlobalInitCache } from '../../init-cache';
 import { Curso } from '../models/Curso';
 import { Estadistica } from '../models/Estadistica';
 import { Init } from '../models/Init';
@@ -12,7 +13,7 @@ import { UsuariosService } from './usuarios.service';
 const INIT_KEY = makeStateKey<Init>('init-data');
 
 // Caché global para SSR (vive mientras dure el proceso del servidor)
-const globalCache: { init?: Init; timestamp?: number } = {};
+//const globalCache: { init?: Init; timestamp?: number } = {};
 
 @Injectable({ providedIn: 'root' })
 export class InitService {
@@ -64,11 +65,11 @@ export class InitService {
 
 		// 3. Caché global para SSR (evita llamar al backend en cada request)
 		if (isPlatformServer(this.platformId)) {
-			const isValid = globalCache.init && Date.now() - (globalCache.timestamp ?? 0) < 5 * 60 * 1000; // 5 minutos
-			if (isValid) {
+			const cached = getGlobalInitCache();
+			if (cached) {
 				//console.log('>>> Usando cache global SSR');
-				this.cargarEnServicios(globalCache.init!);
-				this.transferState.set(INIT_KEY, globalCache.init!);
+				this.cargarEnServicios(cached);
+				this.transferState.set(INIT_KEY, cached);
 				return true;
 			}
 		}
@@ -80,9 +81,7 @@ export class InitService {
 
 			if (isPlatformServer(this.platformId)) {
 				// Guardamos en cache global SSR
-				globalCache.init = response;
-				globalCache.timestamp = Date.now();
-
+				setGlobalInitCache(response);
 				// Pasamos datos al browser
 				this.transferState.set(INIT_KEY, response);
 			} else {
@@ -98,7 +97,7 @@ export class InitService {
 		}
 	}
 
-	private cargarEnServicios(data: Init) {
+	cargarEnServicios(data: Init) {
 		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.id_usuario, profe.nombre_usuario, profe.foto_usuario, profe.presentacion));
 
 		this.cursoService.cursos = data.cursosInit.map((curso) => {

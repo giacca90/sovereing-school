@@ -347,6 +347,7 @@ public class UsuarioController {
 	@PreAuthorize("hasRole('USER') or hasRole('PROF') or hasRole('ADMIN')")
 	@PutMapping("/cursos")
 	public ResponseEntity<?> changeCursosUsuario(@RequestBody Usuario usuario) {
+		System.out.println("TESTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
 		if (authentication == null || !authentication.isAuthenticated()) {
