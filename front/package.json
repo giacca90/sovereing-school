@@ -24,7 +24,7 @@
 		"@angular/platform-browser": "^20.2.0",
 		"@angular/platform-browser-dynamic": "^20.2.0",
 		"@angular/platform-server": "^20.2.0",
-		"@angular/router": "^20.2.0",
+		"@angular/router": "^20.2.1",
 		"@angular/ssr": "^20.2.0",
 		"@stomp/stompjs": "^7.1.1",
 		"@videojs/http-streaming": "^3.17.2",
