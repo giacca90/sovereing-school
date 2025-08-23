@@ -3,6 +3,7 @@ try {
 	rs.initiate({
 		_id: "rs0",
 		version: 1,
+		// TODO: Cambiar el host en production
 		members: [{ _id: 0, host: "localhost:27017" }],
 	});
 	print("Replica set iniciado");

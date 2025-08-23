@@ -8,7 +8,7 @@ services:
         env_file:
             - ../front/.env
         ports:
-            - "4200:4200"
+            - "${FRONT_PORT}:4200"
         volumes:
             - /etc/letsencrypt/live/giacca90.ddns.net/cert.pem:/certs/cert.pem:ro
             - /etc/letsencrypt/live/giacca90.ddns.net/key.pem:/certs/key.pem:ro
@@ -28,9 +28,11 @@ services:
             dockerfile: Dockerfile.postgres
         container_name: sovschool-postgres
         environment:
+            - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - POSTGRES_DB=${POSTGRES_DB}
         ports:
-            - "5432:5432"
+            - "${POSTGRES_PORT}:5432"
         networks:
             - sovschool-network
         volumes:
@@ -43,7 +45,7 @@ services:
             dockerfile: Dockerfile.mongo
         container_name: sovschool-mongo
         ports:
-            - "27017:27017"
+            - "${MONGO_PORT}:27017"
         command: ["mongod", "--replSet", "rs0", "--quiet", "--setParameter", "logLevel=0"]
         networks:
             - sovschool-network
@@ -58,7 +60,7 @@ services:
             dockerfile: Dockerfile.nginx
         container_name: sovschool-rtmp
         ports:
-            - "8060:8060"
+            - "${RTMP_PORT}:8060"
         networks:
             - sovschool-network
 
@@ -71,7 +73,7 @@ services:
         env_file:
             - .env.back_base
         ports:
-            - "8080:8080"
+            - "${BACK_BASE_PORT}:8080"
         networks:
             - sovschool-network
         volumes:
@@ -91,7 +93,7 @@ services:
         env_file:
             - .env.back_chat
         ports:
-            - "8070:8070"
+            - "${BACK_CHAT_PORT}:8070"
         networks:
             - sovschool-network
         volumes:
@@ -109,7 +111,7 @@ services:
         env_file:
             - .env.back_stream
         ports:
-            - "8090:8090"
+            - "${BACK_STREAM_PORT}:8090"
         networks:
             - sovschool-network
         volumes:

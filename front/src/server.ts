@@ -7,6 +7,7 @@ import https from 'https';
 import { join } from 'node:path';
 
 // IMPORTA tus rutas
+const URL = process.env['FRONT_URL'] || 'https://localhost:4200';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
@@ -29,7 +30,7 @@ app.use(
  * Inject environment variables
  */
 app.use((req, res, next) => {
-	/* 	const envScript = `
+	const envScript = `
     <script id="env">
       window.__env = {
         BACK_BASE: '${process.env['BACK_BASE'] || 'https://localhost:8080'}',
@@ -37,19 +38,6 @@ app.use((req, res, next) => {
         BACK_CHAT: '${process.env['BACK_CHAT'] || 'https://localhost:8070'}',
         BACK_CHAT_WSS: '${process.env['BACK_CHAT_WSS'] || 'wss://localhost:8070'}',
         BACK_STREAM_WSS: '${process.env['BACK_STREAM_WSS'] || 'wss://localhost:8090'}'
-      };
-    </script>
-  `; */
-
-	// TODO: Cambiar las URLs de backend en el entorno de producción
-	const envScript = `
-    <script id="env">
-      window.__env = {
-        BACK_BASE: '${'https://localhost:8080'}',
-        BACK_STREAM: '${'https://localhost:8090'}',
-        BACK_CHAT: '${'https://localhost:8070'}',
-        BACK_CHAT_WSS: '${'wss://localhost:8070'}',
-        BACK_STREAM_WSS: '${'wss://localhost:8090'}'
       };
     </script>
   `;
@@ -123,7 +111,7 @@ if (isMainModule(import.meta.url)) {
 
 	// HTTPS server
 	https.createServer({ key, cert }, app).listen(4200, () => {
-		console.log('🔒 Servidor HTTPS escuchando en https://localhost:4200');
+		console.log('🔒 Servidor HTTPS escuchando en ' + URL);
 	});
 }
 
