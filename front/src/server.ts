@@ -7,7 +7,6 @@ import https from 'https';
 import { join } from 'node:path';
 import { Init } from './app/models/Init';
 import { setGlobalInitCache } from './init-cache';
-import { getInitService } from './init-singleton';
 
 // IMPORTA tus rutas
 
@@ -116,21 +115,13 @@ tryBootstrapServerBundle();
  * Nota: este endpoint debe estar *antes* del handler de Angular (más abajo),
  * para que no lo capture el middleware de prerender y evitar errores de body/lock.
  */
-app.post('/refresh-cache', async (req, res) => {
+app.post('/refresh-cache', (req, res) => {
 	try {
 		const newInit: Init = req.body;
 		setGlobalInitCache(newInit);
-
-		// Si InitService está registrado, actualizar servicios Angular.
-		try {
-			const initService = getInitService();
-			initService.cargarEnServicios(newInit);
-			res.send({ message: 'Cache SSR actualizada con éxito' });
-		} catch (err) {
-			// InitService no inicializado todavía: devolvemos 503 y aviso
-			console.warn('[server.ts] /refresh-cache: InitService no inicializado todavía:', err);
-			res.status(503).send({ message: 'InitService no inicializado en SSR. La cache global se ha actualizado, pero no hay instancia Angular para propagar los datos aún.' });
-		}
+		console.log('[server.ts] Actualizando cache global');
+		console.log(newInit.estadistica);
+		res.status(200).json({ message: 'Cache global actualizado' });
 	} catch (e) {
 		console.error('[server.ts] Error al actualizar cache SSR:', e);
 		res.status(500).send({ message: e instanceof Error ? e.message : e });

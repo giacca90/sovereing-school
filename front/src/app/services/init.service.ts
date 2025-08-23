@@ -28,7 +28,7 @@ export class InitService {
 		private http: HttpClient,
 		private cursoService: CursosService,
 		private usuarioService: UsuariosService,
-		private transferState: TransferState,
+		public transferState: TransferState,
 		@Inject(PLATFORM_ID) private platformId: Object,
 	) {}
 
@@ -42,17 +42,20 @@ export class InitService {
 	}
 
 	async carga(): Promise<boolean> {
+		const platform: string = isPlatformBrowser(this.platformId) ? 'browser' : 'server';
 		// 1. Cache en memoria del cliente (SPA)
 		if (this.initDataCache) {
-			//console.log('>>> Usando initCache en memoria');
+			console.log('>>> Usando initCache en memoria en ' + platform);
+			console.log(this.initDataCache.estadistica);
 			this.cargarEnServicios(this.initDataCache);
 			return true;
 		}
 
 		// 2. TransferState (del SSR al browser)
 		if (this.transferState.hasKey(INIT_KEY)) {
-			//console.log('>>> Usando TransferState');
-			const data = this.transferState.get(INIT_KEY, null as any);
+			console.log('>>> Usando TransferState en ' + platform);
+			const data: Init = this.transferState.get(INIT_KEY, null as any);
+			console.log(data.estadistica);
 
 			// Hacemos la llamada para que el backend setee la cookie en el browser
 			if (isPlatformBrowser(this.platformId)) {
@@ -67,7 +70,8 @@ export class InitService {
 		if (isPlatformServer(this.platformId)) {
 			const cached = getGlobalInitCache();
 			if (cached) {
-				//console.log('>>> Usando cache global SSR');
+				console.log('>>> Usando cache global SSR en ' + platform);
+				console.log(cached.estadistica);
 				this.cargarEnServicios(cached);
 				this.transferState.set(INIT_KEY, cached);
 				return true;
@@ -76,7 +80,7 @@ export class InitService {
 
 		// 4. Fetch real al backend
 		try {
-			//console.log('>>> Pidiendo /init al backend');
+			console.log('>>> Pidiendo /init al backend en ' + platform);
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {
@@ -110,5 +114,13 @@ export class InitService {
 
 	auth() {
 		this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true, responseType: 'text' as 'json' }).subscribe();
+	}
+
+	preloadFromGlobalCache() {
+		const cached = getGlobalInitCache();
+		if (cached) {
+			console.log('[InitService] Refrescando TransferState desde cache global SSR');
+			this.transferState.set(INIT_KEY, cached);
+		}
 	}
 }
