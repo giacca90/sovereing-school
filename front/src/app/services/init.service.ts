@@ -64,7 +64,7 @@ export class InitService {
 
 		// 3. Caché global para SSR (evita llamar al backend en cada request)
 		if (isPlatformServer(this.platformId)) {
-			const isValid = globalCache.init && Date.now() - (globalCache.timestamp ?? 0) < 5 * 60 * 1000; // 5 minutos
+			const isValid = globalCache.init && Date.now() - (globalCache.timestamp ?? 0) < 60 * 1000; // 1 minuto
 			if (isValid) {
 				//console.log('>>> Usando cache global SSR');
 				this.cargarEnServicios(globalCache.init!);

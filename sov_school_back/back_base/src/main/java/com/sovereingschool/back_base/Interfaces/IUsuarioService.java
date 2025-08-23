@@ -3,6 +3,7 @@ package com.sovereingschool.back_base.Interfaces;
 import java.util.List;
 
 import com.sovereingschool.back_base.DTOs.AuthResponse;
+import com.sovereingschool.back_base.DTOs.CursosUsuario;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
@@ -30,7 +31,7 @@ public interface IUsuarioService {
 
     public Integer changePlanUsuario(Usuario usuario);
 
-    public Integer changeCursosUsuario(Usuario usuario);
+    public Integer changeCursosUsuario(CursosUsuario cursosUsuario);
 
     public String deleteUsuario(Long id);
 

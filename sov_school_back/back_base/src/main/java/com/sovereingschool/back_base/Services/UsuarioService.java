@@ -34,6 +34,7 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import com.sovereingschool.back_base.DTOs.AuthResponse;
+import com.sovereingschool.back_base.DTOs.CursosUsuario;
 import com.sovereingschool.back_base.Interfaces.IUsuarioService;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
 import com.sovereingschool.back_common.Models.Curso;
@@ -41,6 +42,7 @@ import com.sovereingschool.back_common.Models.Login;
 import com.sovereingschool.back_common.Models.Plan;
 import com.sovereingschool.back_common.Models.RoleEnum;
 import com.sovereingschool.back_common.Models.Usuario;
+import com.sovereingschool.back_common.Repositories.CursoRepository;
 import com.sovereingschool.back_common.Repositories.LoginRepository;
 import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 import com.sovereingschool.back_common.Utils.JwtUtil;
@@ -72,7 +74,10 @@ public class UsuarioService implements IUsuarioService {
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    private UsuarioRepository repo;
+    private UsuarioRepository usuarioRepo;
+
+    @Autowired
+    private CursoRepository cursoRepo;
 
     @Autowired
     private LoginRepository loginRepo;
@@ -135,7 +140,7 @@ public class UsuarioService implements IUsuarioService {
                 true,
                 true);
         try {
-            Usuario usuarioInsertado = this.repo.save(usuario);
+            Usuario usuarioInsertado = this.usuarioRepo.save(usuario);
             if (usuarioInsertado.getId_usuario() == null) {
                 throw new RuntimeException("Error al crear el usuario");
             }
@@ -239,7 +244,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Usuario getUsuario(Long id_usuario) {
-        return this.repo.findUsuarioForId(id_usuario).orElseThrow(() -> {
+        return this.usuarioRepo.findUsuarioForId(id_usuario).orElseThrow(() -> {
             System.err.println("Error en obtener el usuario con ID " + id_usuario);
             return new EntityNotFoundException("Error en obtener el usuario con ID " + id_usuario);
         });
@@ -257,7 +262,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public String getNombreUsuario(Long id_usuario) {
-        return this.repo.findNombreUsuarioForId(id_usuario).orElseThrow(() -> {
+        return this.usuarioRepo.findNombreUsuarioForId(id_usuario).orElseThrow(() -> {
             System.err.println("Error en obtener el nombre del usuario con ID " + id_usuario);
             return new EntityNotFoundException("Error en obtener el nombre del usuario con ID " + id_usuario);
         });
@@ -275,7 +280,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public List<String> getFotosUsuario(Long id_usuario) {
-        return this.repo.findUsuarioForId(id_usuario)
+        return this.usuarioRepo.findUsuarioForId(id_usuario)
                 .map(Usuario::getFoto_usuario)
                 .orElse(null);
     }
@@ -292,7 +297,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public RoleEnum getRollUsuario(Long id_usuario) {
-        return this.repo.findRollUsuarioForId(id_usuario).orElseThrow(() -> {
+        return this.usuarioRepo.findRollUsuarioForId(id_usuario).orElseThrow(() -> {
             System.err.println("Error en obtener el rol del usuario con ID " + id_usuario);
             return new EntityNotFoundException("Error en obtener el rol del usuario con ID " + id_usuario);
         });
@@ -310,7 +315,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Plan getPlanUsuario(Long id_usuario) {
-        return this.repo.findPlanUsuarioForId(id_usuario).orElseThrow(() -> {
+        return this.usuarioRepo.findPlanUsuarioForId(id_usuario).orElseThrow(() -> {
             System.err.println("Error en obtener el plan del usuario con ID " + id_usuario);
             return new EntityNotFoundException("Error en obtener el plan del usuario con ID " + id_usuario);
         });
@@ -331,7 +336,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public List<Curso> getCursosUsuario(Long id_usuario) {
-        return this.repo.findUsuarioForId(id_usuario)
+        return this.usuarioRepo.findUsuarioForId(id_usuario)
                 .map(Usuario::getCursos_usuario)
                 .orElse(null);
     }
@@ -375,7 +380,7 @@ public class UsuarioService implements IUsuarioService {
             }
         }
 
-        return this.repo.save(usuario);
+        return this.usuarioRepo.save(usuario);
     }
 
     /**
@@ -393,10 +398,11 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Integer changePlanUsuario(Usuario usuario) {
-        return this.repo.changePlanUsuarioForId(usuario.getId_usuario(), usuario.getPlan_usuario()).orElseThrow(() -> {
-            System.err.println("Error en cambiar el plan del usuario");
-            return new EntityNotFoundException("Error en cambiar el plan del usuario");
-        });
+        return this.usuarioRepo.changePlanUsuarioForId(usuario.getId_usuario(), usuario.getPlan_usuario())
+                .orElseThrow(() -> {
+                    System.err.println("Error en cambiar el plan del usuario");
+                    return new EntityNotFoundException("Error en cambiar el plan del usuario");
+                });
     }
 
     /**
@@ -413,12 +419,13 @@ public class UsuarioService implements IUsuarioService {
      *
      */
     @Override
-    public Integer changeCursosUsuario(Usuario usuario) {
-        Optional<Usuario> old_usuario = this.repo.findUsuarioForId(usuario.getId_usuario());
+    public Integer changeCursosUsuario(CursosUsuario cursosUsuario) {
+        Optional<Usuario> old_usuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.getId_usuario());
         if (old_usuario.isEmpty()) {
             throw new IllegalArgumentException("El usuario no existe");
         }
-        old_usuario.get().setCursos_usuario(usuario.getCursos_usuario());
+        List<Curso> cursos = this.cursoRepo.findAllById(cursosUsuario.getIds_cursos());
+        old_usuario.get().setCursos_usuario(cursos);
 
         try {
             // Añadir el usuario al microservicio de stream
@@ -451,7 +458,7 @@ public class UsuarioService implements IUsuarioService {
         // Añadir el usuario al microservicio de chat
         // TODO: Implementar la lógica para añadir el usuario al microservicio de chat
 
-        return this.repo.changeUsuarioForId(usuario.getId_usuario(), old_usuario.get()).orElseThrow(() -> {
+        return this.usuarioRepo.changeUsuarioForId(cursosUsuario.getId_usuario(), old_usuario.get()).orElseThrow(() -> {
             System.err.println("Error en cambiar los cursos del usuario");
             return new RuntimeException("Error en cambiar los cursos del usuario");
         });
@@ -469,13 +476,13 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public String deleteUsuario(Long id) {
-        this.repo.findUsuarioForId(id).orElseThrow(() -> {
+        this.usuarioRepo.findUsuarioForId(id).orElseThrow(() -> {
             System.err.println("Error en obtener el usuario con ID " + id);
             return new EntityNotFoundException("Error en obtener el usuario con ID " + id);
         });
         try {
             this.loginRepo.deleteById(id);
-            this.repo.deleteById(id);
+            this.usuarioRepo.deleteById(id);
             return "Usuario eliminado con éxito!!!";
         } catch (IllegalArgumentException e) {
             System.out.println("Error en eliminar el usuario con ID " + id);
@@ -490,7 +497,7 @@ public class UsuarioService implements IUsuarioService {
 
     @Override
     public List<Usuario> getProfes() {
-        return this.repo.findProfes();
+        return this.usuarioRepo.findProfes();
     }
 
     /**
@@ -548,7 +555,7 @@ public class UsuarioService implements IUsuarioService {
 
     public List<Usuario> getAllUsuarios() {
         try {
-            return this.repo.findAll();
+            return this.usuarioRepo.findAll();
         } catch (Exception e) {
             System.err.println("Error al obtener todos los usuarios: " + e.getMessage());
             throw new RuntimeException("Error al obtener todos los usuarios: " + e.getMessage());

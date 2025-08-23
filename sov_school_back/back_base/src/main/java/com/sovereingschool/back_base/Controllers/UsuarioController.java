@@ -51,6 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.sovereingschool.back_base.DTOs.AuthResponse;
+import com.sovereingschool.back_base.DTOs.CursosUsuario;
 import com.sovereingschool.back_base.Services.UsuarioService;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
 import com.sovereingschool.back_common.Models.Curso;
@@ -346,20 +347,21 @@ public class UsuarioController {
 
 	@PreAuthorize("hasRole('USER') or hasRole('PROF') or hasRole('ADMIN')")
 	@PutMapping("/cursos")
-	public ResponseEntity<?> changeCursosUsuario(@RequestBody Usuario usuario) {
+	public ResponseEntity<?> changeCursosUsuario(@RequestBody CursosUsuario cursosUsuario) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
 		if (authentication == null || !authentication.isAuthenticated()) {
 			return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
 		}
 		Long idUsuario = (Long) authentication.getDetails();
-		if (idUsuario == null || !idUsuario.equals(usuario.getId_usuario())) {
+		if (idUsuario == null || !idUsuario.equals(cursosUsuario.getId_usuario())) {
 			return new ResponseEntity<>("Error en el token de acceso: no hay id_usuario en el token",
 					HttpStatus.UNAUTHORIZED);
 		}
 		Object response = new Object();
+
 		try {
-			this.usuarioService.changeCursosUsuario(usuario);
+			this.usuarioService.changeCursosUsuario(cursosUsuario);
 			response = "Cursos actualizados con éxito!!!";
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException e) {

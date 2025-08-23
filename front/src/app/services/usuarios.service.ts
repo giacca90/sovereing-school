@@ -124,8 +124,10 @@ export class UsuariosService {
 		// Si no estaba comprado → añadir y enviar al backend
 		usuario.cursos_usuario.push(curso);
 
+		const cursosUsuario: { id_usuario: number; ids_cursos: number[] } = { id_usuario: usuario.id_usuario, ids_cursos: usuario.cursos_usuario.map((cur: Curso) => cur.id_curso) };
+
 		return this.http
-			.put<string>(this.apiUrl + 'cursos', usuario, {
+			.put<string>(this.apiUrl + 'cursos', cursosUsuario, {
 				observe: 'response',
 				responseType: 'text' as 'json',
 				withCredentials: true,

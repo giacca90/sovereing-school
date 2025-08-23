@@ -14,7 +14,7 @@
 							<p class="ml-2 grow text-gray-500">{{ curso.descriccion_corta }}</p>
 						</div>
 						@if (this.loginService.usuario.id_usuario !== null) {
-							<button class="m-2 rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + curso.id_curso])">Ir al curso</button>
+							<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + curso.id_curso + '/0'])">Ir al curso</button>
 						}
 					</div>
 				}

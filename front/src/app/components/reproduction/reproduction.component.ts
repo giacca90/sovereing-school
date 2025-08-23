@@ -49,6 +49,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 					this.cursoService.getStatusCurso(this.id_curso).subscribe({
 						next: (resp) => {
 							if (resp === 0) {
+								alert('Este curso no está disponible');
 								this.router.navigate(['/']);
 							} else {
 								this.router.navigate(['/repro/' + this.id_curso + '/' + resp]);
