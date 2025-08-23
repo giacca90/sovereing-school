@@ -280,7 +280,11 @@ VALUES (
 		TRUE
 	);
 INSERT INTO login (id_usuario, correo_electronico, PASSWORD)
-VALUES (1, 'matt@prueba.com', 123456),
+VALUES (
+		1,
+		'matt@prueba.com',
+		'$2a$10$9Ii165AsuCR6YeKaJ/FHN.RyTvt1.FdjaeN/6s5ijccjT6hNE1ATW'
+	),
 	(2, 'ra@prueba.com', 234567),
 	(3, 'rodri@prueba.com', 987654),
 	(4, 'equipoljs@prueba.com', 876543),
