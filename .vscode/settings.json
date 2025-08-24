@@ -10,6 +10,15 @@
 			"database": "sov_school",
 			"username": "postgres",
 			"password": "giacca90"
+		},
+		{
+			"previewLimit": 50,
+			"server": "localhost",
+			"port": 5007,
+			"driver": "PostgreSQL",
+			"name": "prod",
+			"database": "sov_school",
+			"username": "theking"
 		}
 	]
 }

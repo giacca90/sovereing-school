@@ -1,6 +1,6 @@
-FROM mongo:8.0.10
+FROM mongo:8.0
 
-RUN apt update && apt upgrade -y && rm -rf /var/lib/apt/lists/*
+# RUN apt update && apt upgrade -y && rm -rf /var/lib/apt/lists/*
 
 COPY init-mongo.js /docker-entrypoint-initdb.d/
 

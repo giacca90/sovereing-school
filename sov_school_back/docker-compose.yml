@@ -11,7 +11,7 @@ services:
             - "${FRONT_PORT}:4200"
         volumes:
             - /etc/letsencrypt/live/giacca90.ddns.net/cert.pem:/certs/cert.pem:ro
-            - /etc/letsencrypt/live/giacca90.ddns.net/key.pem:/certs/key.pem:ro
+            - /etc/letsencrypt/live/giacca90.ddns.net/privkey.pem:/certs/key.pem:ro
 
         networks:
             - sovschool-network
