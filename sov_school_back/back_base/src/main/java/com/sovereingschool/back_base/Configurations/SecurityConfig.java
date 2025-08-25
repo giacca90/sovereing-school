@@ -54,11 +54,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .userDetailsService(inMemoryUserDetailsManager())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .addFilterBefore(corsFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(jwtTokenCookieFilter, ExceptionTranslationFilter.class)
                 .addFilterAfter(jwtTokenValidator, ExceptionTranslationFilter.class)
-                .oauth2Login(oauth2 -> oauth2.successHandler(customOAuth2SuccessHandler()))
+                .oauth2Login(oauth2 -> oauth2.successHandler(customOAuth2SuccessHandler())
+                        .failureHandler((request, response, exception) -> {
+                            exception.printStackTrace();
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.getWriter().write("OAuth2 error: " + exception.getMessage());
+                        }))
                 .formLogin(form -> form.disable())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
