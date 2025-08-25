@@ -38,11 +38,11 @@ public class JwtTokenCookieFilter extends OncePerRequestFilter {
             String refresh = "";
             if (cookies != null) {
                 for (Cookie c : cookies) {
-                    if (c.getName().equals("initToken") && hasText(c.getValue())) {
-                        init = c.getValue();
-                    }
                     if (c.getName().equals("refreshToken") && hasText(c.getValue())) {
                         refresh = c.getValue();
+                    }
+                    if (c.getName().equals("initToken") && hasText(c.getValue())) {
+                        init = c.getValue();
                     }
                 }
             }
