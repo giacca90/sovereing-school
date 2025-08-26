@@ -1,9 +1,10 @@
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
+import compression from 'compression';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import fs from 'fs';
-import http from 'http';
-import https from 'https';
+import http2 from 'http';
+import https2 from 'https';
 import { join } from 'node:path';
 
 // IMPORTA tus rutas
@@ -14,6 +15,9 @@ const app = express();
 
 // Pasa las serverRoutes al engine
 const angularApp = new AngularNodeAppEngine();
+
+// Compresion
+app.use(compression());
 
 /**
  * Serve static files from /browser
@@ -103,14 +107,16 @@ if (isMainModule(import.meta.url)) {
 	const cert = fs.readFileSync('/certs/cert.pem'); // ruta absoluta en contenedor
 
 	// HTTP → HTTPS redirection
-	http.createServer((req, res) => {
-		const host = req.headers.host;
-		res.writeHead(301, { Location: `https://${host}${req.url}` });
-		res.end();
-	}).listen(80, () => console.log('HTTP redirige a HTTPS en puerto 80'));
+	http2
+		.createServer((req, res) => {
+			const host = req.headers.host;
+			res.writeHead(301, { Location: `https://${host}${req.url}` });
+			res.end();
+		})
+		.listen(80, () => console.log('HTTP redirige a HTTPS en puerto 80'));
 
 	// HTTPS server
-	https.createServer({ key, cert }, app).listen(4200, () => {
+	https2.createServer({ key, cert }, app).listen(4200, () => {
 		console.log('🔒 Servidor HTTPS escuchando en ' + URL);
 	});
 }
