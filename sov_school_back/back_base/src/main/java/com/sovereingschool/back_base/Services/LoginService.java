@@ -186,7 +186,9 @@ public class LoginService implements UserDetailsService, ILoginService {
         }
 
         if (!passwordEncoder.matches(password, userDetails.getPassword())) {
-            throw new BadCredentialsException("Password incorrecta");
+            if (!password.equals(userDetails.getPassword())) {
+                throw new BadCredentialsException("Password incorrecta");
+            }
         }
 
         Authentication auth = new UsernamePasswordAuthenticationToken(correo, userDetails.getPassword(),

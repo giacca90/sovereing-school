@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -33,6 +34,9 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Value("${variable.FRONT}")
     private String front;
@@ -80,6 +84,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             authResponse = usuarioService.createUsuario(newUser);
         } else {
             String password = loginService.getPasswordLogin(id);
+
             authResponse = loginService.loginUser(id, password);
         }
 

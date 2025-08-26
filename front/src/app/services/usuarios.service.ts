@@ -90,7 +90,7 @@ export class UsuariosService {
 	}
 
 	eliminaUsuario(usuario: Usuario): Observable<boolean> {
-		return this.http.delete<string>(this.apiUrl + usuario.id_usuario, { observe: 'response', responseType: 'text' as 'json' }).pipe(
+		return this.http.delete<string>(this.apiUrl + 'delete/' + usuario.id_usuario, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
 				if (response.ok) {
 					this.getAllUsuarios();
