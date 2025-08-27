@@ -14,6 +14,7 @@ import { RegisterComponent } from './register/register.component';
 	styleUrl: './log-modal.component.css',
 	imports: [LoginComponent, RegisterComponent],
 })
+// TODO: Arreglar el fallo despues de utilizar el evento de teclado
 export class LogModalComponent implements AfterViewInit {
 	login: HTMLButtonElement | null = null;
 	register: HTMLButtonElement | null = null;

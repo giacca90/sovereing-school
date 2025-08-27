@@ -9,6 +9,8 @@ import { LoginService } from '../../../services/login.service';
 	templateUrl: './login.component.html',
 	styleUrl: './login.component.css',
 })
+
+// TODO: Arreglar el fallo despues de utilizar el evento de teclado
 export class LoginComponent {
 	@Output() oauth2: EventEmitter<string> = new EventEmitter<string>();
 	private fase: number = 0;

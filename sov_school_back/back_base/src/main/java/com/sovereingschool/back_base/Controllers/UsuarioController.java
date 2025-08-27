@@ -52,7 +52,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.CursosUsuario;
-import com.sovereingschool.back_base.Services.UsuarioService;
+import com.sovereingschool.back_base.Interfaces.IUsuarioService;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
@@ -74,9 +74,7 @@ public class UsuarioController {
 	}
 
 	@Autowired
-	// TODO: Volver a activar la interfaz despues de mejorar el manejo de errores
-	// private IUsuarioService usuarioService;
-	private UsuarioService usuarioService;
+	private IUsuarioService usuarioService;
 
 	@Autowired
 	private JwtUtil jwtUtil;

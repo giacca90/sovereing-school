@@ -38,4 +38,6 @@ public interface IUsuarioService {
     public List<Usuario> getProfes();
 
     public boolean sendConfirmationEmail(NewUsuario newUsuario) throws MessagingException;
+
+    public List<Usuario> getAllUsuarios();
 }

@@ -413,7 +413,6 @@ public class CursoChatService {
 
     /**
      * Función para inicializar el chat de usuarios
-     * TODO: Eliminar en producción
      */
     public void init() {
         try {

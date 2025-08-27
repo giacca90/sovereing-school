@@ -191,10 +191,7 @@ public class StreamingController {
     }
 
     /**
-     * Función temporal para desarrollo
-     * TODO: Eliminar en producción
-     * 
-     * @return
+     * Función para rellenar la base de datos
      */
     @GetMapping("/init")
     public ResponseEntity<?> get() {

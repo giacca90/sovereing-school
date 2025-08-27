@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.ChangePassword;
-import com.sovereingschool.back_base.Services.LoginService;
+import com.sovereingschool.back_base.Interfaces.ILoginService;
 import com.sovereingschool.back_common.Models.Login;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Utils.JwtUtil;
@@ -30,9 +30,7 @@ import com.sovereingschool.back_common.Utils.JwtUtil;
 public class LoginController {
 
 	@Autowired
-	// TODO: Volver a activar la interfaz despues de mejorar el manejo de errores
-	// private ILoginService loginService;
-	private LoginService loginService;
+	private ILoginService loginService;
 
 	@Autowired
 	private JwtUtil jwtUtil;

@@ -1,0 +1,49 @@
+services:
+    sovschool-front:
+        develop:
+            watch:
+                - action: sync
+                  path: ../front
+                  target: /app
+                  ignore:
+                      - node_modules/
+                      - dist/
+                      - .git/
+
+                - action: rebuild
+                  path: ../front/package.json
+    sovschool-back-base:
+        develop:
+            watch:
+                - action: sync
+                  path: ./back_base/src
+                  target: /app/src
+                  ignore:
+                      - target/
+                      - .git/
+                - action: rebuild
+                  path: ./back_base/pom.xml
+
+    sovschool-back-chat:
+        develop:
+            watch:
+                - action: sync
+                  path: ./back_chat/src
+                  target: /app/src
+                  ignore:
+                      - target/
+                      - .git/
+                - action: rebuild
+                  path: ./back_chat/pom.xml
+
+    sovschool-back-stream:
+        develop:
+            watch:
+                - action: sync
+                  path: ./back_stream/src
+                  target: /app/src
+                  ignore:
+                      - target/
+                      - .git/
+                - action: rebuild
+                  path: ./back_stream/pom.xml

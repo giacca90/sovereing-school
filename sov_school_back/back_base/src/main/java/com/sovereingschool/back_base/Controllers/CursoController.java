@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.sovereingschool.back_base.Services.CursoService;
+import com.sovereingschool.back_base.Interfaces.ICursoService;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
@@ -34,9 +34,7 @@ import jakarta.persistence.EntityNotFoundException;
 @PreAuthorize("hasAnyRole('GUEST', 'USER', 'PROF', 'ADMIN')")
 public class CursoController {
 	@Autowired
-	// TODO: Volver a activar la interfaz
-	// private ICursoService cursoService;
-	private CursoService cursoService;
+	private ICursoService cursoService;
 
 	/* Parte de gestión de cursos */
 	@GetMapping("/getAll")

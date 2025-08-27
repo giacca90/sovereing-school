@@ -50,7 +50,7 @@ export class StreamingService {
 		return this.http.get(`${this.URL}/${id_curso}/${id_clase}`, { responseType: 'blob', withCredentials: true });
 	}
 
-	// TODO: Revisar
+	// TODO: implementar manejo de errores
 	/**
 	 * Función para emitir un video a través de WebRTC
 	 * @param stream MediaStream
