@@ -495,6 +495,8 @@ public class CursoService implements ICursoService {
                 System.err.println("Error en borrar la clase en el chat: " + e.getMessage());
             }
             // TODO: Mirar si se necesita eliminar algo en el microservicio de streaming
+            // en el microservicio de streaming hay que buscar todos los usuarios sel curso,
+            // y borrar la clase.
         } else {
             System.err.println("Clase no encontrada con ID: " + clase.getId_clase());
         }

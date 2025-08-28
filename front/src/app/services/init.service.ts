@@ -11,8 +11,6 @@ import { LoginService } from './login.service';
 import { UsuariosService } from './usuarios.service';
 
 const INIT_KEY = makeStateKey<Init>('init-data');
-
-// Caché global para SSR (vive mientras dure el proceso del servidor)
 const globalCache: { init?: Init; timestamp?: number } = {};
 
 @Injectable({ providedIn: 'root' })
@@ -43,44 +41,25 @@ export class InitService {
 	}
 
 	async carga(): Promise<boolean> {
-		const tareas: Promise<any>[] = [];
-
-		// 1️⃣ Carga de init-data
-		tareas.push(this.cargaInitData());
-
-		// 2️⃣ Carga de usuario desde /auth (solo en navegador)
-		if (isPlatformBrowser(this.platformId)) {
-			const usuarioPromise = firstValueFrom(this.http.get<Usuario | null>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }))
-				.then((usuario) => {
-					this.loginService.usuario = usuario ?? null;
-				})
-				.catch((err) => {
-					console.warn('[InitService] No hay usuario logueado:', err);
-					this.loginService.usuario = null;
-				});
-
-			tareas.push(usuarioPromise);
-		}
-
-		// 3️⃣ Espera a que ambas terminen antes de continuar
-		await Promise.allSettled(tareas);
-
-		return true;
-	}
-
-	// -------------------
-	// Lógica de carga init-data
-	private async cargaInitData(): Promise<boolean> {
-		// 1️⃣ Cache local en SPA
+		// 1️⃣ SPA cache
 		if (this.initDataCache) {
 			this.cargarEnServicios(this.initDataCache);
+			// En SPA el usuario se obtiene solo desde /auth en el navegador
+			if (isPlatformBrowser(this.platformId) && this.loginService.usuario === undefined) {
+				await this.cargarUsuario();
+			}
 			return true;
 		}
 
-		// 2️⃣ TransferState del SSR al browser
+		// 2️⃣ TransferState (SSR → cliente)
 		if (this.transferState.hasKey(INIT_KEY)) {
 			const data = this.transferState.get(INIT_KEY, null as any);
 			this.cargarEnServicios(data);
+
+			if (isPlatformBrowser(this.platformId)) {
+				await this.cargarUsuario(); // Obtener usuario desde cookie HttpOnly
+			}
+
 			return true;
 		}
 
@@ -107,10 +86,26 @@ export class InitService {
 			}
 
 			this.cargarEnServicios(response);
+
+			// En navegador, cargar usuario en paralelo después
+			if (isPlatformBrowser(this.platformId)) {
+				await this.cargarUsuario();
+			}
+
 			return true;
 		} catch (e) {
-			console.error('[InitService] Error al cargar datos:', e);
+			console.error('[InitService] Error al cargar init-data:', e);
 			return false;
+		}
+	}
+
+	private async cargarUsuario() {
+		try {
+			const usuario = await firstValueFrom(this.http.get<Usuario | null>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }));
+			this.loginService.usuario = usuario ?? null;
+		} catch (err) {
+			console.warn('[InitService] Error al obtener usuario desde /auth:', err);
+			this.loginService.usuario = null;
 		}
 	}
 
