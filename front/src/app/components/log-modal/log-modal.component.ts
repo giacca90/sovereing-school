@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, Inject, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, PLATFORM_ID, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
 import { Auth } from '../../models/Auth';
 import { LoginModalService } from '../../services/login-modal.service';
 import { LoginService } from '../../services/login.service';
@@ -14,12 +15,17 @@ import { RegisterComponent } from './register/register.component';
 	styleUrl: './log-modal.component.css',
 	imports: [LoginComponent, RegisterComponent],
 })
-// TODO: Arreglar el fallo despues de utilizar el evento de teclado
-export class LogModalComponent implements AfterViewInit {
+// Ahora el padre captura los keydown y los pasa a los hijos
+export class LogModalComponent implements AfterViewInit, OnDestroy {
 	login: HTMLButtonElement | null = null;
 	register: HTMLButtonElement | null = null;
 	isLoginHidden: boolean = false;
 	backBase = '';
+
+	// ✅ Subject para propagar eventos de teclado
+	keyEvents$ = new Subject<KeyboardEvent>();
+
+	@ViewChild('modal') modalEl!: ElementRef<HTMLDivElement>;
 
 	constructor(
 		private modalService: LoginModalService,
@@ -33,7 +39,19 @@ export class LogModalComponent implements AfterViewInit {
 		this.register = document.getElementById('register') as HTMLButtonElement;
 		if (isPlatformBrowser(this.platformId)) {
 			this.backBase = (window as any).__env?.BACK_BASE ?? '';
+			// ✅ Aseguramos que el modal recibe foco para captar teclas
+			setTimeout(() => this.modalEl?.nativeElement?.focus(), 0);
 		}
+	}
+
+	ngOnDestroy(): void {
+		// ✅ cerramos el Subject para evitar fugas
+		this.keyEvents$.complete();
+	}
+
+	// ✅ método que captura las teclas y las reenvía a los hijos
+	onKeyDown(event: KeyboardEvent) {
+		this.keyEvents$.next(event);
 	}
 
 	clickLogin() {

@@ -2,14 +2,8 @@ services:
     sovschool-front:
         develop:
             watch:
-                - action: sync
+                - action: rebuild
                   path: ../front
-                  target: /app
-                  ignore:
-                      - node_modules/
-                      - dist/
-                      - .git/
-
                 - action: rebuild
                   path: ../front/package.json
     sovschool-back-base:

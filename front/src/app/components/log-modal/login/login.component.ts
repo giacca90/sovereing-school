@@ -1,4 +1,5 @@
-import { afterNextRender, Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Subject, Subscription } from 'rxjs';
 import { LoginModalService } from '../../../services/login-modal.service';
 import { LoginService } from '../../../services/login.service';
 
@@ -9,30 +10,41 @@ import { LoginService } from '../../../services/login.service';
 	templateUrl: './login.component.html',
 	styleUrl: './login.component.css',
 })
-
-// TODO: Arreglar el fallo despues de utilizar el evento de teclado
-export class LoginComponent {
+export class LoginComponent implements OnInit, OnDestroy {
 	@Output() oauth2: EventEmitter<string> = new EventEmitter<string>();
+	@Input() keyEvents!: Subject<KeyboardEvent>;
+
 	private fase: number = 0;
-	private keyEvent = (e: KeyboardEvent) => {
-		if (e.key === 'Enter') {
-			this.fase === 0 ? this.compruebaCorreo() : this.compruebaPassword();
-		} else if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'Delete') {
-			this.close();
-		}
-	};
+	private keySub?: Subscription;
+
 	constructor(
 		private modalService: LoginModalService,
 		private loginService: LoginService,
-	) {
-		afterNextRender(() => {
-			document.getElementById('modal')?.addEventListener('keydown', this.keyEvent);
+	) {}
+
+	ngOnInit(): void {
+		if (this.keyEvents) {
+			this.keySub = this.keyEvents.subscribe((e: KeyboardEvent) => {
+				if (e.key === 'Enter') {
+					this.fase === 0 ? this.compruebaCorreo() : this.compruebaPassword();
+				} else if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'Delete') {
+					this.close();
+				}
+			});
+		}
+
+		// Ponemos el foco inicial en el campo correo
+		setTimeout(() => {
 			document.getElementById('correo')?.focus();
 		});
 	}
 
+	ngOnDestroy(): void {
+		this.keySub?.unsubscribe();
+	}
+
 	close() {
-		document.getElementById('modal')?.removeEventListener('keydown', this.keyEvent);
+		this.keySub?.unsubscribe();
 		this.modalService.hide();
 	}
 
@@ -63,9 +75,10 @@ export class LoginComponent {
 				<br />
 				<input type="password" id="password" class="m-4 rounded-lg border border-black p-1" placeholder="Password" />
 				<br />
-				<button id="nextButton" class="cursor-pointer m-4 rounded-lg text-black border border-black bg-green-300 p-1" (click)="compruebaCorreo()">Siguiente</button>
-				<button id="cancelButton" class="cursor-pointer m-4 rounded-lg text-black border border-black bg-red-300 p-1" (click)="close()">Cancelar</button>
+				<button id="nextButton" class="cursor-pointer m-4 rounded-lg text-black border border-black bg-green-300 p-1">Siguiente</button>
+				<button id="cancelButton" class="cursor-pointer m-4 rounded-lg text-black border border-black bg-red-300 p-1">Cancelar</button>
 			`;
+
 			const nextButton = document.getElementById('nextButton') as HTMLButtonElement;
 			const cancelButton = document.getElementById('cancelButton') as HTMLButtonElement;
 			document.getElementById('password')?.focus();

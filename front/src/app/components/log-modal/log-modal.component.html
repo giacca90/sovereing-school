@@ -1,12 +1,14 @@
-<div id="modal" class="relative m-4 h-full w-full dark:bg-black">
+<div id="modal" #modal tabindex="0" (keydown)="onKeyDown($event)" class="relative m-4 h-full w-full dark:bg-black">
 	<div class="mb-0 flex flex-row items-center justify-between space-x-4">
 		<div class="relative items-center space-x-4">
 			<button type="button" id="login" class="absolute -top-4 m-4 mb-0 cursor-pointer rounded-t-lg border border-black border-b-white bg-white p-1 font-bold dark:border-gray-400 dark:border-b-black dark:bg-black dark:text-gray-400" (click)="clickLogin()">Entra</button>
 			<button type="button" id="register" class="absolute -top-4 left-12 m-4 mb-0 cursor-pointer rounded-t-lg border border-black border-b-white p-1 font-bold dark:border-gray-400 dark:bg-black dark:text-gray-400" (click)="clickRegister()">Regístrate</button>
 		</div>
 	</div>
+
 	<div id="content_component" class="mt-8 cursor-default rounded-lg border border-black dark:border-gray-400 dark:bg-black dark:text-gray-400">
-		<app-login [hidden]="isLoginHidden" (oauth2)="oauth2LoginWith($event)"></app-login>
-		<app-register [hidden]="!isLoginHidden" (oauth2)="oauth2LoginWith($event)"></app-register>
+		<app-login [hidden]="isLoginHidden" [keyEvents]="keyEvents$" (oauth2)="oauth2LoginWith($event)"></app-login>
+
+		<app-register [hidden]="!isLoginHidden" [keyEvents]="keyEvents$" (oauth2)="oauth2LoginWith($event)"></app-register>
 	</div>
 </div>

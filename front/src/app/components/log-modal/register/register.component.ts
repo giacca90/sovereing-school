@@ -1,4 +1,5 @@
-import { afterNextRender, Component, EventEmitter, OnDestroy, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Subject, Subscription } from 'rxjs';
 import { NuevoUsuario } from '../../../models/NuevoUsuario';
 import { LoginModalService } from '../../../services/login-modal.service';
 import { LoginService } from '../../../services/login.service';
@@ -11,37 +12,45 @@ import { RegisterService } from '../../../services/register.service';
 	templateUrl: './register.component.html',
 	styleUrl: './register.component.css',
 })
-export class RegisterComponent implements OnDestroy {
+export class RegisterComponent implements OnInit, OnDestroy {
 	@Output() oauth2: EventEmitter<string> = new EventEmitter<string>();
+	@Input() keyEvents!: Subject<KeyboardEvent>;
 
 	private nuevoUsuario: NuevoUsuario = new NuevoUsuario();
 	private fase: number = 0;
-	private keyEvent = (e: KeyboardEvent) => {
-		if (e.key === 'Enter') {
-			this.fase === 0 ? this.compruebaCorreo() : this.fase === 1 ? this.compruebaPassword() : this.close();
-		}
-		if (e.key === 'Escape') {
-			this.close();
-		}
-	};
+	private keySub?: Subscription;
 
 	constructor(
 		private modalService: LoginModalService,
 		private loginService: LoginService,
 		private registerService: RegisterService,
-	) {
-		afterNextRender(() => {
-			document.getElementById('modal')?.addEventListener('keydown', this.keyEvent);
+	) {}
+
+	ngOnInit(): void {
+		if (this.keyEvents) {
+			this.keySub = this.keyEvents.subscribe((e: KeyboardEvent) => {
+				if (e.key === 'Enter') {
+					this.fase === 0 ? this.compruebaCorreo() : this.fase === 1 ? this.compruebaPassword() : this.close();
+				}
+				if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'Delete') {
+					this.close();
+				}
+			});
+		}
+
+		// Foco inicial en el nombre
+		setTimeout(() => {
 			document.getElementById('nombre2')?.focus();
 		});
 	}
 
 	ngOnDestroy(): void {
+		this.keySub?.unsubscribe();
 		this.nuevoUsuario = new NuevoUsuario();
 	}
 
 	close() {
-		document.getElementById('modal')?.removeEventListener('keydown', this.keyEvent);
+		this.keySub?.unsubscribe();
 		this.modalService.hide();
 	}
 
@@ -52,20 +61,20 @@ export class RegisterComponent implements OnDestroy {
 
 		if ((document.getElementById('nombre2') as HTMLInputElement).value.length == 0) {
 			const mex: HTMLParagraphElement = document.createElement('p');
-			mex.textContent = 'El nombre no puede estas vacío.';
+			mex.textContent = 'El nombre no puede estar vacío.';
 			message.appendChild(mex);
 			return;
 		}
 		if (correo.length == 0) {
 			const mex: HTMLParagraphElement = document.createElement('p');
-			mex.textContent = 'No has puesto el Correo!!!';
+			mex.textContent = 'No has puesto el correo!!!';
 			message.appendChild(mex);
 			return;
 		}
 
 		if (!this.compruebaEmail(correo)) {
 			const mex: HTMLParagraphElement = document.createElement('p');
-			mex.textContent = 'El correo electrónico no tiene un formato valido!!!';
+			mex.textContent = 'El correo electrónico no tiene un formato válido!!!';
 			message.appendChild(mex);
 			return;
 		}
@@ -86,9 +95,10 @@ export class RegisterComponent implements OnDestroy {
 				<br />
 				<input type="password" id="password2" class="m-4 rounded-lg border border-black p-1" placeholder="Repite la contraseña" />
 				<br />
-				<button id="nextButton2" class="cursor-pointer m-4 rounded-lg border text-black border-black bg-green-300 p-1" >Siguiente</button>
-				<button id="cancelButton2" class="cursor-pointer m-4 rounded-lg border text-black border-black bg-red-300 p-1" >Cancelar</button>
+				<button id="nextButton2" class="cursor-pointer m-4 rounded-lg border text-black border-black bg-green-300 p-1">Siguiente</button>
+				<button id="cancelButton2" class="cursor-pointer m-4 rounded-lg border text-black border-black bg-red-300 p-1">Cancelar</button>
 			`;
+
 			const nextButton = document.getElementById('nextButton2') as HTMLButtonElement;
 			const cancelButton = document.getElementById('cancelButton2') as HTMLButtonElement;
 			document.getElementById('password')?.focus();
@@ -114,11 +124,11 @@ export class RegisterComponent implements OnDestroy {
 		const pass: string = (document.getElementById('password') as HTMLInputElement).value;
 		const pass2: string = (document.getElementById('password2') as HTMLInputElement).value;
 		if (pass.length === 0) {
-			message.textContent = 'La contraseña no puede estas vacía';
+			message.textContent = 'La contraseña no puede estar vacía';
 			return;
 		}
 		if (pass2.length === 0) {
-			message.textContent = 'La contraseña no puede estas vacía';
+			message.textContent = 'La contraseña no puede estar vacía';
 			return;
 		}
 		if (pass == pass2) {
