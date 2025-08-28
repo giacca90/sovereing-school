@@ -13,9 +13,11 @@ export class LoginService {
 
 	constructor(private http: HttpClient) {
 		afterNextRender(() => {
-			const token = localStorage.getItem('Token');
-			if (token) {
-				this.loginWithToken(token);
+			if (this.usuario === null) {
+				const token = localStorage.getItem('Token');
+				if (token) {
+					this.loginWithToken(token);
+				}
 			}
 		});
 	}

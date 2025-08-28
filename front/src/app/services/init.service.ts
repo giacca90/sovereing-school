@@ -7,6 +7,7 @@ import { Estadistica } from '../models/Estadistica';
 import { Init } from '../models/Init';
 import { Usuario } from '../models/Usuario';
 import { CursosService } from './cursos.service';
+import { LoginService } from './login.service';
 import { UsuariosService } from './usuarios.service';
 
 const INIT_KEY = makeStateKey<Init>('init-data');
@@ -28,6 +29,7 @@ export class InitService {
 		private cursoService: CursosService,
 		private usuarioService: UsuariosService,
 		private transferState: TransferState,
+		private loginService: LoginService,
 		@Inject(PLATFORM_ID) private platformId: Object,
 	) {}
 
@@ -55,7 +57,21 @@ export class InitService {
 
 			// Hacemos la llamada para que el backend setee la cookie en el browser
 			if (isPlatformBrowser(this.platformId)) {
-				this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true, responseType: 'text' as 'json' }).subscribe();
+				try {
+					// Llamada al endpoint /auth que ahora devuelve Usuario o null
+					const usuario = await firstValueFrom(
+						this.http.get<Usuario | null>(this.apiUrl + '/auth', {
+							headers: this.headers,
+							withCredentials: true,
+						}),
+					);
+
+					// Actualizamos el servicio de login con el usuario recibido
+					this.loginService.usuario = usuario ?? null;
+				} catch (err) {
+					console.warn('[InitService] Error al obtener usuario desde /auth:', err);
+					this.loginService.usuario = null;
+				}
 			}
 
 			this.cargarEnServicios(data);
