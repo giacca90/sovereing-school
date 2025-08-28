@@ -116,6 +116,7 @@ export class AdministracionComponent {
 		});
 	}
 
+	// TODO: activar la eliminación de cursos
 	eliminaCurso(curso: Curso) {
 		if (!confirm('¿Estás seguro que deseas eliminar este curso?\n Esto eliminará también el chat de este curso')) {
 			return;

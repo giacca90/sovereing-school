@@ -371,10 +371,10 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	private muestraCortina(x: number, y: number, timeInSeconds: number) {
 		const curtain = document.createElement('div');
 		curtain.style.position = 'absolute';
-		curtain.style.top = `${y}px`;
+		curtain.style.top = `${y + window.scrollY}px`;
 		curtain.style.left = `${x}px`;
 		curtain.style.width = '200px';
-		curtain.style.height = '100px';
+		curtain.style.height = 'auto';
 		curtain.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
 		curtain.style.color = 'white';
 		curtain.style.padding = '10px';

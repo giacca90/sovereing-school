@@ -30,6 +30,9 @@ export class CursosService {
 	}
 
 	async getCurso(id_curso: number, fromServer?: boolean): Promise<Curso | null> {
+		if (id_curso == 0) {
+			return null;
+		}
 		for (let i = 0; i < this.cursos.length; i++) {
 			if (this.cursos[i].id_curso == id_curso) {
 				if (this.cursos[i].clases_curso === undefined || fromServer) {

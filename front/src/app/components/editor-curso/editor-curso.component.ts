@@ -93,6 +93,11 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		this.subscription.unsubscribe();
 	}
 
+	/**
+	 * Evento de arrastre para posicionar los cursos
+	 * @param event Evento de arrastre
+	 * @param id Id del curso
+	 */
 	onDragStart(event: Event, id: number) {
 		const event2: DragEvent = event as DragEvent;
 		const div = event2.target as HTMLDivElement;
@@ -110,6 +115,11 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		div.classList.add('opacity-0');
 	}
 
+	/**
+	 * Efecto de mover los otros cursos al arrastrar
+	 * @param event Evento de arrastre
+	 * @param id Id del curso
+	 */
 	onDragOver(event: Event, id: number) {
 		event.preventDefault();
 		if (this.draggedElementId === null || this.draggedElementId === id) {
@@ -132,6 +142,10 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		}
 	}
 
+	/**
+	 * Evento de soltar los cursos
+	 * @param event Evento de soltar
+	 */
 	onDrop(event: Event) {
 		event.preventDefault();
 		this.draggedElementId = null;
@@ -201,6 +215,10 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		}
 	}
 
+	/**
+	 * Carga de imagen del curso
+	 * @param event Evento de carga de imagen
+	 */
 	cargaImagenCurso(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files) {
@@ -269,6 +287,12 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 
 	async claseGuardada(event: boolean) {
 		if (event) {
+			console.log('Guardando cambios en curso: ' + this.idCurso);
+			if (this.idCurso == 0) {
+				this.claseEditar = null;
+				document.body.style.overflow = 'auto';
+				return;
+			}
 			this.cursoService
 				.getCurso(this.idCurso, true)
 				.then((curso) => {
