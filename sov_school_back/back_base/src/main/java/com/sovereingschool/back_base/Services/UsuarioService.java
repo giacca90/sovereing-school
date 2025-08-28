@@ -427,8 +427,8 @@ public class UsuarioService implements IUsuarioService {
         List<Curso> cursos = this.cursoRepo.findAllById(cursosUsuario.getIds_cursos());
         old_usuario.get().setCursos_usuario(cursos);
 
+        // Añadir el usuario al microservicio de stream
         try {
-            // Añadir el usuario al microservicio de stream
             WebClient webClientStream = createSecureWebClient(backStreamURL);
             webClientStream.put().uri("/nuevoCursoUsuario")
                     .body(Mono.just(old_usuario), Usuario.class)
@@ -446,7 +446,6 @@ public class UsuarioService implements IUsuarioService {
                     }).subscribe(res -> {
                         // Maneja el resultado cuando esté disponible
                         if (res == null || !res.equals("Usuario creado con exito!!!")) {
-                        } else {
                             System.err.println("Error en crear el usuario en el stream:");
                             System.err.println(res);
                         }

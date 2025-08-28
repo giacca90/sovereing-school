@@ -43,66 +43,66 @@ export class InitService {
 	}
 
 	async carga(): Promise<boolean> {
-		// 1. Cache en memoria del cliente (SPA)
+		const tareas: Promise<any>[] = [];
+
+		// 1️⃣ Carga de init-data
+		tareas.push(this.cargaInitData());
+
+		// 2️⃣ Carga de usuario desde /auth (solo en navegador)
+		if (isPlatformBrowser(this.platformId)) {
+			const usuarioPromise = firstValueFrom(this.http.get<Usuario | null>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }))
+				.then((usuario) => {
+					this.loginService.usuario = usuario ?? null;
+				})
+				.catch((err) => {
+					console.warn('[InitService] No hay usuario logueado:', err);
+					this.loginService.usuario = null;
+				});
+
+			tareas.push(usuarioPromise);
+		}
+
+		// 3️⃣ Espera a que ambas terminen antes de continuar
+		await Promise.allSettled(tareas);
+
+		return true;
+	}
+
+	// -------------------
+	// Lógica de carga init-data
+	private async cargaInitData(): Promise<boolean> {
+		// 1️⃣ Cache local en SPA
 		if (this.initDataCache) {
-			//console.log('>>> Usando initCache en memoria');
 			this.cargarEnServicios(this.initDataCache);
 			return true;
 		}
 
-		// 2. TransferState (del SSR al browser)
+		// 2️⃣ TransferState del SSR al browser
 		if (this.transferState.hasKey(INIT_KEY)) {
-			//console.log('>>> Usando TransferState');
 			const data = this.transferState.get(INIT_KEY, null as any);
-
-			// Hacemos la llamada para que el backend setee la cookie en el browser
-			if (isPlatformBrowser(this.platformId)) {
-				try {
-					// Llamada al endpoint /auth que ahora devuelve Usuario o null
-					const usuario = await firstValueFrom(
-						this.http.get<Usuario | null>(this.apiUrl + '/auth', {
-							headers: this.headers,
-							withCredentials: true,
-						}),
-					);
-
-					// Actualizamos el servicio de login con el usuario recibido
-					this.loginService.usuario = usuario ?? null;
-				} catch (err) {
-					console.warn('[InitService] Error al obtener usuario desde /auth:', err);
-					this.loginService.usuario = null;
-				}
-			}
-
 			this.cargarEnServicios(data);
 			return true;
 		}
 
-		// 3. Caché global para SSR (evita llamar al backend en cada request)
+		// 3️⃣ Cache global SSR
 		if (isPlatformServer(this.platformId)) {
-			const isValid = globalCache.init && Date.now() - (globalCache.timestamp ?? 0) < 60 * 1000; // 1 minuto
+			const isValid = globalCache.init && Date.now() - (globalCache.timestamp ?? 0) < 60 * 1000;
 			if (isValid) {
-				//console.log('>>> Usando cache global SSR');
 				this.cargarEnServicios(globalCache.init!);
 				this.transferState.set(INIT_KEY, globalCache.init!);
 				return true;
 			}
 		}
 
-		// 4. Fetch real al backend
+		// 4️⃣ Fetch real al backend
 		try {
-			//console.log('>>> Pidiendo /init al backend');
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {
-				// Guardamos en cache global SSR
 				globalCache.init = response;
 				globalCache.timestamp = Date.now();
-
-				// Pasamos datos al browser
 				this.transferState.set(INIT_KEY, response);
 			} else {
-				// Guardamos en cache local del cliente
 				this.initDataCache = response;
 			}
 
@@ -123,9 +123,5 @@ export class InitService {
 		});
 
 		this.estadistica = data.estadistica;
-	}
-
-	auth() {
-		this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true, responseType: 'text' as 'json' }).subscribe();
 	}
 }

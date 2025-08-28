@@ -124,8 +124,6 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @param correo Correo electrónico del usuario
      * @return Objeto UserDetails con los datos del usuario
      * @throws UsernameNotFoundException si el usuario no existe
-     * 
-     *                                   TODO: Investigar a que sirve eso
      */
     @Override
     public UserDetails loadUserByUsername(String correo) throws UsernameNotFoundException {

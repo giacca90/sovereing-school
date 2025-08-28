@@ -494,11 +494,10 @@ public class CursoService implements ICursoService {
             } catch (Exception e) {
                 System.err.println("Error en borrar la clase en el chat: " + e.getMessage());
             }
+            // TODO: Mirar si se necesita eliminar algo en el microservicio de streaming
         } else {
             System.err.println("Clase no encontrada con ID: " + clase.getId_clase());
         }
-
-        // TODO: Mirar si se necesita eliminar algo en el microservicio de streaming
 
     }
 
