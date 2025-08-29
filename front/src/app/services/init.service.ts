@@ -33,9 +33,7 @@ export class InitService {
 
 	get apiUrl(): string {
 		// Ruta al contenedor
-		if (isPlatformServer(this.platformId)) {
-			return 'https://sovschool-back-base:8080/init';
-		} else if (typeof window !== 'undefined' && (window as any).__env) {
+		if (typeof window !== 'undefined' && (window as any).__env) {
 			return (window as any).__env.BACK_BASE + '/init';
 		} else if (process.env['BACK_BASE']) {
 			return process.env['BACK_BASE'] + '/init';

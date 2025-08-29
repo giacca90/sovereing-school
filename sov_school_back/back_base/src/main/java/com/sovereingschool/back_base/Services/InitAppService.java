@@ -108,8 +108,7 @@ public class InitAppService implements IInitAppService {
         try {
             InitApp init = this.getInit();
 
-            // URL del contenedor del SSR
-            WebClient webClient = webClientConfig.createSecureWebClient("https://sovschool-front:4200");
+            WebClient webClient = webClientConfig.createSecureWebClient(frontURL);
 
             webClient.post()
                     .uri("/refresh-cache")
