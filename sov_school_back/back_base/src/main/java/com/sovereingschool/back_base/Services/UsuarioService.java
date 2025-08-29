@@ -63,6 +63,11 @@ import reactor.netty.http.client.HttpClient;
 @Transactional
 public class UsuarioService implements IUsuarioService {
 
+    /**
+     * Función para generar un color hexadecimal aleatorio para el usuario sin foto
+     * 
+     * @return String con el color hexadecimal
+     */
     public static String generarColorHex() {
         Random random = new Random();
         int r = random.nextInt(256);
@@ -87,6 +92,9 @@ public class UsuarioService implements IUsuarioService {
 
     @Autowired
     private JavaMailSender mailSender;
+
+    @Autowired
+    private InitAppService initAppService;
 
     @Value("${variable.BACK_CHAT}")
     private String backChatURL;
@@ -225,6 +233,14 @@ public class UsuarioService implements IUsuarioService {
             SecurityContextHolder.getContext().setAuthentication(auth);
             String accessToken = jwtUtil.generateToken(auth, "access", usuarioInsertado.getId_usuario());
             String refreshToken = jwtUtil.generateToken(auth, "refresh", usuarioInsertado.getId_usuario());
+
+            // Actualizar el SSR
+            try {
+                this.initAppService.refreshSSR();
+            } catch (Exception e) {
+                System.err.println("Error en actualizar el SSR: " + e.getMessage());
+                throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
+            }
 
             return new AuthResponse(true, "Usuario creado con éxito", usuarioInsertado, accessToken, refreshToken);
 
@@ -482,6 +498,14 @@ public class UsuarioService implements IUsuarioService {
         try {
             this.loginRepo.deleteById(id);
             this.usuarioRepo.deleteById(id);
+
+            // Actualizar el SSR
+            try {
+                this.initAppService.refreshSSR();
+            } catch (Exception e) {
+                System.err.println("Error en actualizar el SSR: " + e.getMessage());
+                throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
+            }
             return "Usuario eliminado con éxito!!!";
         } catch (IllegalArgumentException e) {
             System.out.println("Error en eliminar el usuario con ID " + id);
@@ -561,6 +585,7 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
+    // TODO: Cambiar en producción
     private WebClient createSecureWebClient(String baseUrl) throws Exception {
 
         SslContext sslContext = SslContextBuilder.forClient()

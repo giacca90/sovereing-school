@@ -12,4 +12,6 @@ public interface IInitAppService {
     InitApp getInit();
 
     String getInitToken();
+
+    void refreshSSR();
 }

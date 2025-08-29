@@ -109,12 +109,13 @@ tryBootstrapServerBundle();
  * para que no lo capture el middleware de prerender y evitar errores de body/lock.
  */
 app.post('/refresh-cache', (req, res) => {
+	console.log('<---------------------------------------------->');
 	try {
 		const newInit: Init = req.body;
 		setGlobalInitCache(newInit);
 		console.log('[server.ts] Actualizando cache global');
 		console.log(newInit.estadistica);
-		res.status(200).json({ message: 'Cache global actualizado' });
+		res.status(200).json({ message: 'Cache global actualizado con éxito!!!' });
 	} catch (e) {
 		console.error('[server.ts] Error al actualizar cache SSR:', e);
 		res.status(500).send({ message: e instanceof Error ? e.message : e });

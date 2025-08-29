@@ -57,6 +57,9 @@ public class CursoService implements ICursoService {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private InitAppService initAppService;
+
     @Value("${variable.BACK_STREAM}")
     private String backStreamURL;
 
@@ -292,6 +295,14 @@ public class CursoService implements ICursoService {
             System.err.println("Error en actualizar el curso en el streaming: " + e.getMessage());
             throw new RuntimeException("Error en actualizar el curso en el streaming: " + e.getMessage());
         }
+
+        // Actualizar el SSR
+        try {
+            this.initAppService.refreshSSR();
+        } catch (Exception e) {
+            System.err.println("Error en actualizar el SSR: " + e.getMessage());
+            throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
+        }
         // Si todo ha ido bien, devuelve el curso
         return curso;
     }
@@ -397,6 +408,15 @@ public class CursoService implements ICursoService {
             System.err.println("Error al conectar con el microservicio de chat: " + e.getMessage());
             throw new RuntimeException("Error al conectar con el microservicio de chat: " + e.getMessage());
         }
+
+        // Actualizar el SSR
+        try {
+            this.initAppService.refreshSSR();
+        } catch (Exception e) {
+            System.err.println("Error en actualizar el SSR: " + e.getMessage());
+            throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
+        }
+
         return true;
     }
 
@@ -469,7 +489,6 @@ public class CursoService implements ICursoService {
 
             // Elimina el chat de la clase
             try {
-                // Obtener token
                 WebClient webClient = createSecureWebClient(backChatURL);
                 webClient.delete()
                         .uri("/delete_clase_chat/" + clase.getCurso_clase().getId_curso().toString() + "/"
@@ -497,6 +516,14 @@ public class CursoService implements ICursoService {
             // TODO: Mirar si se necesita eliminar algo en el microservicio de streaming
             // en el microservicio de streaming hay que buscar todos los usuarios sel curso,
             // y borrar la clase.
+
+            // Actualizar el SSR
+            try {
+                this.initAppService.refreshSSR();
+            } catch (Exception e) {
+                System.err.println("Error en actualizar el SSR: " + e.getMessage());
+                throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
+            }
         } else {
             System.err.println("Clase no encontrada con ID: " + clase.getId_clase());
         }
@@ -556,6 +583,7 @@ public class CursoService implements ICursoService {
         }
     }
 
+    // TODO: Cambiar en producción
     private WebClient createSecureWebClient(String baseUrl) throws Exception {
         URI uri = new URI(baseUrl);
         String host = uri.getHost(); // p.ej. "sovschool-back-chat"

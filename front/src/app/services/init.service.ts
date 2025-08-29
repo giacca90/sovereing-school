@@ -13,9 +13,6 @@ import { UsuariosService } from './usuarios.service';
 
 const INIT_KEY = makeStateKey<Init>('init-data');
 
-// Caché global para SSR (vive mientras dure el proceso del servidor)
-//const globalCache: { init?: Init; timestamp?: number } = {};
-
 @Injectable({ providedIn: 'root' })
 export class InitService {
 	public estadistica: Estadistica | null = null;
@@ -46,35 +43,36 @@ export class InitService {
 		}
 		return 'https://localhost:8080/init';
 	}
+	private platform: string = isPlatformBrowser(this.platformId) ? 'browser' : 'server';
 
+	/**
+	 * Función que carga los datos de inicio desde el backend
+	 * Sirve para el pre-renderizado de la pagina, y para evitar llamadas al backend
+	 * @returns
+	 */
 	async carga(): Promise<boolean> {
-		const platform: string = isPlatformBrowser(this.platformId) ? 'browser' : 'server';
 		// 1. Cache en memoria del cliente (SPA)
 		if (this.initDataCache) {
-			console.log('>>> Usando initCache en memoria en ' + platform);
+			console.log('>>> Usando initCache en memoria en ' + this.platform);
 			//console.log(this.initDataCache.cursosInit);
 			console.log(this.initDataCache.estadistica);
 			this.cargarEnServicios(this.initDataCache);
 			// En SPA el usuario se obtiene solo desde /auth en el navegador
-			if (isPlatformBrowser(this.platformId) && this.loginService.usuario === undefined) {
+			/* if (isPlatformBrowser(this.platformId) && this.loginService.usuario === undefined) {
 				await this.cargarUsuario();
-			}
+			} */
 			return true;
 		}
 
 		// 2️⃣ TransferState (SSR → cliente)
 		if (this.transferState.hasKey(INIT_KEY)) {
-			console.log('>>> Usando TransferState en ' + platform + ' con INIT_KEY: ' + INIT_KEY);
+			console.log('>>> Usando TransferState en ' + this.platform + ' con INIT_KEY: ' + INIT_KEY);
 			//console.log(this.transferState.get(INIT_KEY, null as any).cursosInit);
 			console.log(this.transferState.get(INIT_KEY, null as any).estadistica);
 
 			const data: Init = this.transferState.get(INIT_KEY, null as any);
 
 			this.cargarEnServicios(data);
-
-			if (isPlatformBrowser(this.platformId)) {
-				await this.cargarUsuario(); // Obtener usuario desde cookie HttpOnly
-			}
 
 			return true;
 		}
@@ -83,7 +81,7 @@ export class InitService {
 		if (isPlatformServer(this.platformId)) {
 			const cached = getGlobalInitCache();
 			if (cached) {
-				console.log('>>> Usando cache global SSR en ' + platform);
+				console.log('>>> Usando cache global SSR en ' + this.platform);
 				//console.log(cached.cursosInit);
 				console.log(cached.estadistica);
 				this.cargarEnServicios(cached);
@@ -94,7 +92,7 @@ export class InitService {
 
 		// 4️⃣ Fetch real al backend
 		try {
-			console.log('>>> Pidiendo /init al backend en ' + platform);
+			console.log('>>> Pidiendo /init al backend en ' + this.platform);
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {
@@ -112,11 +110,6 @@ export class InitService {
 
 			this.cargarEnServicios(response);
 
-			// En navegador, cargar usuario en paralelo después
-			if (isPlatformBrowser(this.platformId)) {
-				await this.cargarUsuario();
-			}
-
 			return true;
 		} catch (e) {
 			console.error('[InitService] Error al cargar init-data:', e);
@@ -124,16 +117,24 @@ export class InitService {
 		}
 	}
 
-	private async cargarUsuario() {
+	/**
+	 * Carga el usuario y el initToken desde /auth
+	 */
+	public async cargarUsuario() {
 		try {
+			console.log('[InitService] Cargando usuario desde /auth');
 			const usuario = await firstValueFrom(this.http.get<Usuario | null>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }));
-			this.loginService.usuario = usuario ?? null;
+			this.loginService.usuario = usuario;
 		} catch (err) {
 			console.warn('[InitService] Error al obtener usuario desde /auth:', err);
 			this.loginService.usuario = null;
 		}
 	}
 
+	/**
+	 * Carga los datos de inicio en los servicios que los necesitan
+	 * @param data Datos de inicio :Init
+	 */
 	private cargarEnServicios(data: Init) {
 		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.id_usuario, profe.nombre_usuario, profe.foto_usuario, profe.presentacion));
 
@@ -143,10 +144,6 @@ export class InitService {
 		});
 
 		this.estadistica = data.estadistica;
-	}
-
-	auth() {
-		this.http.get<String>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true, responseType: 'text' as 'json' }).subscribe();
 	}
 
 	preloadFromGlobalCache() {
