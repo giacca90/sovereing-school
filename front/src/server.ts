@@ -34,7 +34,7 @@ app.use(
  * Inject environment variables
  */
 app.use((req, res, next) => {
-	/* 	const envScript = `
+	const envScript = `
     <script id="env">
       window.__env = {
         BACK_BASE: '${process.env['BACK_BASE'] || 'https://localhost:8080'}',
@@ -44,10 +44,10 @@ app.use((req, res, next) => {
         BACK_STREAM_WSS: '${process.env['BACK_STREAM_WSS'] || 'wss://localhost:8090'}'
       };
     </script>
-  `; */
+  `;
 
 	// TODO: Cambiar las URLs de backend en el entorno de producción
-	const envScript = `
+	/* const envScript = `
     <script id="env">
       window.__env = {
         BACK_BASE: '${'https://localhost:8080'}',
@@ -57,7 +57,7 @@ app.use((req, res, next) => {
         BACK_STREAM_WSS: '${'https://localhost:8090'}'
       };
     </script>
-  `;
+  `; */
 
 	res.locals['envScript'] = envScript;
 	next();
