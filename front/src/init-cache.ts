@@ -1,12 +1,12 @@
 // init-cache.ts
 import { Init } from './app/models/Init';
 
-export let globalInitCache: Init | null = null;
+const GLOBAL_KEY = '__GLOBAL_INIT_CACHE__';
 
 export function setGlobalInitCache(data: Init) {
-	globalInitCache = data;
+	(globalThis as any)[GLOBAL_KEY] = data;
 }
 
 export function getGlobalInitCache(): Init | null {
-	return globalInitCache;
+	return (globalThis as any)[GLOBAL_KEY] || null;
 }

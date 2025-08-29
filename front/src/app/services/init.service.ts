@@ -35,6 +35,10 @@ export class InitService {
 	) {}
 
 	get apiUrl(): string {
+		// TODO: Solo para desarrollo, eliminar en producción
+		if (isPlatformServer(this.platformId)) {
+			return 'https://sovschool-back-base:8080/init';
+		}
 		if (typeof window !== 'undefined' && (window as any).__env) {
 			return (window as any).__env.BACK_BASE + '/init';
 		} else if (process.env['BACK_BASE']) {
@@ -48,6 +52,7 @@ export class InitService {
 		// 1. Cache en memoria del cliente (SPA)
 		if (this.initDataCache) {
 			console.log('>>> Usando initCache en memoria en ' + platform);
+			//console.log(this.initDataCache.cursosInit);
 			console.log(this.initDataCache.estadistica);
 			this.cargarEnServicios(this.initDataCache);
 			// En SPA el usuario se obtiene solo desde /auth en el navegador
@@ -59,9 +64,13 @@ export class InitService {
 
 		// 2️⃣ TransferState (SSR → cliente)
 		if (this.transferState.hasKey(INIT_KEY)) {
-			console.log('>>> Usando TransferState en ' + platform);
+			console.log('>>> Usando TransferState en ' + platform + ' con INIT_KEY: ' + INIT_KEY);
+			//console.log(this.transferState.get(INIT_KEY, null as any).cursosInit);
+			console.log(this.transferState.get(INIT_KEY, null as any).estadistica);
+
 			const data: Init = this.transferState.get(INIT_KEY, null as any);
-			console.log(data.estadistica);
+
+			this.cargarEnServicios(data);
 
 			if (isPlatformBrowser(this.platformId)) {
 				await this.cargarUsuario(); // Obtener usuario desde cookie HttpOnly
@@ -75,6 +84,7 @@ export class InitService {
 			const cached = getGlobalInitCache();
 			if (cached) {
 				console.log('>>> Usando cache global SSR en ' + platform);
+				//console.log(cached.cursosInit);
 				console.log(cached.estadistica);
 				this.cargarEnServicios(cached);
 				this.transferState.set(INIT_KEY, cached);
@@ -89,8 +99,12 @@ export class InitService {
 
 			if (isPlatformServer(this.platformId)) {
 				// Guardamos en cache global SSR
+				console.log('>>> Guardando en cache global SSR');
+				//console.log(response.cursosInit);
+				console.log(response.estadistica);
 				setGlobalInitCache(response);
 				// Pasamos datos al browser
+				console.log('>>> Pasando datos al transferState con INIT_KEY: ' + INIT_KEY);
 				this.transferState.set(INIT_KEY, response);
 			} else {
 				this.initDataCache = response;
@@ -139,6 +153,8 @@ export class InitService {
 		const cached = getGlobalInitCache();
 		if (cached) {
 			console.log('[InitService] Refrescando TransferState desde cache global SSR');
+			//console.log(cached.cursosInit);
+			console.log(cached.estadistica);
 			this.transferState.set(INIT_KEY, cached);
 		}
 	}

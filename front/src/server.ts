@@ -78,17 +78,18 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 async function tryBootstrapServerBundle() {
 	try {
 		// Ajusta la ruta según tu salida de build: aquí se asume dist/front/server/main.js
-		const serverMainPath = join(process.cwd(), 'dist/front/server/main.js');
+		const serverMainPath = join(process.cwd(), 'dist/front/server/server.mjs');
 
 		if (fs.existsSync(serverMainPath)) {
 			// Import dinámico del bundle server compilado y ejecución de su export por defecto
 			// (se asume que main.server exporta una función default que realiza el bootstrap y registra InitService)
 			const mod = await import(serverMainPath);
-			if (typeof mod.default === 'function') {
-				await mod.default(); // esto debería internamente llamar a setInitService(...)
+			const bootstrapFn = mod.default || mod; // si es CJS vendrá directo en mod
+			if (typeof bootstrapFn === 'function') {
+				await bootstrapFn();
 				console.log('[server.ts] Bundle server arrancado correctamente desde', serverMainPath);
 			} else {
-				console.warn('[server.ts] El módulo server existe pero no exporta default(). Asegúrate de que main.server exporte la función bootstrap.');
+				console.warn('[server.ts] El módulo server no exporta una función bootstrap.');
 			}
 		} else {
 			console.warn('[server.ts] No existe el bundle server precompilado en:', serverMainPath);
