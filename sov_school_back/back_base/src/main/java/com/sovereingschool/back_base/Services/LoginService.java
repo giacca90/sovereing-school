@@ -67,8 +67,9 @@ public class LoginService implements UserDetailsService, ILoginService {
     public String getCorreoLogin(Long id_usuario) {
         return this.loginRepository.findCorreoLoginForId(id_usuario).orElseThrow(
                 () -> {
-                    System.err.println("Error en obtener el correo del usuario con ID " + id_usuario);
-                    return new EntityNotFoundException("Error en obtener el correo del usuario con ID " + id_usuario);
+                    System.err.println("getCorreoLogin: Error en obtener el correo del usuario con ID " + id_usuario);
+                    return new EntityNotFoundException(
+                            "getCorreoLogin: Error en obtener el correo del usuario con ID " + id_usuario);
                 });
     }
 
@@ -175,8 +176,9 @@ public class LoginService implements UserDetailsService, ILoginService {
     public AuthResponse loginUser(Long id, String password) {
         String correo = this.loginRepository.findCorreoLoginForId(id)
                 .orElseThrow(() -> {
-                    System.err.println("Error en obtener el correo del usuario con ID " + id);
-                    return new EntityNotFoundException("Error en obtener el correo del usuario con ID " + id);
+                    System.err.println("loginUser: Error en obtener el correo del usuario con ID " + id);
+                    return new EntityNotFoundException(
+                            "loginUser: Error en obtener el correo del usuario con ID " + id);
                 });
         UserDetails userDetails = this.loadUserByUsername(correo);
         if (userDetails == null) {
@@ -227,8 +229,9 @@ public class LoginService implements UserDetailsService, ILoginService {
     public AuthResponse refreshAccessToken(Long id) {
         String correo = this.loginRepository.findCorreoLoginForId(id)
                 .orElseThrow(() -> {
-                    System.err.println("Error en obtener el correo del usuario con ID " + id);
-                    return new EntityNotFoundException("Error en obtener el correo del usuario con ID " + id);
+                    System.err.println("refreshAccessToken: Error en obtener el correo del usuario con ID " + id);
+                    return new EntityNotFoundException(
+                            "refreshAccessToken: Error en obtener el correo del usuario con ID " + id);
                 });
         UserDetails userDetails = this.loadUserByUsername(correo);
         if (userDetails == null) {
