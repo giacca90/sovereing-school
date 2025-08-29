@@ -67,13 +67,6 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
  * ---------------------------------------------------
  * Intentar arrancar (bootstrap) el main.server compilado al inicio
  * ---------------------------------------------------
- *
- * Si has hecho la build SSR correctamente, en dist/<project>/server
- * tendrás un main.js (o main.mjs). Si existe, lo importamos y lo ejecutamos
- * para que registre InitService via setInitService(...) durante el bootstrap.
- *
- * Si no existe, no fallamos el proceso: la ruta /refresh-cache devolverá 503
- * hasta que se haga el bootstrap manualmente o desplegues el server bundle.
  */
 async function tryBootstrapServerBundle() {
 	try {
@@ -81,8 +74,6 @@ async function tryBootstrapServerBundle() {
 		const serverMainPath = join(process.cwd(), 'dist/front/server/server.mjs');
 
 		if (fs.existsSync(serverMainPath)) {
-			// Import dinámico del bundle server compilado y ejecución de su export por defecto
-			// (se asume que main.server exporta una función default que realiza el bootstrap y registra InitService)
 			const mod = await import(serverMainPath);
 			const bootstrapFn = mod.default || mod; // si es CJS vendrá directo en mod
 			if (typeof bootstrapFn === 'function') {
@@ -105,16 +96,13 @@ tryBootstrapServerBundle();
 /**
  * Refrescar cache de la página en caso de cambios en el backend
  *
- * Nota: este endpoint debe estar *antes* del handler de Angular (más abajo),
- * para que no lo capture el middleware de prerender y evitar errores de body/lock.
  */
 app.post('/refresh-cache', (req, res) => {
-	console.log('<---------------------------------------------->');
 	try {
 		const newInit: Init = req.body;
 		setGlobalInitCache(newInit);
 		console.log('[server.ts] Actualizando cache global');
-		console.log(newInit.estadistica);
+		// console.log(newInit.estadistica);
 		res.status(200).json({ message: 'Cache global actualizado con éxito!!!' });
 	} catch (e) {
 		console.error('[server.ts] Error al actualizar cache SSR:', e);

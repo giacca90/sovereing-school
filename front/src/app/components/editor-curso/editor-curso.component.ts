@@ -181,7 +181,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		});
 	}
 
-	// TODO: Arreglar el fallo al añadir una clase a un curso nuevo
 	updateCurso() {
 		this.subscription.add(
 			this.cursoService.updateCurso(this.curso).subscribe({

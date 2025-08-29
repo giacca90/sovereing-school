@@ -104,7 +104,7 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 			}
 		}
 
-		// TODO: quitar esto cuando se arregle el problema de que el usuario puede cambiar el curso de una clase
+		// TODO: quitar esto cuando se arregle el problema de que el curso_clase llega como string
 		this.clase.curso_clase = Number(this.clase.curso_clase);
 		if (this.clase.tipo_clase === 0) {
 			if (this.clase.curso_clase === 0) {

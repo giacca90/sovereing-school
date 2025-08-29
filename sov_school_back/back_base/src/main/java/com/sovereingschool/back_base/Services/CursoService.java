@@ -3,7 +3,6 @@ package com.sovereingschool.back_base.Services;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.URI;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,14 +16,13 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.sovereingschool.back_base.Configurations.WebClientConfig;
 import com.sovereingschool.back_base.Interfaces.ICursoService;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
@@ -32,17 +30,12 @@ import com.sovereingschool.back_common.Models.Plan;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_common.Repositories.CursoRepository;
-import com.sovereingschool.back_common.Utils.JwtUtil;
 
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
 
 @Service
 @Transactional
@@ -55,10 +48,10 @@ public class CursoService implements ICursoService {
     private ClaseRepository claseRepo;
 
     @Autowired
-    private JwtUtil jwtUtil;
+    private InitAppService initAppService;
 
     @Autowired
-    private InitAppService initAppService;
+    private WebClientConfig webClientConfig;
 
     @Value("${variable.BACK_STREAM}")
     private String backStreamURL;
@@ -242,7 +235,7 @@ public class CursoService implements ICursoService {
 
         // Actualizar el chat del curso
         try {
-            WebClient webClient = createSecureWebClient(backChatURL);
+            WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
             webClient.post().uri("/actualizar_curso_chat")
                     .body(Mono.just(curso), Curso.class)
                     .retrieve()
@@ -270,7 +263,7 @@ public class CursoService implements ICursoService {
 
         // Actializa el curso en el stream
         try {
-            WebClient webClient = createSecureWebClient(backStreamURL);
+            WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
             webClient.post().uri("/actualizar_curso_stream")
                     .body(Mono.just(curso), Curso.class)
                     .retrieve()
@@ -356,7 +349,7 @@ public class CursoService implements ICursoService {
 
         // Eliminar el curso del microservicio de streaming
         try {
-            WebClient webClient = createSecureWebClient(backStreamURL);
+            WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
             webClient.delete()
                     .uri("/deleteCurso/" + id_curso)
                     .retrieve()
@@ -383,7 +376,7 @@ public class CursoService implements ICursoService {
 
         // Eliminar el curso del microservicio de chat
         try {
-            WebClient webClientChat = createSecureWebClient(backChatURL);
+            WebClient webClientChat = webClientConfig.createSecureWebClient(backChatURL);
             webClientChat.delete()
                     .uri("/delete_curso_chat/" + id_curso)
                     .retrieve()
@@ -458,7 +451,7 @@ public class CursoService implements ICursoService {
             // Eliminar la carpeta de la clase
             try {
                 // Obtener token
-                WebClient webClient = createSecureWebClient(backStreamURL);
+                WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
                 webClient.delete()
                         .uri("/deleteClase/" + clase.getCurso_clase().getId_curso().toString() + "/"
                                 + clase.getId_clase().toString())
@@ -489,7 +482,7 @@ public class CursoService implements ICursoService {
 
             // Elimina el chat de la clase
             try {
-                WebClient webClient = createSecureWebClient(backChatURL);
+                WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
                 webClient.delete()
                         .uri("/delete_clase_chat/" + clase.getCurso_clase().getId_curso().toString() + "/"
                                 + clase.getId_clase().toString())
@@ -581,32 +574,5 @@ public class CursoService implements ICursoService {
             System.err.println("Error en subir el video: " + e.getMessage());
             throw new RuntimeException("Error en subir el video: " + e.getMessage());
         }
-    }
-
-    // TODO: Cambiar en producción
-    private WebClient createSecureWebClient(String baseUrl) throws Exception {
-        URI uri = new URI(baseUrl);
-        String host = uri.getHost(); // p.ej. "sovschool-back-chat"
-        int port = uri.getPort(); // p.ej. 8070
-
-        SslContext sslContext = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .build();
-
-        HttpClient httpClient = HttpClient.create()
-                .secure(spec -> spec.sslContext(sslContext));
-
-        String authToken = this.jwtUtil.generateToken(null, "server", null);
-
-        String hostHeader = (port == 443 || port == -1)
-                ? host
-                : host + ":" + port;
-
-        return WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl(baseUrl)
-                .defaultHeader(HttpHeaders.HOST, hostHeader)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + authToken)
-                .build();
     }
 }

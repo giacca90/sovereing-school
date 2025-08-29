@@ -14,7 +14,6 @@ import java.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
@@ -33,6 +32,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
+import com.sovereingschool.back_base.Configurations.WebClientConfig;
 import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.CursosUsuario;
 import com.sovereingschool.back_base.Interfaces.IUsuarioService;
@@ -47,9 +47,6 @@ import com.sovereingschool.back_common.Repositories.LoginRepository;
 import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 import com.sovereingschool.back_common.Utils.JwtUtil;
 
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.persistence.EntityManager;
@@ -57,7 +54,6 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
 
 @Service
 @Transactional
@@ -89,6 +85,9 @@ public class UsuarioService implements IUsuarioService {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private WebClientConfig webClientConfig;
 
     @Autowired
     private JavaMailSender mailSender;
@@ -160,7 +159,7 @@ public class UsuarioService implements IUsuarioService {
 
             // Crear el usuario en el microservicio de chat
             try {
-                WebClient webClient = createSecureWebClient(backChatURL);
+                WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
                 webClient.post().uri("/crea_usuario_chat")
                         .body(Mono.just(usuarioInsertado), Usuario.class)
                         .retrieve()
@@ -187,7 +186,7 @@ public class UsuarioService implements IUsuarioService {
 
             // Crear el usuario en el microservicio de stream
             try {
-                WebClient webClientStream = createSecureWebClient(backStreamURL);
+                WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
                 webClientStream.put()
                         .uri("/nuevoUsuario")
                         .body(Mono.just(usuarioInsertado), Usuario.class)
@@ -445,7 +444,7 @@ public class UsuarioService implements IUsuarioService {
 
         // Añadir el usuario al microservicio de stream
         try {
-            WebClient webClientStream = createSecureWebClient(backStreamURL);
+            WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
             webClientStream.put().uri("/nuevoCursoUsuario")
                     .body(Mono.just(old_usuario), Usuario.class)
                     .retrieve()
@@ -583,27 +582,5 @@ public class UsuarioService implements IUsuarioService {
             System.err.println("Error al obtener todos los usuarios: " + e.getMessage());
             throw new RuntimeException("Error al obtener todos los usuarios: " + e.getMessage());
         }
-    }
-
-    // TODO: Cambiar en producción
-    private WebClient createSecureWebClient(String baseUrl) throws Exception {
-
-        SslContext sslContext = SslContextBuilder.forClient()
-                .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                .build();
-
-        // Configurar HttpClient con el contexto SSL
-        HttpClient httpClient = HttpClient.create()
-                .secure(spec -> spec.sslContext(sslContext));
-
-        // Obtener token
-        String authToken = this.jwtUtil.generateToken(null, "server", null);
-
-        // Conectar HttpClient con WebClient y añadir header por defecto
-        return WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl(baseUrl)
-                .defaultHeader("Authorization", "Bearer " + authToken)
-                .build();
     }
 }

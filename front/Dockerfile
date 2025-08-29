@@ -24,9 +24,5 @@ COPY --from=build /app/dist /app/dist
 
 EXPOSE 4200
 
-# Establece la variable de entorno para todo el contenedor
-# TODO: Quitar en producción
-ENV NODE_TLS_REJECT_UNAUTHORIZED=0
-
 ENTRYPOINT ["node", "dist/front/server/server.mjs"]
 
