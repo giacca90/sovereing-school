@@ -214,7 +214,7 @@ public class ChatController {
     public ResponseEntity<?> init() {
         try {
             this.cursoChatService.init();
-            return new ResponseEntity<String>("Iniciado mongo con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<String>("Iniciado chat con exito!!!", HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
