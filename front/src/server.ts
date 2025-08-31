@@ -1,4 +1,3 @@
-import { makeStateKey } from '@angular/core';
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -16,7 +15,6 @@ import { crearJwt, verificarJwt } from './jwt.util';
 const URL = process.env['FRONT_URL'] || 'https://localhost:4200';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
-const USER_KEY = makeStateKey<Usuario>('usuario');
 
 // Wrapper para middlewares async
 const asyncHandler = (fn: any) => (req: Request, res: Response, next: NextFunction) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -89,7 +87,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 // Función para obtener usuario desde backend
 async function fetchUsuario(id_usuario: number): Promise<Usuario | null> {
-	const BACK_BASE = process.env['BACK_BASE'] || 'https://localhost:8080';
+	const BACK_BASE = process.env['BACK_BASE_DOCKER'] || 'https://localhost:8080';
 	try {
 		const headers: Record<string, string> = {};
 		const ssrToken = crearJwt({ id_usuario });

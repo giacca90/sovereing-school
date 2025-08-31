@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sovereingschool.back_base.Interfaces.IInitAppService;
 import com.sovereingschool.back_base.Interfaces.IUsuarioService;
-import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Utils.JwtUtil;
 
 @RestController
@@ -59,19 +58,6 @@ public class InitController {
 
     @GetMapping("/auth")
     public ResponseEntity<?> auth(@CookieValue(required = false) String refreshToken) {
-        Usuario usuario = null;
-
-        if (refreshToken != null && !refreshToken.isEmpty()) {
-            try {
-                Long idUsuario = this.jwtUtil.getIdUsuario(refreshToken);
-                usuario = this.usuarioService.getUsuario(idUsuario);
-            } catch (Exception e) {
-                logger.error("Error en la carga inicial: " + e.getMessage(), e);
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-        }
-
         String initToken = this.initAppService.getInitToken();
         ResponseCookie initTokenCookie = ResponseCookie.from("initToken", initToken)
                 .httpOnly(true) // No accesible desde JavaScript
@@ -82,7 +68,7 @@ public class InitController {
 
         return ResponseEntity.ok()
                 .header("Set-Cookie", initTokenCookie.toString())
-                .body(usuario);
+                .body("OK");
     }
 
 }

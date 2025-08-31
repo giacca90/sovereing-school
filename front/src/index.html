@@ -2,6 +2,7 @@
 <html lang="es" class="dark:scrollbar dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900">
 	<head>
 		<script id="env">
+			// Pasamos variables de entorno al cliente
 			window.__env = {
 				BACK_BASE: 'https://localhost:8080',
 				BACK_STREAM: 'https://localhost:8090',
@@ -10,16 +11,17 @@
 				BACK_STREAM_WSS: 'wss://localhost:8090',
 			};
 		</script>
-		<script>
-			(async function () {
-				const BACK_BASE = window.__env?.BACK_BASE || 'https://localhost:8080';
-				try {
-					await fetch(BACK_BASE + '/init/auth', { credentials: 'include' });
-				} catch (err) {
-					console.error('[Preload] No se pudo obtener la cookie initToken del backend:', err);
-				}
-			})();
+
+		<script type="module">
+			// Intenta obtener el token de inicio del backend
+			const BACK_BASE = window.__env?.BACK_BASE || 'https://localhost:8080';
+			try {
+				await fetch(BACK_BASE + '/init/auth', { credentials: 'include' });
+			} catch (err) {
+				console.error('[Preload] No se pudo obtener la cookie initToken del backend:', err);
+			}
 		</script>
+
 		<script>
 			// Detecta el tema del sistema y aplica la clase dark si es necesario
 			if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -29,6 +31,7 @@
 			}
 		</script>
 		<script>
+			// Para tener window de forma global
 			var global = window;
 		</script>
 		<meta charset="utf-8" />

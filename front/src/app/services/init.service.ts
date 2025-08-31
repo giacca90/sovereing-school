@@ -33,7 +33,9 @@ export class InitService {
 
 	get apiUrl(): string {
 		// Ruta al contenedor
-		if (typeof window !== 'undefined' && (window as any).__env) {
+		if (isPlatformServer(this.platformId)) {
+			return process.env['BACK_BASE_DOCKER'] + '/init';
+		} else if (typeof window !== 'undefined' && (window as any).__env) {
 			return (window as any).__env.BACK_BASE + '/init';
 		} else if (process.env['BACK_BASE']) {
 			return process.env['BACK_BASE'] + '/init';
