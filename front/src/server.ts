@@ -18,6 +18,9 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const USER_KEY = makeStateKey<Usuario>('usuario');
 
+// Wrapper para middlewares async
+const asyncHandler = (fn: any) => (req: Request, res: Response, next: NextFunction) => Promise.resolve(fn(req, res, next)).catch(next);
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -28,57 +31,55 @@ const angularApp = new AngularNodeAppEngine();
 app.use(express.static(browserDistFolder, { maxAge: '1y', index: false, redirect: false }));
 
 // Middleware para inyectar env y usuario
-app.use(async (req, res, next) => {
-	const envScript = `
-    <script id="env">
-      window.__env = {
-        BACK_BASE: '${process.env['BACK_BASE'] || 'https://localhost:8080'}',
-        BACK_STREAM: '${process.env['BACK_STREAM'] || 'https://localhost:8090'}',
-        BACK_CHAT: '${process.env['BACK_CHAT'] || 'https://localhost:8070'}',
-        BACK_CHAT_WSS: '${process.env['BACK_CHAT_WSS'] || 'wss://localhost:8070'}',
-        BACK_STREAM_WSS: '${process.env['BACK_STREAM_WSS'] || 'wss://localhost:8090'}'
-      };
-    </script>
-  `;
-	res.locals['envScript'] = envScript;
+app.use(
+	asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+		const envScript = `
+      <script id="env">
+        window.__env = {
+          BACK_BASE: '${process.env['BACK_BASE'] || 'https://localhost:8080'}',
+          BACK_STREAM: '${process.env['BACK_STREAM'] || 'https://localhost:8090'}',
+          BACK_CHAT: '${process.env['BACK_CHAT'] || 'https://localhost:8070'}',
+          BACK_CHAT_WSS: '${process.env['BACK_CHAT_WSS'] || 'wss://localhost:8070'}',
+          BACK_STREAM_WSS: '${process.env['BACK_STREAM_WSS'] || 'wss://localhost:8090'}'
+        };
+      </script>
+    `;
+		res.locals['envScript'] = envScript;
 
-	const token = req.cookies['ssrUserToken'];
-	console.log('[SSR] Verificando token');
+		const token = req.cookies['ssrUserToken'];
+		console.log('[SSR] Verificando token');
 
-	if (token) {
-		const payload = verificarJwt(token);
-		if (payload) {
-			try {
-				if (!payload.id_usuario) return;
-				const usuario = await fetchUsuario(payload.id_usuario);
-				res.locals['usuario'] = usuario || null;
-				// TODO: Sustituir global por otra cosa
-				(global as any).ssrUsuario = usuario || null;
+		if (token) {
+			const payload = verificarJwt(token);
+			if (payload) {
+				try {
+					if (!payload.id_usuario) return;
+					const usuario = await fetchUsuario(payload.id_usuario);
+					res.locals['usuario'] = usuario || null;
+					(global as any).ssrUsuario = usuario || null;
 
-				// Renovar cookie
-				res.cookie('ssrUserToken', token, {
-					httpOnly: true,
-					secure: true,
-					sameSite: 'lax',
-					maxAge: 15 * 24 * 60 * 60 * 1000,
-				});
-			} catch (err) {
-				console.error('[SSR] Error al obtener usuario:', err);
-				res.locals['usuario'] = null;
-				// TODO: Sustituir global por otra cosa
-				(global as any).ssrUsuario = null;
+					res.cookie('ssrUserToken', token, {
+						httpOnly: true,
+						secure: true,
+						sameSite: 'lax',
+						maxAge: 15 * 24 * 60 * 60 * 1000,
+					});
+				} catch (err) {
+					console.error('[SSR] Error al obtener usuario:', err);
+					res.locals['usuario'] = null;
+					(global as any).ssrUsuario = null;
+				}
+			} else {
+				res.clearCookie('ssrUserToken');
 			}
 		} else {
-			res.clearCookie('ssrUserToken');
+			res.locals['usuario'] = null;
+			(global as any).ssrUsuario = null;
 		}
-	} else {
-		res.locals['usuario'] = null;
-		// TODO: Sustituir global por otra cosa
-		(global as any).ssrUsuario = null;
-	}
 
-	next();
-});
+		next();
+	}),
+);
 
 // Manejo de errores
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
@@ -108,35 +109,47 @@ async function fetchUsuario(id_usuario: number): Promise<Usuario | null> {
 }
 
 // Refresh cache
-app.post('/refresh-cache', (req, res) => {
-	try {
-		const newInit: Init = req.body;
-		setGlobalInitCache(newInit);
-		console.log('[server.ts] Cache global actualizado');
-		res.status(200).json({ message: 'Cache global actualizado con éxito' });
-	} catch (e) {
-		console.error('[server.ts] Error al actualizar cache SSR:', e);
-		res.status(500).send({ message: e instanceof Error ? e.message : e });
-	}
-});
+app.post(
+	'/refresh-cache',
+	asyncHandler(async (req: Request, res: Response) => {
+		try {
+			const newInit: Init = req.body;
+			setGlobalInitCache(newInit);
+			console.log('[server.ts] Cache global actualizado');
+			res.status(200).json({ message: 'Cache global actualizado con éxito' });
+		} catch (e) {
+			console.error('[server.ts] Error al actualizar cache SSR:', e);
+			res.status(500).send({ message: e instanceof Error ? e.message : e });
+		}
+	}),
+);
 
 // SSR login/logout
-app.post('/ssr-login', async (req: Request, res: Response) => {
-	try {
+app.post(
+	'/ssr-login',
+	asyncHandler(async (req: Request, res: Response) => {
 		const { token } = req.body;
-		if (!token) return res.status(400).json({ ok: false, message: 'Token no enviado' });
+		if (!token) {
+			res.status(400).json({ ok: false, message: 'Token no enviado' });
+			return;
+		}
 
 		const payloadFront = verificarJwt(token);
-		if (!payloadFront?.id_usuario) return res.status(401).json({ ok: false, message: 'Token inválido' });
+		if (!payloadFront?.id_usuario) {
+			res.status(401).json({ ok: false, message: 'Token inválido' });
+			return;
+		}
 
 		const ssrToken = crearJwt({ id_usuario: payloadFront.id_usuario });
-		res.cookie('ssrUserToken', ssrToken, { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 15 * 24 * 60 * 60 * 1000 });
-		return res.status(200).json({ ok: true });
-	} catch (err) {
-		console.error('[SSR] Error en ssr-login:', err);
-		return res.status(500).json({ ok: false, message: 'Error interno' });
-	}
-});
+		res.cookie('ssrUserToken', ssrToken, {
+			httpOnly: true,
+			secure: true,
+			sameSite: 'lax',
+			maxAge: 15 * 24 * 60 * 60 * 1000,
+		});
+		res.status(200).json({ ok: true });
+	}),
+);
 
 app.get('/ssr-logout', (req: Request, res: Response) => {
 	res.clearCookie('ssrUserToken');
@@ -144,27 +157,26 @@ app.get('/ssr-logout', (req: Request, res: Response) => {
 });
 
 // Angular SSR handler
-app.use(async (req, res, next) => {
-	try {
+app.use(
+	asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
 		const response = await angularApp.handle(req);
 		if (!response) return next();
 		if (response.status === 404) return next();
 
 		let html = await response.text();
 
-		// Inyectar env
 		if (res.locals['envScript']) {
 			html = html.replace(/<script id="env">[\s\S]*?<\/script>/, res.locals['envScript']);
 		}
 
-		// TransferState: inject actual Angular key
 		html = html.replace(
 			'</head>',
 			`<script>
-      window['TRANSFER_STATE'] = window['TRANSFER_STATE'] || {};
-      window['TRANSFER_STATE']['usuario'] = ${JSON.stringify(res.locals['usuario'] || null)};
-    </script></head>`,
+        window['TRANSFER_STATE'] = window['TRANSFER_STATE'] || {};
+        window['TRANSFER_STATE']['usuario'] = ${JSON.stringify(res.locals['usuario'] || null)};
+      </script></head>`,
 		);
+
 		const newResponse = new Response(html, {
 			status: response.status,
 			statusText: response.statusText,
@@ -172,11 +184,8 @@ app.use(async (req, res, next) => {
 		});
 
 		return writeResponseToNodeResponse(newResponse, res);
-	} catch (err) {
-		console.error('[SSR] Error prerendering:', err);
-		res.status(500).send('<html><body><h1>Servidor Angular prerender fallback</h1></body></html>');
-	}
-});
+	}),
+);
 
 // HTTPS server
 if (isMainModule(import.meta.url)) {
