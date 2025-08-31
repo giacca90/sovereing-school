@@ -107,6 +107,9 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 			//localStorage.setItem('Usuario', JSON.stringify(authResponse.usuario));
 			this.loginService.usuario = authResponse.usuario;
 
+			// Avisamos al SSR de que estamos logueados
+			this.loginService.loginSSR(authResponse.accessToken);
+
 			// Puedes emitir un evento o redirigir
 			this.router.navigate(['/']);
 			this.modalService.hide();

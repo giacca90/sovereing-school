@@ -1,5 +1,7 @@
+import { makeStateKey } from '@angular/core';
 import { AngularNodeAppEngine, createNodeRequestHandler, isMainModule, writeResponseToNodeResponse } from '@angular/ssr/node';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
 import fs from 'fs';
@@ -7,38 +9,26 @@ import http2 from 'http';
 import https2 from 'https';
 import { join } from 'node:path';
 import { Init } from './app/models/Init';
+import { Usuario } from './app/models/Usuario';
 import { setGlobalInitCache } from './init-cache';
+import { crearJwt, verificarJwt } from './jwt.util';
 
-// IMPORTA tus rutas
 const URL = process.env['FRONT_URL'] || 'https://localhost:4200';
-
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
+const USER_KEY = makeStateKey<Usuario>('usuario');
 
-// Middleware para poder parsear JSON en POST
+// Middleware
 app.use(express.json());
-
-// Pasa las serverRoutes al engine
+app.use(cookieParser());
+app.use(compression());
 const angularApp = new AngularNodeAppEngine();
 
-// Compresion
-app.use(compression());
+// Servir static files
+app.use(express.static(browserDistFolder, { maxAge: '1y', index: false, redirect: false }));
 
-/**
- * Serve static files from /browser
- */
-app.use(
-	express.static(browserDistFolder, {
-		maxAge: '1y',
-		index: false,
-		redirect: false,
-	}),
-);
-
-/**
- * Inject environment variables
- */
-app.use((req, res, next) => {
+// Middleware para inyectar env y usuario
+app.use(async (req, res, next) => {
 	const envScript = `
     <script id="env">
       window.__env = {
@@ -50,123 +40,158 @@ app.use((req, res, next) => {
       };
     </script>
   `;
-
 	res.locals['envScript'] = envScript;
+
+	const token = req.cookies['ssrUserToken'];
+	console.log('[SSR] Verificando token');
+
+	if (token) {
+		const payload = verificarJwt(token);
+		if (payload) {
+			try {
+				if (!payload.id_usuario) return;
+				const usuario = await fetchUsuario(payload.id_usuario);
+				res.locals['usuario'] = usuario || null;
+				// TODO: Sustituir global por otra cosa
+				(global as any).ssrUsuario = usuario || null;
+
+				// Renovar cookie
+				res.cookie('ssrUserToken', token, {
+					httpOnly: true,
+					secure: true,
+					sameSite: 'lax',
+					maxAge: 15 * 24 * 60 * 60 * 1000,
+				});
+			} catch (err) {
+				console.error('[SSR] Error al obtener usuario:', err);
+				res.locals['usuario'] = null;
+				// TODO: Sustituir global por otra cosa
+				(global as any).ssrUsuario = null;
+			}
+		} else {
+			res.clearCookie('ssrUserToken');
+		}
+	} else {
+		res.locals['usuario'] = null;
+		// TODO: Sustituir global por otra cosa
+		(global as any).ssrUsuario = null;
+	}
+
 	next();
 });
 
-/**
- * Manejo de errores
- */
+// Manejo de errores
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 	console.error('Error en el servidor:', err);
 	res.status(500).send('Error interno del servidor');
 });
 
-/**
- * ---------------------------------------------------
- * Intentar arrancar (bootstrap) el main.server compilado al inicio
- * ---------------------------------------------------
- */
-async function tryBootstrapServerBundle() {
+// Función para obtener usuario desde backend
+async function fetchUsuario(id_usuario: number): Promise<Usuario | null> {
+	const BACK_BASE = process.env['BACK_BASE'] || 'https://localhost:8080';
 	try {
-		// Ajusta la ruta según tu salida de build: aquí se asume dist/front/server/main.js
-		const serverMainPath = join(process.cwd(), 'dist/front/server/server.mjs');
+		const headers: Record<string, string> = {};
+		const ssrToken = crearJwt({ id_usuario });
+		headers['Authorization'] = `Bearer ${ssrToken}`;
 
-		if (fs.existsSync(serverMainPath)) {
-			const mod = await import(serverMainPath);
-			const bootstrapFn = mod.default || mod; // si es CJS vendrá directo en mod
-			if (typeof bootstrapFn === 'function') {
-				await bootstrapFn();
-				console.log('[server.ts] Bundle server arrancado correctamente desde', serverMainPath);
-			} else {
-				console.warn('[server.ts] El módulo server no exporta una función bootstrap.');
-			}
-		} else {
-			console.warn('[server.ts] No existe el bundle server precompilado en:', serverMainPath);
+		const resp = await fetch(`${BACK_BASE}/usuario/${id_usuario}`, { method: 'GET', headers });
+		if (!resp.ok) {
+			console.error(`[SSR] Backend devolvió ${resp.status}:`, await resp.text());
+			return null;
 		}
+
+		return (await resp.json()) as Usuario;
 	} catch (err) {
-		console.error('[server.ts] Error arrancando bundle server:', err);
+		console.error('[SSR] Error fetch usuario:', err);
+		return null;
 	}
 }
 
-// Llamada al arrancar el proceso (no bloqueante)
-tryBootstrapServerBundle();
-
-/**
- * Refrescar cache de la página en caso de cambios en el backend
- *
- */
+// Refresh cache
 app.post('/refresh-cache', (req, res) => {
 	try {
 		const newInit: Init = req.body;
 		setGlobalInitCache(newInit);
-		console.log('[server.ts] Actualizando cache global');
-		// console.log(newInit.estadistica);
-		res.status(200).json({ message: 'Cache global actualizado con éxito!!!' });
+		console.log('[server.ts] Cache global actualizado');
+		res.status(200).json({ message: 'Cache global actualizado con éxito' });
 	} catch (e) {
 		console.error('[server.ts] Error al actualizar cache SSR:', e);
 		res.status(500).send({ message: e instanceof Error ? e.message : e });
 	}
 });
 
-/**
- * Handle all other requests by rendering the Angular application.
- * Manejo tolerante a errores 404 o conexión para prerender.
- *
- * Este middleware queda *DESPUÉS* de las rutas específicas (como /refresh-cache)
- * para evitar que Angular intente manejar peticiones que quieran ser tratadas por Express.
- */
-app.use((req, res, next) => {
-	angularApp
-		.handle(req)
-		.then(async (response) => {
-			if (!response) return next();
-			if (response.status === 404) return next();
+// SSR login/logout
+app.post('/ssr-login', async (req: Request, res: Response) => {
+	try {
+		const { token } = req.body;
+		if (!token) return res.status(400).json({ ok: false, message: 'Token no enviado' });
 
-			if (response.body) {
-				const html = await response.text();
-				const modifiedHtml = html.replace(/<script id="env">[\s\S]*?<\/script>/, res.locals['envScript']);
-				const newResponse = new Response(modifiedHtml, {
-					status: response.status,
-					statusText: response.statusText,
-					headers: response.headers,
-				});
-				return writeResponseToNodeResponse(newResponse, res);
-			}
+		const payloadFront = verificarJwt(token);
+		if (!payloadFront?.id_usuario) return res.status(401).json({ ok: false, message: 'Token inválido' });
 
-			return next();
-		})
-		.catch((err) => {
-			console.warn('Error prerendering (se ignora para no fallar):', err);
-			// Si hay error de conexión o fetch fallido, evitar fallo: enviar respuesta básica o seguir
-			res.status(200).send('<html><body><h1>Servidor Angular prerender fallback</h1></body></html>');
-		});
+		const ssrToken = crearJwt({ id_usuario: payloadFront.id_usuario });
+		res.cookie('ssrUserToken', ssrToken, { httpOnly: true, secure: true, sameSite: 'lax', maxAge: 15 * 24 * 60 * 60 * 1000 });
+		return res.status(200).json({ ok: true });
+	} catch (err) {
+		console.error('[SSR] Error en ssr-login:', err);
+		return res.status(500).json({ ok: false, message: 'Error interno' });
+	}
 });
 
-/**
- * Start the server if this module is the main entry point.
- */
-if (isMainModule(import.meta.url)) {
-	const key = fs.readFileSync('/certs/key.pem'); // ruta absoluta en contenedor
-	const cert = fs.readFileSync('/certs/cert.pem'); // ruta absoluta en contenedor
+app.get('/ssr-logout', (req: Request, res: Response) => {
+	res.clearCookie('ssrUserToken');
+	res.status(200).json({ ok: true });
+});
 
-	// HTTP → HTTPS redirection
+// Angular SSR handler
+app.use(async (req, res, next) => {
+	try {
+		const response = await angularApp.handle(req);
+		if (!response) return next();
+		if (response.status === 404) return next();
+
+		let html = await response.text();
+
+		// Inyectar env
+		if (res.locals['envScript']) {
+			html = html.replace(/<script id="env">[\s\S]*?<\/script>/, res.locals['envScript']);
+		}
+
+		// TransferState: inject actual Angular key
+		html = html.replace(
+			'</head>',
+			`<script>
+      window['TRANSFER_STATE'] = window['TRANSFER_STATE'] || {};
+      window['TRANSFER_STATE']['usuario'] = ${JSON.stringify(res.locals['usuario'] || null)};
+    </script></head>`,
+		);
+		const newResponse = new Response(html, {
+			status: response.status,
+			statusText: response.statusText,
+			headers: response.headers,
+		});
+
+		return writeResponseToNodeResponse(newResponse, res);
+	} catch (err) {
+		console.error('[SSR] Error prerendering:', err);
+		res.status(500).send('<html><body><h1>Servidor Angular prerender fallback</h1></body></html>');
+	}
+});
+
+// HTTPS server
+if (isMainModule(import.meta.url)) {
+	const key = fs.readFileSync('/certs/key.pem');
+	const cert = fs.readFileSync('/certs/cert.pem');
+
 	http2
 		.createServer((req, res) => {
 			const host = req.headers.host;
 			res.writeHead(301, { Location: `https://${host}${req.url}` });
 			res.end();
 		})
-		.listen(80, () => console.log('HTTP redirige a HTTPS en puerto 80'));
+		.listen(80, () => console.log('HTTP → HTTPS redirige en puerto 80'));
 
-	// HTTPS server
-	https2.createServer({ key, cert }, app).listen(4200, () => {
-		console.log('🔒 Servidor HTTPS escuchando en ' + URL);
-	});
+	https2.createServer({ key, cert }, app).listen(4200, () => console.log('🔒 Servidor HTTPS escuchando en ' + URL));
 }
 
-/**
- * Request handler used by Angular CLI or Firebase
- */
 export const reqHandler = createNodeRequestHandler(app);

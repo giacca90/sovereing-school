@@ -1,5 +1,6 @@
+import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
-import { afterNextRender, Injectable } from '@angular/core';
+import { Inject, Injectable, makeStateKey, PLATFORM_ID } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 import { Auth } from '../models/Auth';
 import { Usuario } from '../models/Usuario';
@@ -10,22 +11,61 @@ import { Usuario } from '../models/Usuario';
 export class LoginService {
 	private id_usuario: number | null = null;
 	public usuario: Usuario | null = null;
+	USER_KEY = makeStateKey<Usuario>('usuario');
 
-	constructor(private http: HttpClient) {
-		afterNextRender(() => {
+	constructor(
+		private http: HttpClient,
+		@Inject(PLATFORM_ID) private platformId: Object,
+	) {
+		/* afterNextRender(() => {
 			if (this.usuario === null) {
 				const token = localStorage.getItem('Token');
 				if (token) {
 					this.loginWithToken(token);
 				}
 			}
-		});
+		}); */
+	}
+
+	async cargarUsuarioDesdeTransferState(): Promise<void> {
+		if (isPlatformBrowser(this.platformId)) {
+			const rawState = (window as any)['TRANSFER_STATE'] || {};
+			if (rawState['usuario']) {
+				this.usuario = rawState['usuario'];
+				delete rawState['usuario'];
+				console.log('[LoginService] Usuario cargado desde TransferState', this.usuario);
+			} else {
+				console.log('[LoginService] Usuario no encontrado en TransferState');
+				this.usuario = null;
+			}
+		}
+
+		if (isPlatformServer(this.platformId)) {
+			// TODO: Sustituir global por otra cosa
+			this.usuario = (global as any).ssrUsuario || null;
+		}
 	}
 
 	get apiUrl(): string {
 		if (typeof window !== 'undefined' && (window as any).__env) {
 			const url = (window as any).__env.BACK_BASE ?? '';
 			return url + '/login/';
+		}
+		return '';
+	}
+
+	get loginSSRUrl(): string {
+		if (typeof window !== 'undefined' && (window as any).__env) {
+			const url = (window as any).__env.FRONT_URL ?? '';
+			return url + '/ssr-login';
+		}
+		return '';
+	}
+
+	get logoutSSRUrl(): string {
+		if (typeof window !== 'undefined' && (window as any).__env) {
+			const url = (window as any).__env.FRONT_URL ?? '';
+			return url + '/ssr-logout';
 		}
 		return '';
 	}
@@ -70,6 +110,26 @@ export class LoginService {
 						this.usuario = response.body.usuario;
 						// Comprueba si está en el navegador
 						localStorage.setItem('Token', response.body.accessToken);
+						// Avisamos al SSR de que estamos logueados
+						this.loginSSR(response.body.accessToken);
+						/* this.http
+							.post<{ ok: boolean }>(
+								this.loginSSRUrl,
+								{ token: response.body.accessToken }, // enviar el token que recibimos del backend
+								{ observe: 'response', withCredentials: true },
+							)
+							.subscribe({
+								next: (resp: HttpResponse<{ ok: boolean }>) => {
+									if (resp.status !== 200 || !resp.body?.ok) {
+										console.error('Error en avisar al SSR de que estamos logueados: ' + resp.status);
+										console.error(resp.body);
+									}
+								},
+								error: (error: HttpErrorResponse) => {
+									console.error('Avisar al SSR de que estamos logueados fallido:', error);
+								},
+							});
+ */
 						resolve(true);
 						sub.unsubscribe();
 						return;
@@ -132,5 +192,39 @@ export class LoginService {
 				console.error('Logout failed:', error);
 			},
 		});
+
+		// Avisamos al SSR de que hacemos logout
+		this.http.get<string>(this.logoutSSRUrl, { observe: 'response', responseType: 'text' as 'json', withCredentials: true }).subscribe({
+			next: (response: HttpResponse<string>) => {
+				if (response.status !== 200) {
+					console.error('Error en avisar al SSR de que hacemos logout: ' + response.status);
+					console.error(response.body);
+				}
+			},
+			error: (error: HttpErrorResponse) => {
+				console.error('Avisar al SSR de que hacemos logout fallido:', error);
+			},
+		});
+	}
+
+	public loginSSR(token: string) {
+		// Avisamos al SSR de que estamos logueados
+		this.http
+			.post<{ ok: boolean }>(
+				this.loginSSRUrl,
+				{ token: token }, // enviar el token que recibimos del backend
+				{ observe: 'response', withCredentials: true },
+			)
+			.subscribe({
+				next: (resp: HttpResponse<{ ok: boolean }>) => {
+					if (resp.status !== 200 || !resp.body?.ok) {
+						console.error('Error en avisar al SSR de que estamos logueados: ' + resp.status);
+						console.error(resp.body);
+					}
+				},
+				error: (error: HttpErrorResponse) => {
+					console.error('Avisar al SSR de que estamos logueados fallido:', error);
+				},
+			});
 	}
 }

@@ -1,4 +1,4 @@
-import { isPlatformBrowser, isPlatformServer } from '@angular/common';
+import { isPlatformServer } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID, TransferState, makeStateKey } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
@@ -40,7 +40,6 @@ export class InitService {
 		}
 		return 'https://localhost:8080/init';
 	}
-	private platform: string = isPlatformBrowser(this.platformId) ? 'browser' : 'server';
 
 	/**
 	 * Función que carga los datos de inicio desde el backend
