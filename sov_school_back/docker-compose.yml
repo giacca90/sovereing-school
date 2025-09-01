@@ -9,6 +9,8 @@ services:
             - ../front/.env
         ports:
             - "${FRONT_PORT}:4200"
+        expose:
+            - "4201"
         volumes:
             - /etc/letsencrypt/live/giacca90.ddns.net/cert.pem:/certs/cert.pem:ro
             - /etc/letsencrypt/live/giacca90.ddns.net/privkey.pem:/certs/key.pem:ro
@@ -77,6 +79,8 @@ services:
             - .env.back_base
         ports:
             - "${BACK_BASE_PORT}:8080"
+        expose:
+            - "8081"
         networks:
             - sovschool-network
         volumes:
@@ -97,6 +101,8 @@ services:
             - .env.back_chat
         ports:
             - "${BACK_CHAT_PORT}:8070"
+        expose:
+            - "8071"
         networks:
             - sovschool-network
         volumes:
@@ -115,6 +121,8 @@ services:
             - .env.back_stream
         ports:
             - "${BACK_STREAM_PORT}:8090"
+        expose:
+            - "8091"
         networks:
             - sovschool-network
         volumes:

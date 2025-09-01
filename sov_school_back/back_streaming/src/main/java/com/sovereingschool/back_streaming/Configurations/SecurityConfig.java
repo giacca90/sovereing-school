@@ -47,7 +47,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(csrf -> csrf.disable())
-                .redirectToHttps(Customizer.withDefaults())
+                // .redirectToHttps(Customizer.withDefaults())
                 .httpBasic(Customizer.withDefaults())
                 .userDetailsService(inMemoryUserDetailsManager())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

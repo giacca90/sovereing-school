@@ -197,14 +197,26 @@ if (isMainModule(import.meta.url)) {
 	const key = fs.readFileSync('/certs/key.pem');
 	const cert = fs.readFileSync('/certs/cert.pem');
 
+	// Servidor HTTP condicional
 	http2
 		.createServer((req, res) => {
-			const host = req.headers.host;
-			res.writeHead(301, { Location: `https://${host}${req.url}` });
-			res.end();
-		})
-		.listen(80, () => console.log('HTTP → HTTPS redirige en puerto 80'));
+			const remoteIp = req.socket.remoteAddress || '';
 
+			// Permitir HTTP solo desde la red interna Docker
+			// Típicamente bridge network de Docker: 172.18.x.x (ajústalo a tu red)
+			if (remoteIp.startsWith('172.18.') || remoteIp === '127.0.0.1') {
+				// Servir HTTP normalmente
+				app(req, res);
+			} else {
+				// Redirigir todo lo demás a HTTPS
+				const host = req.headers.host;
+				res.writeHead(301, { Location: `https://${host}${req.url}` });
+				res.end();
+			}
+		})
+		.listen(4201, () => console.log('HTTP → redirige a HTTPS salvo desde Docker'));
+
+	// Servidor HTTPS normal
 	https2.createServer({ key, cert }, app).listen(4200, () => console.log('🔒 Servidor HTTPS escuchando en ' + URL));
 }
 

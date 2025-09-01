@@ -50,7 +50,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
-                .redirectToHttps(Customizer.withDefaults())
+                // .redirectToHttps(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth.requestMatchers("/oauth2/**", "/login/**", "/error").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
