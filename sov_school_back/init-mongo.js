@@ -1,10 +1,6 @@
 // Inicializa el replica set
 try {
-	rs.initiate({
-		_id: "rs0",
-		version: 1,
-		members: [{ _id: 0, host: "sovschool-mongo:27017" }],
-	});
+	rs.initiate({ _id: "rs0", version: 1, members: [{ _id: 0, host: "sovschool-mongo:27017" }] });
 	print("Replica set iniciado");
 } catch (e) {
 	print("Replica set ya iniciado o error: " + e.message);

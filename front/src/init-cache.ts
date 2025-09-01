@@ -1,4 +1,4 @@
-// init-cache.ts
+// Cache global SSR
 import { Init } from './app/models/Init';
 
 const GLOBAL_KEY = '__GLOBAL_INIT_CACHE__';

@@ -31,8 +31,12 @@ export function crearJwt(payload: JwtPayloadSSR): string {
 
 	return jwt.sign(claims, SECRET_KEY, options);
 }
-
-// Verificar y decodificar un token
+/**
+ * Verificar y decodificar un token
+ *
+ * @param token String
+ * @returns (JwtPayload & { id_usuario?: number })
+ */
 export function verificarJwt(token: string): (JwtPayload & { id_usuario?: number }) | null {
 	try {
 		const decoded = jwt.verify(token, SECRET_KEY) as JwtPayload & { id_usuario?: number };

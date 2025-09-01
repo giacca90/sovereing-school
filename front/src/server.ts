@@ -85,7 +85,11 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 	res.status(500).send('Error interno del servidor');
 });
 
-// Función para obtener usuario desde backend
+/**
+ * Función para obtener usuario desde backend
+ * @param id_usuario Number
+ * @returns  Promise<Usuario | null>
+ */
 async function fetchUsuario(id_usuario: number): Promise<Usuario | null> {
 	const BACK_BASE = process.env['BACK_BASE_DOCKER'] || 'https://localhost:8080';
 	try {
@@ -122,7 +126,7 @@ app.post(
 	}),
 );
 
-// SSR login/logout
+// SSR login
 app.post(
 	'/ssr-login',
 	asyncHandler(async (req: Request, res: Response) => {
@@ -149,6 +153,7 @@ app.post(
 	}),
 );
 
+// SSR logout
 app.get('/ssr-logout', (req: Request, res: Response) => {
 	res.clearCookie('ssrUserToken');
 	res.status(200).json({ ok: true });
@@ -163,10 +168,12 @@ app.use(
 
 		let html = await response.text();
 
+		// Sustituimos las variables de entorno
 		if (res.locals['envScript']) {
 			html = html.replace(/<script id="env">[\s\S]*?<\/script>/, res.locals['envScript']);
 		}
 
+		// Precargamos el usuario
 		html = html.replace(
 			'</head>',
 			`<script>

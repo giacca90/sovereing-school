@@ -1,0 +1,5 @@
+Para que el replica set funcione, hay que iniciarlo manualmente la primera vez,
+se hace entrando al contenedor, luego ejecutando el comando:
+mongosh
+ y luego ejecutando el comando:
+rs.initiate({ _id: "rs0", version: 1, members: [{ _id: 0, host: "sovschool-mongo:27017" }] });
