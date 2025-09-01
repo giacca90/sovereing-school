@@ -54,7 +54,7 @@ export class EditorVideoComponent implements AfterViewInit {
 				},
 			});
 
-			console.log('cursoUrl:', this.clase.curso_clase);
+			//console.log('cursoUrl:', this.clase.curso_clase);
 
 			this.player.src({
 				src: `${this.backStream}/${this.clase.curso_clase}/${this.clase.id_clase}/master.m3u8`,
@@ -193,7 +193,7 @@ export class EditorVideoComponent implements AfterViewInit {
 			});
 
 			this.player.on('loadeddata', () => {
-				console.log('Archivo .m3u8 cargado correctamente');
+				//console.log('Archivo .m3u8 cargado correctamente');
 			});
 		}
 	}

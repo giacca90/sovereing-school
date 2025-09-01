@@ -195,13 +195,13 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 						this.streamingService.getPresets().subscribe({
 							next: (res) => {
 								try {
-									console.log('Presets recibidos:', res);
+									//console.log('Presets recibidos:', res);
 									this.savedPresets = new Map(Object.entries(res));
 								} catch (error) {
-									console.error('Error al parsear los presets:', error);
+									//console.error('Error al parsear los presets:', error);
 									this.savedPresets = new Map();
 								}
-								console.log('Presets actualizados:', this.savedPresets);
+								//console.log('Presets actualizados:', this.savedPresets);
 								if (this.clase) this.clase.tipo_clase = 2;
 								webcamButton.classList.add('text-blue-700');
 							},

@@ -45,7 +45,7 @@ app.use(
 		res.locals['envScript'] = envScript;
 
 		const token = req.cookies['ssrUserToken'];
-		console.log('[SSR] Verificando token');
+		//console.log('[SSR] Verificando token');
 
 		if (token) {
 			const payload = verificarJwt(token);

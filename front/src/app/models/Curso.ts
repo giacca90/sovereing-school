@@ -35,13 +35,4 @@ export class Curso {
 		this.imagen_curso = _imagen_curso;
 		this.precio_curso = _precio_curso;
 	}
-
-	/* get NombresProfesores() {
-		if (this.profesores_curso.length == 1) return this.profesores_curso[0].nombre_usuario;
-		let nombres: string = this.profesores_curso[0].nombre_usuario.toString();
-		for (let i = 1; i < this.profesores_curso.length; i++) {
-			nombres = nombres + ' y ' + this.profesores_curso[i].nombre_usuario;
-		}
-		return nombres;
-	} */
 }

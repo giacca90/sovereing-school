@@ -59,7 +59,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 			await this.cursoService.getCurso(this.idCurso).then((curso) => {
 				this.curso = JSON.parse(JSON.stringify(curso));
 				if (!this.curso) {
-					console.log('Curso no encontrado: ' + this.idCurso);
+					console.error('Curso no encontrado: ' + this.idCurso);
 					this.router.navigate(['/']);
 				}
 				this.curso.clases_curso?.forEach((clase) => {
@@ -286,7 +286,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 
 	async claseGuardada(event: boolean) {
 		if (event) {
-			console.log('Guardando cambios en curso: ' + this.idCurso);
+			//console.log('Guardando cambios en curso: ' + this.idCurso);
 			if (this.idCurso == 0) {
 				this.claseEditar = null;
 				document.body.style.overflow = 'auto';
@@ -295,7 +295,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 			this.cursoService
 				.getCurso(this.idCurso, true)
 				.then((curso) => {
-					console.log('Curso actualizado:', curso);
+					//console.log('Curso actualizado:', curso);
 					if (curso) {
 						this.curso = curso;
 						this.claseEditar = null;

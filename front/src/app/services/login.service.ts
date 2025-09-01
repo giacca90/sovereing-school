@@ -33,9 +33,9 @@ export class LoginService {
 			if (rawState['usuario']) {
 				this.usuario = rawState['usuario'];
 				delete rawState['usuario'];
-				console.log('[LoginService] Usuario cargado desde TransferState', this.usuario);
+				//console.log('[LoginService] Usuario cargado desde TransferState', this.usuario);
 			} else {
-				console.log('[LoginService] Usuario no encontrado en TransferState');
+				//console.log('[LoginService] Usuario no encontrado en TransferState');
 				this.usuario = null;
 			}
 		}

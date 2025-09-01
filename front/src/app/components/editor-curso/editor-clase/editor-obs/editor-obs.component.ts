@@ -113,7 +113,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 			});
 
 			this.player.on('loadeddata', () => {
-				console.log('Archivo .m3u8 cargado correctamente');
+				//console.log('Archivo .m3u8 cargado correctamente');
 				this.m3u8Loaded = true;
 
 				const techEl = this.player.tech(true)?.el() as HTMLVideoElement & { captureStream(): MediaStream };

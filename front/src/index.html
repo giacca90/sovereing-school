@@ -16,7 +16,12 @@
 			// Intenta obtener el token de inicio del backend
 			const BACK_BASE = window.__env?.BACK_BASE || 'https://localhost:8080';
 			try {
-				await fetch(BACK_BASE + '/init/auth', { credentials: 'include' });
+				await fetch(BACK_BASE + '/init/auth', {
+					credentials: 'include',
+					headers: {
+						'Authorization': 'Basic ' + btoa('Visitante:visitante'),
+					},
+				});
 			} catch (err) {
 				console.error('[Preload] No se pudo obtener la cookie initToken del backend:', err);
 			}
