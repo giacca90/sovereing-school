@@ -128,6 +128,11 @@ services:
         volumes:
             - sovschool-videos:/Videos
             - /etc/letsencrypt/live/giacca90.ddns.net/keystore.p12:/certs/keystore.p12:ro
+            - /dev/dri:/dev/dri
+            - /tmp/.X11-unix:/tmp/.X11-unix # Monta el socket de X11 del host
+        environment:
+            - DISPLAY=${DISPLAY} # Pasa el display del host al contenedor
+        privileged: true # Asegura acceso completo a la GPU
         depends_on:
             - sovschool-postgres
             - sovschool-mongo

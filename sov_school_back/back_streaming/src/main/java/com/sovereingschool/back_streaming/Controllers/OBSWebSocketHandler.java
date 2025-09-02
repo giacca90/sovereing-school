@@ -39,13 +39,16 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
     private final StreamingService streamingService;
     private final Executor executor;
     private final String RTMP_URL;
+    private final String RTMP_DOCKER;
     private final String uploadDir;
 
     public OBSWebSocketHandler(Executor executor, StreamingService streamingService, String RTMP_URL,
+            String RTMP_DOCKER,
             String uploadDir) {
         this.streamingService = streamingService;
         this.executor = executor;
         this.RTMP_URL = RTMP_URL;
+        this.RTMP_DOCKER = RTMP_DOCKER;
         this.uploadDir = uploadDir;
     }
 
@@ -198,6 +201,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         // preparar comando FFmpeg preview
         List<String> ffmpegCommand = List.of(
                 "ffmpeg",
+                // "-init_hw_device", "vaapi=va",
                 "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
                 "-re",
                 "-i", rtmpUrl,
@@ -259,13 +263,15 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                 // Generar URL RTMP para OBS
                 String rtmpUrl = RTMP_URL + userId + "_" + session.getId();
                 System.out.println("RTMP URL: " + rtmpUrl);
+                String rtmpUrlDocker = RTMP_DOCKER + userId + "_" + session.getId();
+                System.out.println("RTMP URL DOCKER: " + rtmpUrlDocker);
 
                 // Preparar la previsualización de la transmisión
                 executor.execute(() -> {
                     Thread currentThread = Thread.currentThread();
                     previews.put(session.getId(), currentThread); // Añadir el hilo al mapa
                     try {
-                        this.startPreview(rtmpUrl);
+                        this.startPreview(rtmpUrlDocker);
                     } catch (IOException | InterruptedException e) {
                         System.err.println(
                                 "Error al iniciar la previsualización de la transmisión: " + e.getMessage());
@@ -279,7 +285,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             } else if (payload.contains("emitirOBS") && payload.contains("rtmpUrl")) {
                 String streamId = this.extractStreamId(payload);
                 try {
-                    this.startFFmpegProcessForUser(streamId, RTMP_URL + streamId);
+                    this.startFFmpegProcessForUser(streamId, RTMP_DOCKER + streamId);
                     session.sendMessage(
                             new TextMessage("{\"type\":\"start\",\"message\":\" \"}"));
                 } catch (Exception e) {

@@ -35,6 +35,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Value("${variable.RTMP}")
     private String RTMP_URL;
 
+    @Value("${variable.RTMP_DOCKER}")
+    private String RTMP_DOCKER;
+
     @Value("${variable.VIDEOS_DIR}")
     private String uploadDir;
 
@@ -50,7 +53,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .addInterceptors(authHandshakeInterceptor);
         // Registrar el handler para OBS
         registry.addHandler(
-                new OBSWebSocketHandler(webSocketTaskExecutor(), streamingService, RTMP_URL + "/live/", uploadDir),
+                new OBSWebSocketHandler(webSocketTaskExecutor(), streamingService, RTMP_URL + "/live/",
+                        RTMP_DOCKER + "/live/", uploadDir),
                 "/live-obs")
                 .setAllowedOrigins("*") // Cambia "*" a los dominios permitidos en producción
                 .addInterceptors(authHandshakeInterceptor);
