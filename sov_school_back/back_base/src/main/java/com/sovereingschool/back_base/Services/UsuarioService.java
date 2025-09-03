@@ -95,10 +95,10 @@ public class UsuarioService implements IUsuarioService {
     @Autowired
     private InitAppService initAppService;
 
-    @Value("${variable.BACK_CHAT}")
+    @Value("${variable.BACK_CHAT_DOCKER}")
     private String backChatURL;
 
-    @Value("${variable.BACK_STREAM}")
+    @Value("${variable.BACK_STREAM_DOCKER}")
     private String backStreamURL;
 
     @Value("${variable.FRONT}")

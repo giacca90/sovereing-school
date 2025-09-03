@@ -43,8 +43,8 @@ public class InitAppService implements IInitAppService {
     @Autowired
     private WebClientConfig webClientConfig;
 
-    @Value("${variable.FRONT}")
-    private String frontURL;
+    @Value("${variable.FRONT_DOCKER}")
+    private String frontDocker;
 
     @Override
     public List<Usuario> getProfesores() {
@@ -108,7 +108,7 @@ public class InitAppService implements IInitAppService {
         try {
             InitApp init = this.getInit();
 
-            WebClient webClient = webClientConfig.createSecureWebClient(frontURL);
+            WebClient webClient = webClientConfig.createSecureWebClient(frontDocker);
 
             webClient.post()
                     .uri("/refresh-cache")
@@ -126,7 +126,7 @@ public class InitAppService implements IInitAppService {
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     })
                     .subscribe(res -> {
-                        if (res == null || !res.contains("Cache global actualizado con éxito!!!")) {
+                        if (res == null || !res.contains("Cache global actualizado con éxito")) {
                             System.err.println("Error en actualizar el cache global");
                             System.err.println(res);
                             throw new RuntimeException("Error en actualizar el cache global");

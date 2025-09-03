@@ -46,6 +46,9 @@ public class SecurityConfig {
     @Value("${variable.FRONT}")
     private String front;
 
+    @Value("${variable.FRONT_DOCKER}")
+    private String frontDocker;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
@@ -108,6 +111,7 @@ public class SecurityConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.addAllowedOrigin(front); // Origen permitido
+        config.addAllowedOrigin(frontDocker); // Origen permitido
         config.addAllowedMethod("*"); // Métodos permitidos
         config.addAllowedHeader("*"); // Headers permitidos
         config.setAllowCredentials(true); // Permitir credenciales

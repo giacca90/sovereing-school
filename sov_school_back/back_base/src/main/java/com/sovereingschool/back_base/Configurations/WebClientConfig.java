@@ -15,7 +15,6 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.netty.http.client.HttpClient;
-import reactor.netty.transport.logging.AdvancedByteBufFormat;
 
 @Configuration
 public class WebClientConfig {
@@ -74,16 +73,12 @@ public class WebClientConfig {
 					.trustManager(InsecureTrustManagerFactory.INSTANCE)
 					.build();
 			return HttpClient.create()
-					.secure(t -> t.sslContext(sslContext))
-					.wiretap("reactor.netty.http.client.HttpClient",
-							io.netty.handler.logging.LogLevel.DEBUG,
-							AdvancedByteBufFormat.TEXTUAL);
+					.secure(t -> t.sslContext(sslContext));
+
 		} else {
 			return HttpClient.create()
-					.secure()
-					.wiretap("reactor.netty.http.client.HttpClient",
-							io.netty.handler.logging.LogLevel.INFO,
-							AdvancedByteBufFormat.TEXTUAL);
+					.secure();
+
 		}
 	}
 }

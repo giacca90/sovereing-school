@@ -31,9 +31,7 @@ import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_common.Repositories.CursoRepository;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import reactor.core.publisher.Mono;
 
@@ -53,22 +51,17 @@ public class CursoService implements ICursoService {
     @Autowired
     private WebClientConfig webClientConfig;
 
-    @Value("${variable.BACK_STREAM}")
+    @Value("${variable.BACK_STREAM_DOCKER}")
     private String backStreamURL;
 
-    @Value("${variable.BACK_CHAT}")
+    @Value("${variable.BACK_CHAT_DOCKER}")
     private String backChatURL;
 
     private Path baseUploadDir;
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
     public CursoService(
-            @Value("${variable.VIDEOS_DIR}") String uploadDir,
-            EntityManager entityManager) {
+            @Value("${variable.VIDEOS_DIR}") String uploadDir) {
         this.baseUploadDir = Paths.get(uploadDir);
-        this.entityManager = entityManager;
     }
 
     @Override
