@@ -194,7 +194,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 
 						this.router.navigate(['/cursosUsuario']);
 					} else {
-						console.error('Falló la actualización del curso');
+						console.error('Falló la actualización del curso en editor-curso');
 					}
 				},
 				error: (error) => {

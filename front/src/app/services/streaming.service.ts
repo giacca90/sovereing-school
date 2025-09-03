@@ -123,7 +123,7 @@ export class StreamingService {
 
 					const success = await firstValueFrom(this.cursoService.updateCurso(curso)); // Esperar Observable
 					if (!success) {
-						console.error('Falló la actualización del curso');
+						console.error('Falló la actualización del curso en emitirWebcam');
 						return;
 					}
 					console.log('Curso actualizado');
@@ -414,7 +414,7 @@ export class StreamingService {
 		};
 	}
 
-	emitirOBS(clase: Clase | null) {
+	async emitirOBS(curso: Curso | null, clase: Clase | null) {
 		const status = document.getElementById('statusOBS');
 		if (!this.ws) {
 			throw new Error('No se puede conectar con Websocket');
@@ -424,53 +424,47 @@ export class StreamingService {
 			status.textContent = 'Creando la clase...';
 		}
 		this.enGrabacion = true;
-		if (!clase || !this.rtmpUrl) throw new Error('No se puede emitir OBS sin ruta RTMP');
+		if (!clase || !curso || !this.rtmpUrl) throw new Error('No se puede emitir OBS sin ruta RTMP');
+
 		clase.direccion_clase = this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1);
-		if (!clase.curso_clase) {
+
+		if (!clase.curso_clase || !curso.clases_curso) {
 			this.enGrabacion = false;
 			this.ws?.close();
-			console.error('No se puede emitir OBS sin curso');
+			console.error('No se puede emitir OBS sin curso: ' + clase.curso_clase);
 			throw new Error('No se puede emitir OBS sin curso');
 		}
-		this.cursoService.getCurso(clase.curso_clase).then((curso) => {
-			if (!curso || !curso.clases_curso) {
+		clase.posicion_clase = curso.clases_curso.length + 1;
+		curso.clases_curso?.push(clase);
+		this.cursoService.updateCurso(curso).subscribe({
+			next: (success: Curso) => {
+				if (!success || !status || !this.ws) throw new Error('Falló la actualización del curso');
+				console.log('Curso actualizado con éxito');
+				status.textContent = 'Clase creada, iniciando la emisión...';
+				this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
+				this.ws.onmessage = (event) => {
+					const data = JSON.parse(event.data);
+					if (data.type === 'start') {
+						console.log('Emisión de OBS iniciada.');
+						this.enGrabacion = true;
+						status.textContent = 'Emisión de OBS iniciada.';
+					} else if (data.type === 'info') {
+						console.log('Info recibida del servidor:', data.message);
+						status.textContent = `Info: ${data.message}`;
+					} else if (data.type === 'error') {
+						console.error('Error recibido del servidor:', data.message);
+						this.enGrabacion = false;
+						status.textContent = `Error: ${data.message}`;
+						this.ws?.close();
+					}
+				};
+			},
+			error: (error) => {
 				this.enGrabacion = false;
 				this.ws?.close();
-				console.error('Falló la actualización del curso');
-				throw new Error('Falló la actualización del curso');
-			}
-			clase.posicion_clase = curso.clases_curso.length + 1;
-			curso.clases_curso?.push(clase);
-			this.cursoService.updateCurso(curso).subscribe({
-				next: (success: Curso) => {
-					if (!success || !status || !this.ws) throw new Error('Falló la actualización del curso');
-					console.log('Curso actualizado con éxito');
-					status.textContent = 'Clase creada, iniciando la emisión...';
-					this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
-					this.ws.onmessage = (event) => {
-						const data = JSON.parse(event.data);
-						if (data.type === 'start') {
-							console.log('Emisión de OBS iniciada.');
-							this.enGrabacion = true;
-							status.textContent = 'Emisión de OBS iniciada.';
-						} else if (data.type === 'info') {
-							console.log('Info recibida del servidor:', data.message);
-							status.textContent = `Info: ${data.message}`;
-						} else if (data.type === 'error') {
-							console.error('Error recibido del servidor:', data.message);
-							this.enGrabacion = false;
-							status.textContent = `Error: ${data.message}`;
-							this.ws?.close();
-						}
-					};
-				},
-				error: (error) => {
-					this.enGrabacion = false;
-					this.ws?.close();
-					console.error('Error al actualizar el curso: ' + error);
-					throw new Error('Error al actualizar el curso: ' + error);
-				},
-			});
+				console.error('Error al actualizar el curso: ' + error);
+				throw new Error('Error al actualizar el curso: ' + error);
+			},
 		});
 	}
 

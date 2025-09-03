@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, Component, Inject, Input, OnDestroy, PLATFORM_ID } from '@angular/core';
 import { Clase } from '../../../../models/Clase';
+import { Curso } from '../../../../models/Curso';
 import { LoginService } from '../../../../services/login.service';
 import { StreamingService } from '../../../../services/streaming.service';
 
@@ -11,6 +12,7 @@ import { StreamingService } from '../../../../services/streaming.service';
 	styleUrl: './editor-obs.component.css',
 })
 export class EditorObsComponent implements AfterViewInit, OnDestroy {
+	@Input() curso!: Curso;
 	@Input() clase!: Clase;
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
@@ -53,7 +55,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		}
 
 		try {
-			this.streamingService.emitirOBS(this.clase);
+			this.streamingService.emitirOBS(this.curso, this.clase);
 		} catch (error: any) {
 			const status = document.getElementById('statusOBS');
 			if (status) {

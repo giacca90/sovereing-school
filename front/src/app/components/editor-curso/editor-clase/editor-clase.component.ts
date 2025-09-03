@@ -114,7 +114,7 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 			this.cursoService.updateCurso(this.curso).subscribe({
 				next: (success: Curso) => {
 					if (!success) {
-						console.error('Falló la actualización del curso');
+						console.error('Falló la actualización del curso en editor-clase');
 					}
 					this.close();
 				},

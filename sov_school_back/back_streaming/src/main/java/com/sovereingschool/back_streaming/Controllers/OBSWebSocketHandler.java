@@ -201,7 +201,6 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         // preparar comando FFmpeg preview
         List<String> ffmpegCommand = List.of(
                 "ffmpeg",
-                // "-init_hw_device", "vaapi=va",
                 "-vaapi_device", "/dev/dri/renderD128", // Dispositivo VAAPI
                 "-re",
                 "-i", rtmpUrl,

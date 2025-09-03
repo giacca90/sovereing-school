@@ -116,8 +116,8 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     @Override
     public String getClase(Long id_usuario, Long id_curso, Long id_clase) {
         UsuarioCursos usuario = this.usuarioCursosRepository.findByIdUsuario(id_usuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el usuario del chat");
-            throw new EntityNotFoundException("Error en obtener el usuario del chat");
+            System.err.println("Error en obtener el usuario del streaming. id_usuario: " + id_usuario);
+            throw new EntityNotFoundException("Error en obtener el usuario del streaming");
         });
 
         if (id_clase == 0) {
