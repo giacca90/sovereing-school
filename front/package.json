@@ -21,7 +21,7 @@
 		"@angular/compiler": "^20.2.2",
 		"@angular/core": "^20.2.2",
 		"@angular/forms": "^20.2.2",
-		"@angular/platform-browser": "^20.2.2",
+		"@angular/platform-browser": "^20.2.3",
 		"@angular/platform-browser-dynamic": "^20.2.2",
 		"@angular/platform-server": "^20.2.2",
 		"@angular/router": "^20.2.2",
