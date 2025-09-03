@@ -203,7 +203,6 @@ if (isMainModule(import.meta.url)) {
 	http.createServer((req, res) => {
 		const remoteIp = req.socket.remoteAddress || '';
 
-		console.log('Remote IP:', remoteIp);
 		if (remoteIp.startsWith('172.18.') || remoteIp === '127.0.0.1') {
 			app(req, res);
 		} else {
