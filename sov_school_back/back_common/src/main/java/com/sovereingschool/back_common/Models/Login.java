@@ -9,15 +9,13 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@AllArgsConstructor
+/* @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Setter
+@Setter */
+@Data
 @Entity
 @Table(name = "login")
 public class Login implements Serializable {

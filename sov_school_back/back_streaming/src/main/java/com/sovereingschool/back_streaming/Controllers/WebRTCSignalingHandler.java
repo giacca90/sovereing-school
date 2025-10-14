@@ -2,11 +2,14 @@ package com.sovereingschool.back_streaming.Controllers;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -19,18 +22,19 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sovereingschool.back_streaming.Services.StreamingService;
 
 public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    // <streamId, WebSocketSession>
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, Thread> ffmpegThreads = new ConcurrentHashMap<>();
-    private final Map<String, String[]> sessionIdToStreamId = new ConcurrentHashMap<>();
+    private final Map<String, String[]> streamIdToStreamSettings = new ConcurrentHashMap<>();
     private final Executor executor; // Executor inyectado
     private final StreamingService streamingService;
 
@@ -38,7 +42,6 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
     private BufferedWriter pionWriter;
     private BufferedReader pionReader;
     private BufferedReader pionErrorReader;
-    private Thread pionErrorReaderThread;
 
     // Constructor modificado para aceptar Executor y StreamingService
     public WebRTCSignalingHandler(Executor executor, StreamingService streamingService) {
@@ -65,7 +68,6 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                 return;
             }
 
-            sessions.put(session.getId(), session);
             String username = (String) session.getAttributes().get("username");
             System.out.println("Conexión establecida en WebOBS para el usuario: " + username);
         } catch (Exception e) {
@@ -74,8 +76,6 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                 session.close(CloseStatus.SERVER_ERROR);
             } catch (IOException ex) {
                 System.err.println("Error en cerrar la conexión: " + ex.getMessage());
-            } finally {
-                sessions.remove(session.getId());
             }
         }
     }
@@ -83,7 +83,6 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
         String userId = session.getId();
-        sessions.remove(userId);
 
         if (pionWriter != null) {
             try {
@@ -105,10 +104,6 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
             pionProcess.destroy();
         }
 
-        if (pionErrorReaderThread != null) {
-            pionErrorReaderThread.interrupt();
-        }
-
         Thread t = ffmpegThreads.remove(userId);
         if (t != null) {
             t.interrupt();
@@ -118,208 +113,158 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
-        // Parsear el mensaje recibido
         try {
             String payload = message.getPayload();
             JsonNode json = objectMapper.readTree(payload);
+            System.out.println("Recibido desde el front: " + payload);
 
-            if (json.has("userId")) {
-                String userId = json.get("userId").asText();
-                JsonNode videoSettings = json.get("videoSettings");
+            if (json.has("type")) {
+                String type = json.get("type").asText();
 
-                String width = null;
-                String height = null;
-                String fps = null;
-
-                if (videoSettings != null) {
-                    width = videoSettings.has("width") ? videoSettings.get("width").asText() : null;
-                    height = videoSettings.has("height") ? videoSettings.get("height").asText() : null;
-                    fps = videoSettings.has("fps") ? videoSettings.get("fps").asText() : null;
-                }
-
-                String streamId = userId + "_" + session.getId();
-                sessionIdToStreamId.put(session.getId(), new String[] { width, height, fps });
-
-                // Enviar streamId al frontend
-                try {
-                    session.sendMessage(new TextMessage("{\"type\":\"streamId\",\"streamId\":\"" + streamId + "\"}"));
-                } catch (IOException e) {
-                    System.err.println("Error al enviar streamId: " + e.getMessage());
-                    try {
-                        session.close();
-                    } catch (IOException ex) {
-                        System.err.println("Errorn en cerrar la sesión: " + ex.getMessage());
-                    }
-                    return;
-                }
-
-            } else if (json.has("detenerStreamWebcam")) {
-                // Petición para detener el stream
-                String streamId = json.get("detenerStreamWebcam").asText();
-                System.out.println("Llega el mensaje de detener WebOBS");
-                try {
-                    streamingService.stopFFmpegProcessForUser(streamId);
-                } catch (IOException | RuntimeException e) {
-                    System.err.println(
-                            "Error al detener el proceso FFmpeg para el stream: " + streamId + ": " + e.getMessage());
-                }
-            } else if (json.has("streamId") && json.has("sdp")) {
-                String streamId = json.get("streamId").asText();
-                if (!streamId.contains(session.getId())) {
-                    System.err.println("El streamId no coincide con el sessionId");
-                    try {
-                        session.sendMessage(new TextMessage(
-                                "{\"type\":\"error\",\"message\":\"El streamId no coincide con el sessionId \"}"));
-                    } catch (IOException e) {
-                        System.err.println("Error al enviar el mensaje de error: " + e.getMessage());
-                    }
-
-                    try {
-                        session.close();
-                    } catch (IOException ex) {
-                        System.err.println("Errorn en cerrar la sesión: " + ex.getMessage());
-                    }
-                    return;
-                }
-
-                String sdpOffer = json.get("sdp").asText();
-                String[] videoSetting = sessionIdToStreamId.remove(session.getId());
-
-                if (pionProcess == null || !pionProcess.isAlive()) {
-                    ProcessBuilder pb = new ProcessBuilder("go", "run", "pion-server.go");
-                    pb.directory(new File("src/main/resources/pion/"));
-                    pb.redirectErrorStream(false); // stderr separado
-
-                    try {
-                        pionProcess = pb.start();
-                    } catch (IOException e) {
-                        System.out.println("Error al iniciar proceso Go: " + e.getMessage());
+                switch (type) {
+                    case "userId":
+                        Long userId = (Long) session.getAttributes().get("idUsuario");
+                        String streamId = userId + "_" + session.getId();
+                        // Enviar streamId al frontend
                         try {
-                            session.sendMessage(new TextMessage(
-                                    "{\"type\":\"error\",\"message\":\"Error al iniciar proceso Go: \"" + e.getMessage()
-                                            + "\"}"));
-                        } catch (IOException ex) {
-                            System.err.println("Error al enviar mensaje de error: " + ex.getMessage());
-                        }
-
-                        try {
-                            session.close();
-                        } catch (IOException ex) {
-                            System.err.println("Error en cerrar la sesión: " + ex.getMessage());
-                        }
-                        return;
-                    }
-
-                    pionWriter = new BufferedWriter(new OutputStreamWriter(pionProcess.getOutputStream()));
-                    pionReader = new BufferedReader(new InputStreamReader(pionProcess.getInputStream()));
-                    pionErrorReader = new BufferedReader(new InputStreamReader(pionProcess.getErrorStream()));
-
-                    // Leer logs del proceso Pion
-                    this.pionErrorReaderThread = new Thread(() -> {
-                        String line;
-                        try {
-                            while ((line = pionErrorReader.readLine()) != null) {
-                                System.err.println("PION: " + line);
-                            }
+                            session.sendMessage(
+                                    new TextMessage("{\"type\":\"streamId\",\"streamId\":\"" + streamId + "\"}"));
+                            sessions.put(streamId, session);
                         } catch (IOException e) {
-                            System.err.println("Error en stderr PION: " + e.getMessage());
+                            System.err.println("Error al enviar streamId: " + e.getMessage());
+                            try {
+                                session.close();
+                            } catch (IOException ex) {
+                                System.err.println("Error en cerrar la sesión: " + ex.getMessage());
+                            }
+                            return;
                         }
-                    });
-                    this.pionErrorReaderThread.start();
+                        break;
+
+                    case "emitir": {
+                        streamId = json.get("streamId").asText();
+                        JsonNode videoSettings = json.get("videoSettings");
+                        System.out.println("VideoSettings: " + videoSettings);
+                        if (!compruebaSesion(streamId, session)) {
+                            return;
+                        }
+                        String width = null;
+                        String height = null;
+                        String fps = null;
+
+                        if (videoSettings != null) {
+                            width = videoSettings.has("width") ? videoSettings.get("width").asText() : null;
+                            height = videoSettings.has("height") ? videoSettings.get("height").asText() : null;
+                            fps = videoSettings.has("fps") ? videoSettings.get("fps").asText() : null;
+                        }
+
+                        streamIdToStreamSettings.put(streamId, new String[] { width, height, fps });
+                        System.out.println("Empieza a emitir Webcam");
+                        try {
+                            session.sendMessage(new TextMessage("{\"type\":\"info\",\"message\":\"ok\"}"));
+                        } catch (Exception e) {
+                            System.err.println("Error al enviar mensaje de info: " + e.getMessage());
+                        }
+                        break;
+                    }
+
+                    case "offer": {
+                        System.out.println("Recibimos un stream de Webcam");
+                        streamId = json.get("streamId").asText();
+                        if (!compruebaSesion(streamId, session)) {
+                            return;
+                        }
+
+                        String sdpOffer = json.get("sdp").asText();
+                        String[] videoSetting = streamIdToStreamSettings.remove(streamId);
+                        if (videoSetting == null) {
+                            return;
+                        }
+                        System.out.println("VideoSetting: " + Arrays.toString(videoSetting));
+                        System.out.println("SDP Offer: " + sdpOffer);
+
+                        this.startPion(); // Iniciar proceso Go si no está iniciado
+                        // Enviar JSON con SDP offer al proceso Go
+                        ObjectNode request = objectMapper.createObjectNode();
+                        request.put("type", "offer");
+                        request.put("streamId", streamId);
+                        request.put("sdp", sdpOffer);
+                        // Convertir array de Java a ArrayNode de Jackson
+                        ArrayNode videoSettingsNode = objectMapper.createArrayNode();
+                        for (String setting : videoSetting) {
+                            videoSettingsNode.add(setting);
+                        }
+                        request.set("videoSettings", videoSettingsNode);
+
+                        synchronized (pionWriter) {
+                            try {
+                                pionWriter.write(request.toString());
+                                pionWriter.newLine();
+                                pionWriter.flush();
+                            } catch (IOException e) {
+                                System.err.println("Error al enviar al proceso Go: " + e.getMessage());
+                                return;
+                            }
+                        }
+                        break;
+                    }
+
+                    case "candidate": {
+                        // Pasamos los candidate a PION
+                        streamId = json.get("streamId").asText();
+                        if (!compruebaSesion(streamId, session)) {
+                            return;
+                        }
+                        JsonNode candidateNode = json.get("candidate"); // obtienes el objeto completo
+                        ObjectNode candidateResponse = objectMapper.createObjectNode();
+                        candidateResponse.put("type", "candidate");
+                        candidateResponse.put("streamId", streamId);
+                        candidateResponse.set("candidate", candidateNode);
+                        synchronized (pionWriter) {
+                            try {
+                                pionWriter.write(candidateResponse.toString());
+                                pionWriter.newLine();
+                                pionWriter.flush();
+                            } catch (IOException e) {
+                                System.err.println("Error al enviar al proceso Go: " + e.getMessage());
+                                return;
+                            }
+                        }
+                        break;
+                    }
+
+                    case "detenerStreamWebRTC": {
+                        streamId = json.get("streamId").asText();
+                        if (!compruebaSesion(streamId, session)) {
+                            return;
+                        }
+                        System.out.println("Llega el mensaje de detener WebOBS");
+                        try {
+                            // IMPORTANTE: añadir '\n' y flush para que el proceso Go lea la línea
+                            this.pionWriter.write("{\"type\":\"stopStreamByID\",\"streamId\":\"" + streamId + "\"}\n");
+                            this.pionWriter.flush();
+
+                            // Opcional: pequeño retardo para reducir la probabilidad de race (200-500ms)
+                            // Thread.sleep(250);
+
+                            streamingService.stopFFmpegProcessForUser(streamId);
+                        } catch (IOException | RuntimeException e) {
+                            System.err.println(
+                                    "Error al detener el proceso FFmpeg para el stream: " + streamId + ": "
+                                            + e.getMessage());
+                        } finally {
+                            session.close();
+                        }
+                        break;
+                    }
+
+                    default:
+                        System.err.println("JSON desconocido: " + json.toString());
+                        break;
                 }
-
-                // Enviar JSON con SDP offer al proceso Go
-                ObjectNode request = objectMapper.createObjectNode();
-                request.put("sessionId", streamId);
-                request.put("sdp", sdpOffer);
-                request.put("width", Integer.parseInt(videoSetting[0]));
-                request.put("height", Integer.parseInt(videoSetting[1]));
-                request.put("fps", Integer.parseInt(videoSetting[2]));
-
-                synchronized (pionWriter) {
-                    try {
-                        pionWriter.write(request.toString());
-                        pionWriter.newLine();
-                        pionWriter.flush();
-                    } catch (IOException e) {
-                        System.err.println("Error al enviar al proceso Go: " + e.getMessage());
-                        return;
-                    }
-                }
-
-                // Leer SDP answer (solo la primera línea de salida del script)
-                String answerLine;
-                try {
-                    answerLine = pionReader.readLine();
-                } catch (IOException e) {
-                    System.err.println("Error al leer la respuesta del proceso Go: " + e.getMessage());
-                    try {
-                        session.sendMessage(new TextMessage(
-                                "{\"type\":\"error\",\"message\":\"Error al leer la respuesta del proceso Go: \""
-                                        + e.getMessage() + "\"}"));
-                    } catch (IOException ex) {
-                        System.err.println("Error al enviar mensaje de error: " + ex.getMessage());
-                    }
-
-                    try {
-                        session.close();
-                    } catch (IOException ex) {
-                        System.err.println("Error en cerrar la sesión: " + ex.getMessage());
-                    }
-                    return;
-                }
-
-                JsonNode sdpJson = objectMapper.readTree(answerLine);
-                String sdpString = sdpJson.get("sdp").asText();
-
-                // Enviar SDP al frontend
-                ObjectNode response = objectMapper.createObjectNode();
-                response.put("type", "webrtc-answer");
-                response.put("sdp", sdpString);
-
-                try {
-                    session.sendMessage(new TextMessage(response.toString()));
-                } catch (IOException e) {
-                    System.out.println("Error al enviar la respuesta al frontend: " + e.getMessage());
-                    try {
-                        session.sendMessage(new TextMessage(
-                                "{\"type\":\"error\",\"message\":\"Error al enviar la respuesta al frontend: \""
-                                        + e.getMessage() + "\"}"));
-                    } catch (IOException ex) {
-                        System.err.println("Error al enviar mensaje de error: " + ex.getMessage());
-                    }
-
-                    try {
-                        session.close();
-                    } catch (IOException ex) {
-                        System.err.println("Error en cerrar la sesión: " + ex.getMessage());
-                    }
-                    return;
-                }
-
-                // Iniciar el hilo de FFmpeg
-                executor.execute(() -> {
-                    try {
-                        InputStream pionBinaryStream = pionProcess.getInputStream(); // ahora contiene el flujo binario
-
-                        // Ejecutar ffmpeg y pasarle el stream
-                        streamingService.startLiveStreamingFromStream(
-                                streamId,
-                                pionBinaryStream,
-                                videoSetting);
-
-                        ffmpegThreads.put(session.getId(), Thread.currentThread());
-
-                    } catch (Exception e) {
-                        System.err
-                                .println("Error al iniciar FFmpeg para el stream " + streamId + ": " + e.getMessage());
-                    }
-                });
             }
-        } catch (
-
-        JsonProcessingException e) {
-            System.err.println("Error al parsear el mensaje JSON: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error en handleTextMessage: " + e.getMessage());
         }
     }
 
@@ -332,5 +277,166 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(role -> role.equals("ROLE_PROF") || role.equals("ROLE_ADMIN"));
+    }
+
+    private boolean compruebaSesion(String streamId, WebSocketSession session) {
+        if (!streamId.contains(session.getId())) {
+            System.err.println("El streamId no coincide con el sessionId");
+            try {
+                session.sendMessage(new TextMessage(
+                        "{\"type\":\"error\",\"message\":\"El streamId no coincide con el sessionId \"}"));
+            } catch (IOException e) {
+                System.err.println("Error al enviar el mensaje de error: " + e.getMessage());
+            }
+            try {
+                session.close();
+            } catch (IOException ex) {
+                System.err.println("Error en cerrar la sesión: " + ex.getMessage());
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private void startPion() {
+        if (pionProcess != null && pionProcess.isAlive()) {
+            return; // Ya está corriendo
+        }
+
+        ProcessBuilder pb;
+
+        // Detectar si estamos dentro de Docker
+        boolean inDocker = false;
+        try {
+            File dockerEnv = new File("/.dockerenv");
+            inDocker = dockerEnv.exists();
+        } catch (Exception ignored) {
+        }
+
+        if (inDocker) {
+            // En Docker (prod), usar el binario compilado que debería estar en
+            // /app/bin/pion-server
+            String prodBinary = "/app/pion-server";
+            pb = new ProcessBuilder(prodBinary);
+            System.out.println("Iniciando Pion desde binario compilado en Docker: " + prodBinary);
+        } else {
+            // En desarrollo, usar go run sobre el script
+            pb = new ProcessBuilder("go", "run", "pion-server.go");
+            pb.directory(new File("src/main/resources/pion/"));
+            System.out.println("Iniciando Pion en modo desarrollo con go run");
+        }
+
+        pb.redirectErrorStream(false); // mantener stdout y stderr separados
+
+        try {
+            pionProcess = pb.start();
+            System.out.println("Proceso Pion iniciado correctamente");
+        } catch (IOException e) {
+            System.err.println("Error al iniciar el proceso Pion: " + e.getMessage());
+            return;
+        }
+
+        // Inicializar readers/writers
+        pionWriter = new BufferedWriter(new OutputStreamWriter(pionProcess.getOutputStream()));
+        pionReader = new BufferedReader(new InputStreamReader(pionProcess.getInputStream()));
+        pionErrorReader = new BufferedReader(new InputStreamReader(pionProcess.getErrorStream()));
+
+        // Hilo para leer stderr
+        executor.execute(() -> {
+            String line;
+            try {
+                while ((line = pionErrorReader.readLine()) != null) {
+                    System.err.println("PION Log: " + line);
+                }
+            } catch (IOException e) {
+                System.err.println("Error leyendo stderr de Pion: " + e.getMessage());
+            }
+        });
+
+        // Hilo para leer stdout
+        executor.execute(() -> {
+            String line;
+            try {
+                while ((line = pionReader.readLine()) != null) {
+                    System.out.println("STDOUT Pion: " + line);
+                    try {
+                        JsonNode msg = objectMapper.readTree(line);
+                        String type = msg.get("type").asText();
+                        String streamId = msg.get("streamId").asText();
+                        WebSocketSession session = sessions.get(streamId);
+
+                        switch (type) {
+                            case "webrtc-answer":
+                                String sdpAnswer = msg.get("sdp").asText();
+                                ObjectNode response = objectMapper.createObjectNode();
+                                response.put("type", "webrtc-answer");
+                                response.put("sdp", sdpAnswer);
+                                session.sendMessage(new TextMessage(response.toString()));
+                                // System.out.println("Respuesta webrtc-answer enviada al frontend");
+                                // System.out.println(sdpAnswer);
+                                break;
+
+                            case "rtp-sdp":
+                                String sdp = msg.get("sdp").asText();
+                                JsonNode videoSettingsNode = msg.get("videoSettings");
+                                String[] videoSetting = new String[videoSettingsNode.size()];
+                                for (int i = 0; i < videoSettingsNode.size(); i++) {
+                                    videoSetting[i] = videoSettingsNode.get(i).asText();
+                                }
+
+                                System.out.println("Recibido SDP RTP para stream " + streamId);
+                                System.out.println(sdp);
+                                executor.execute(() -> {
+                                    try (InputStream sdpStream = new ByteArrayInputStream(
+                                            sdp.getBytes(StandardCharsets.UTF_8))) {
+                                        streamingService.startLiveStreamingFromStream(streamId, sdpStream,
+                                                videoSetting);
+                                        ffmpegThreads.put(session.getId(), Thread.currentThread());
+                                        System.out.println("Iniciado hilo FFmpeg para stream " + streamId);
+                                    } catch (Exception e) {
+                                        System.err.println("Error iniciando FFmpeg para stream " + streamId + ": "
+                                                + e.getMessage());
+                                    }
+                                });
+                                break;
+
+                            case "candidate": {
+                                String streamIdCandidate = msg.get("streamId").asText();
+                                if (session == null) {
+                                    System.err
+                                            .println("No se encontró la sesión para el streamId " + streamIdCandidate);
+                                    break;
+                                }
+
+                                // candidate llega como string plano desde Pion
+                                String candidateStr = msg.get("candidate").asText();
+
+                                ObjectNode candidateResponse = objectMapper.createObjectNode();
+                                candidateResponse.put("type", "candidate");
+
+                                // Crear estructura compatible con RTCIceCandidateInit
+                                ObjectNode candidateInit = objectMapper.createObjectNode();
+                                candidateInit.put("candidate", candidateStr);
+                                candidateInit.put("sdpMid", "0"); // valores neutros válidos
+                                candidateInit.put("sdpMLineIndex", 0);
+
+                                candidateResponse.set("candidate", candidateInit);
+
+                                session.sendMessage(new TextMessage(candidateResponse.toString()));
+                                break;
+                            }
+
+                            default:
+                                System.out.println("Mensaje JSON desconocido de Pion: " + msg.toString());
+                        }
+                    } catch (Exception ex) {
+                        System.err.println("Error parseando JSON desde stdout de Pion: " + line);
+                        ex.printStackTrace();
+                    }
+                }
+            } catch (IOException e) {
+                System.err.println("Error leyendo stdout de Pion: " + e.getMessage());
+            }
+        });
     }
 }

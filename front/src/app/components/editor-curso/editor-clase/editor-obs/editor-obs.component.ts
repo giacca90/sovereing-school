@@ -1,8 +1,6 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, Inject, Input, OnDestroy, PLATFORM_ID } from '@angular/core';
-import { Clase } from '../../../../models/Clase';
-import { Curso } from '../../../../models/Curso';
-import { LoginService } from '../../../../services/login.service';
+import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, Output, PLATFORM_ID } from '@angular/core';
+import { firstValueFrom, Observable } from 'rxjs';
 import { StreamingService } from '../../../../services/streaming.service';
 
 @Component({
@@ -12,18 +10,22 @@ import { StreamingService } from '../../../../services/streaming.service';
 	styleUrl: './editor-obs.component.css',
 })
 export class EditorObsComponent implements AfterViewInit, OnDestroy {
-	@Input() curso!: Curso;
-	@Input() clase!: Clase;
+	@Input() readyObserve?: Observable<boolean>; // Avisa cuando está listo para emitir (opcional)
+	@Output() emision: EventEmitter<string | null> = new EventEmitter();
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
 	player: any;
+	ready: boolean = false;
+	rutaOBS: string = '';
 
 	constructor(
 		public streamingService: StreamingService,
-		private loginService: LoginService,
 		@Inject(PLATFORM_ID) private platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
+		this.readyObserve?.subscribe((res) => {
+			this.ready = res;
+		});
 	}
 
 	ngAfterViewInit(): void {
@@ -36,31 +38,15 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		this.player.dispose();
 	}
 
-	emiteOBS() {
-		if (this.clase.nombre_clase == null || this.clase.nombre_clase == '') {
-			alert('Debes poner un nombre para la clase');
-			return;
-		}
-		if (this.clase.descriccion_clase == null || this.clase.descriccion_clase == '') {
-			alert('Debes poner una descripción para la clase');
-			return;
-		}
-		if (this.clase.contenido_clase == null || this.clase.contenido_clase == '') {
-			alert('Debes poner contenido para la clase');
-			return;
-		}
+	async emiteOBS() {
 		if (!this.m3u8Loaded) {
 			alert('Debes conectarte primero con OBS');
 			return;
 		}
 
-		try {
-			this.streamingService.emitirOBS(this.curso, this.clase);
-		} catch (error: any) {
-			const status = document.getElementById('statusOBS');
-			if (status) {
-				status.textContent = error.message;
-			}
+		if (this.ready) {
+			const url = await firstValueFrom(this.streamingService.rtmpUrl$);
+			this.emision.emit(url);
 		}
 	}
 
@@ -68,15 +54,13 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		this.streamingService.stopMediaStreaming();
 		this.player.src = '';
 		this.player.srcObject = null;
+		this.emision.emit(null);
 	}
 
 	async startOBS() {
 		if (!this.isBrowser) return; // ✅ Evita ejecutar en SSR
 
-		const userId = this.loginService.usuario?.id_usuario;
-		if (!userId) return;
-
-		this.streamingService.startOBS(userId);
+		this.streamingService.startOBS();
 
 		// Esperar a que el DOM esté listo
 		setTimeout(async () => {
@@ -130,6 +114,103 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 
 			// ✅ Asegura el estilo solo si el elemento existe
 			videoOBS.style.height = 'auto'; // Usar 'auto' en lugar de 'content' (no válido en CSS)
+
+			// Mostrar la URL RTMP al usuario
+			const enlaces: HTMLDivElement = document.getElementById('enlaces') as HTMLDivElement;
+			if (enlaces) {
+				const server: HTMLParagraphElement = document.createElement('p') as HTMLParagraphElement;
+				server.textContent = 'URL del servidor';
+				const lServer: HTMLParagraphElement = document.createElement('p') as HTMLParagraphElement;
+				lServer.classList.add('p-2', 'cursor-pointer', 'rounded-lg', 'border', 'border-black', 'text-blue-700');
+
+				const url = await firstValueFrom(this.streamingService.rtmpUrl$);
+				if (url) {
+					lServer.textContent = url.substring(0, url.lastIndexOf('/'));
+				} else {
+					console.error('No se pudo obtener la URL del servidor');
+					return;
+				}
+				lServer.onclick = () =>
+					navigator.clipboard.writeText(lServer.textContent || '').then(() => {
+						const tooltip = document.getElementById('tooltip') as HTMLDivElement;
+						if (tooltip) {
+							tooltip.textContent = 'Copiado al portapapeles';
+							setTimeout(() => {
+								tooltip.textContent = 'Haz click para copiar';
+							}, 3000);
+						}
+					});
+				// Crear tooltip dinámico para lServer
+				lServer.addEventListener('mouseover', (event: MouseEvent) => {
+					const tooltip = document.createElement('div');
+					tooltip.id = 'tooltip';
+					tooltip.textContent = 'Haz click para copiar';
+					tooltip.classList.add('absolute', 'bg-black', 'text-white', 'text-xs', 'p-1', 'rounded-sm', 'tooltip');
+					// Posicionar el tooltip basado en la posición del ratón
+					tooltip.style.position = 'fixed'; // Usamos 'fixed' para que funcione con las coordenadas del mouse
+					tooltip.style.top = `${event.clientY - 30}px`; // Ajustar posición encima del ratón
+					tooltip.style.left = `${event.clientX}px`; // Alinear con el puntero del ratón
+					enlaces.appendChild(tooltip);
+				});
+
+				lServer.addEventListener('mousemove', (event: MouseEvent) => moveTooltip(event));
+
+				lServer.addEventListener('mouseleave', () => {
+					const tooltip = document.getElementById('tooltip') as HTMLDivElement;
+					if (tooltip) {
+						tooltip.remove();
+					}
+				});
+
+				const key: HTMLParagraphElement = document.createElement('p') as HTMLParagraphElement;
+				key.textContent = 'Clave del stream';
+				const lKey: HTMLParagraphElement = document.createElement('p') as HTMLParagraphElement;
+				lKey.classList.add('p-2', 'cursor-pointer', 'rounded-lg', 'border', 'border-black', 'text-blue-700');
+
+				lKey.textContent = url.substring(0, url.lastIndexOf('/'));
+
+				lKey.onclick = () =>
+					navigator.clipboard.writeText(lKey.textContent || '').then(() => {
+						const tooltip = document.getElementById('tooltip') as HTMLDivElement;
+						if (tooltip) {
+							tooltip.textContent = 'Copiado al portapapeles';
+							setTimeout(() => {
+								tooltip.textContent = 'Haz click para copiar';
+							}, 3000);
+						}
+					});
+				lKey.addEventListener('mouseover', (event: MouseEvent) => {
+					const tooltip = document.createElement('div');
+					tooltip.id = 'tooltip';
+					tooltip.textContent = 'Haz click para copiar';
+					tooltip.classList.add('absolute', 'bg-black', 'text-white', 'text-xs', 'p-1', 'rounded-sm', 'tooltip');
+					// Posicionar el tooltip basado en la posición del ratón
+					tooltip.style.position = 'fixed'; // Usamos 'fixed' para que funcione con las coordenadas del mouse
+					tooltip.style.top = `${event.clientY - 40}px`; // Ajustar posición encima del ratón
+					tooltip.style.left = `${event.clientX}px`; // Alinear con el puntero del ratón
+					enlaces.appendChild(tooltip);
+				});
+
+				lKey.addEventListener('mousemove', (event: MouseEvent) => moveTooltip(event));
+
+				lKey.addEventListener('mouseleave', () => {
+					const tooltip = document.getElementById('tooltip') as HTMLDivElement;
+					if (tooltip) {
+						tooltip.remove();
+					}
+				});
+
+				// Mover el tooltip con el ratón mientras esté en el elemento
+				const moveTooltip = (moveEvent: MouseEvent) => {
+					const tooltip = document.getElementById('tooltip') as HTMLDivElement;
+					tooltip.style.top = `${moveEvent.clientY - 30}px`;
+					tooltip.style.left = `${moveEvent.clientX}px`;
+				};
+				enlaces.appendChild(server);
+				enlaces.appendChild(lServer);
+				enlaces.appendChild(key);
+				enlaces.appendChild(lKey);
+			}
 		}, 300);
 	}
 

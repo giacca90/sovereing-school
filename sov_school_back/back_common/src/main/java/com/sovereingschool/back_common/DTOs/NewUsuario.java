@@ -8,15 +8,15 @@ import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 import lombok.ToString;
 
-@AllArgsConstructor
+/* @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Setter
+@Setter */
+@Data
+@AllArgsConstructor
 @ToString
 public class NewUsuario implements Serializable {
 	private String nombre_usuario;

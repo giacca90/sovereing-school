@@ -5,7 +5,6 @@ import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Clase } from '../../models/Clase';
 import { Curso } from '../../models/Curso';
-import { ClaseService } from '../../services/clase.service';
 import { CursosService } from '../../services/cursos.service';
 import { InitService } from '../../services/init.service';
 import { LoginService } from '../../services/login.service';
@@ -33,7 +32,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		private route: ActivatedRoute,
 		private router: Router,
 		public cursoService: CursosService,
-		private claseService: ClaseService,
 		public loginService: LoginService,
 		public streamingService: StreamingService,
 		private initService: InitService,
@@ -191,7 +189,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 						if (this.idCurso == 0) {
 							this.cursoService.cursos.push(success);
 						}
-
 						this.router.navigate(['/cursosUsuario']);
 					} else {
 						console.error('Falló la actualización del curso en editor-curso');
@@ -251,7 +248,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 				this.cursoService.deleteCurso(this.curso).subscribe({
 					next: (result: boolean) => {
 						if (result) {
-							this.initService.carga();
+							//this.initService.carga();
 							this.router.navigate(['/cursosUsuario']);
 						}
 					},
@@ -266,21 +263,18 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	// metodo para eliminar una clase desde la vista del curso
 	eliminaClase(clase: Clase) {
 		if (confirm('Esto eliminará definitivamente la clase. Estás seguro??')) {
-			this.subscription.add(
-				this.claseService.deleteClase(clase).subscribe({
-					next: (resp: boolean) => {
-						if (!resp) {
-							alert('Error al eliminar la clase');
-							return;
-						}
-						this.curso.clases_curso = this.curso.clases_curso?.filter((c) => c.id_clase !== clase.id_clase);
-						this.initService.carga();
-					},
-					error: (e: Error) => {
-						console.error('Error en eliminar Clase: ' + e.message);
-					},
-				}),
-			);
+			this.curso.clases_curso = this.curso.clases_curso?.filter((c) => c.id_clase !== clase.id_clase);
+			this.cursoService.updateCurso(this.curso).subscribe({
+				next: (success: Curso) => {
+					if (!success) {
+						console.error('Falló la actualización del curso en editor-clase');
+					}
+					this.initService.carga();
+				},
+				error: (error) => {
+					console.error('Error al actualizar el curso: ' + error);
+				},
+			});
 		}
 	}
 

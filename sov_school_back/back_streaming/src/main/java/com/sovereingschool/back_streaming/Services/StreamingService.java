@@ -190,43 +190,69 @@ public class StreamingService {
         // Guardar el proceso en el mapa
         ffmpegProcesses.put(streamId.substring(streamId.lastIndexOf("_") + 1), process);
 
-        // Hilo para escribir en el stdin de FFmpeg (solo para InputStream)
-        if (inputStream instanceof InputStream) {
-            System.out.println("Iniciando hilo de escritura en stdin de FFmpeg");
-            new Thread(() -> {
-                try {
-                    InputStream IS = (InputStream) inputStream; // Input desde el proceso Go
-                    OutputStream OS = process.getOutputStream(); // Salida hacia ffmpeg
-
-                    byte[] buffer = new byte[409600];
-                    int bytesRead;
-
-                    while ((bytesRead = IS.read(buffer)) != -1) {
-                        System.out.println("Enviando paquete a ffmpeg: " + bytesRead + " bytes");
-                        OS.write(buffer, 0, bytesRead);
-                        OS.flush();
-                    }
-
-                    // NO cerramos OS si quieres mantener ffmpeg activo
-
-                } catch (IOException e) {
-                    System.err.println("Error al escribir en el stdin de FFmpeg: " + e.getMessage());
-                }
-            }).start();
-        }
+        /*
+         * // Hilo para escribir en el stdin de FFmpeg (solo para InputStream)
+         * if (inputStream instanceof InputStream) {
+         * System.out.println("Iniciando hilo de escritura en stdin de FFmpeg");
+         * new Thread(() -> {
+         * try {
+         * InputStream IS = (InputStream) inputStream; // Input desde el proceso Go
+         * OutputStream OS = process.getOutputStream(); // Salida hacia ffmpeg
+         * 
+         * byte[] buffer = new byte[409600];
+         * int bytesRead;
+         * 
+         * while ((bytesRead = IS.read(buffer)) != -1) {
+         * System.out.println("Enviando paquete a ffmpeg: " + bytesRead + " bytes");
+         * OS.write(buffer, 0, bytesRead);
+         * OS.flush();
+         * }
+         * 
+         * // NO cerramos OS si quieres mantener ffmpeg activo
+         * 
+         * } catch (IOException e) {
+         * System.err.println("Error al escribir en el stdin de FFmpeg: " +
+         * e.getMessage());
+         * }
+         * });
+         * }
+         */
 
         // Hilo para leer los logs de FFmpeg
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
         Thread logReader = new Thread(() -> {
             try {
                 String line;
+                boolean sdpSent = false;
+
                 while ((line = reader.readLine()) != null) {
                     System.err.println("FFmpeg: " + line);
+
+                    // Enviar SDP a FFmpeg (solo para WebRTC)
+                    if (!sdpSent && inputStream instanceof InputStream && line.contains("ffmpeg version")) {
+                        try {
+                            System.out.println("➡️ Enviando SDP a FFmpeg...");
+                            OutputStream os = process.getOutputStream();
+                            InputStream sdpStream = (InputStream) inputStream;
+
+                            byte[] buffer = new byte[8192];
+                            int bytesRead;
+                            while ((bytesRead = sdpStream.read(buffer)) != -1) {
+                                os.write(buffer, 0, bytesRead);
+                            }
+                            os.flush();
+                            os.close(); // cerramos stdin, el SDP ya está completo
+
+                            sdpSent = true;
+                            System.out.println("✅ SDP enviado y stdin cerrado");
+                        } catch (IOException e) {
+                            System.err.println("Error al enviar SDP a FFmpeg: " + e.getMessage());
+                        }
+                    }
                 }
             } catch (IOException e) {
                 System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
-                throw new RuntimeException("Error leyendo salida de FFmpeg: " +
-                        e.getMessage());
+                throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
             }
         });
         logReader.start();
@@ -236,37 +262,31 @@ public class StreamingService {
     public void stopFFmpegProcessForUser(String streamId) throws IOException, RuntimeException {
         String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         Process process = ffmpegProcesses.remove(sessionId);
-        if (process != null && process.isAlive()) {
-            try {
-                OutputStream os = process.getOutputStream();
-                os.write('q'); // Señal de terminación
-                os.flush();
-                os.close();
 
-                boolean finished = process.waitFor(5, TimeUnit.SECONDS); // Esperar 5 segundos
-                if (finished) {
-                    // El proceso terminó correctamente
-                    int exitCode = process.exitValue();
-                    if (exitCode == 0) {
-                    } else {
-                        System.err.println("FFmpeg preview terminó con un error. Código de salida: " + exitCode);
-                        throw new RuntimeException(
-                                "FFmpeg preview terminó con un error. Código de salida: " + exitCode);
-                    }
-                } else {
-                    // Si no terminó en 1 segundo, forzar la terminación
-                    System.err.println(
-                            "El proceso FFmpeg preview no respondió en el tiempo esperado. Terminando de forma forzada...");
-                    process.destroy(); // Intentar una terminación limpia
-                    if (process.isAlive()) {
-                        process.destroyForcibly(); // Forzar si sigue vivo
-                    }
-                }
-            } catch (InterruptedException e) {
-                System.err.println("El proceso fue interrumpido: " + e.getMessage());
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("El proceso fue interrumpido: " + e.getMessage());
+        if (process == null) {
+            System.err.println("⚠️ No se encontró proceso FFmpeg activo para sessionId=" + sessionId);
+            return;
+        }
+
+        if (!process.isAlive()) {
+            System.out.println("✅ FFmpeg ya estaba detenido para sessionId=" + sessionId);
+            return;
+        }
+
+        try {
+            System.out.println("🛑 Deteniendo FFmpeg enviando SIGTERM...");
+            process.destroy(); // Señal de terminación suave
+
+            if (!process.waitFor(3, TimeUnit.SECONDS)) {
+                System.err.println("⏰ FFmpeg no respondió, forzando terminación (SIGKILL)...");
+                process.destroyForcibly();
+            } else {
+                System.out.println("✅ FFmpeg detenido correctamente (exitCode=" + process.exitValue() + ")");
             }
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("El proceso fue interrumpido: " + e.getMessage(), e);
         }
     }
 
@@ -375,10 +395,11 @@ public class StreamingService {
                 .collect(Collectors.toList());
 
         // Debug
-        resolutionPairs.forEach(r -> System.out.println("Perfil: " +
-                r.getWidth() + "x" + r.getHeight() +
-                "@" + r.getFps() + "fps → br=" + r.getBitrate() + "kbps"));
-
+        /*
+         * resolutionPairs.forEach(r -> System.out.println("Perfil: " +
+         * r.getWidth() + "x" + r.getHeight() +
+         * "@" + r.getFps() + "fps → br=" + r.getBitrate() + "kbps"));
+         */
         // Crear los filtros
         List<String> filters = new ArrayList<>();
 
@@ -437,12 +458,25 @@ public class StreamingService {
         // VAAPI
         ));
 
-        if (live) {
+        if (live && !inputFilePath.contains("pipe:")) {
             ffmpegCommand.add("-re");
         }
 
+        if (inputFilePath.contains("pipe:") && videoSetting != null) {
+            ffmpegCommand.addAll(List.of("-analyzeduration", "10000000",
+                    "-probesize", "5000000", "-protocol_whitelist",
+                    "file,udp,rtp,stdin,fd",
+                    "-f", "sdp", "-i", "-",
+                    "-fflags", "+genpts",
+                    "-use_wallclock_as_timestamps", "1",
+                    "-fps_mode", "passthrough"
+            // "-s", videoSetting[0] + "x" + videoSetting[1]
+            ));
+        } else {
+            ffmpegCommand.addAll(List.of("-i", inputFilePath));
+        }
+
         ffmpegCommand.addAll(List.of(
-                "-i", inputFilePath,
                 "-filter_complex"));
         ffmpegCommand.addAll(filters);
         ffmpegCommand.addAll(List.of("-var_stream_map"));

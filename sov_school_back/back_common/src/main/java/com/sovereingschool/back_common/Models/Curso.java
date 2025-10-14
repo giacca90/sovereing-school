@@ -20,17 +20,14 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.Data;
 
-@AllArgsConstructor
+/* @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString
+@ToString */
+@Data
 @Entity
 @Table(name = "curso")
 public class Curso implements Serializable {
@@ -49,7 +46,7 @@ public class Curso implements Serializable {
 
 	private Date fecha_publicacion_curso;
 
-	@OneToMany(mappedBy = "curso_clase", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+	@OneToMany(mappedBy = "curso_clase", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonIgnoreProperties({ "curso_clase" })
 	@JsonManagedReference
 	private List<Clase> clases_curso;

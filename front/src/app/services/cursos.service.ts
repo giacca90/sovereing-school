@@ -107,10 +107,7 @@ export class CursosService {
 		return this.http.delete<string>(this.backURL + '/cursos/delete/' + curso.id_curso, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
 				if (response.ok) {
-					this.cursos = this.cursos.slice(
-						this.cursos.findIndex((curso2) => curso2.id_curso === curso.id_curso),
-						1,
-					);
+					this.cursos = this.cursos.filter((c) => c.id_curso !== curso.id_curso);
 					return true;
 				}
 				return false;

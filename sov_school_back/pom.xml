@@ -4,23 +4,23 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!-- Spring Boot BOM como padre -->
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.5</version>
+    <version>3.5.6</version>
     <relativePath />
   </parent>
 
   <groupId>com.lagolesoftware.app</groupId>
   <artifactId>sov_school_back</artifactId>
   <version>1.0-SNAPSHOT</version>
-
-  <name>sov_school_back</name>
-
-  <description>Contenedor de la aplicación Sovereing School</description>
-
   <packaging>pom</packaging>
 
+  <name>sov_school_back</name>
+  <description>Contenedor de la aplicación Sovereing School</description>
+
+  <!-- Submódulos -->
   <modules>
     <module>back_common</module>
     <module>back_base</module>
@@ -33,51 +33,69 @@
   </properties>
 
   <dependencies>
-
+    <!-- Starters de Spring Boot -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
-      <version>3.5.5</version>
+      <version>3.5.6</version>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
-      <version>3.5.5</version>
+      <version>3.5.6</version>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
-      <version>3.5.5</version>
+      <version>3.5.6</version>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
-      <version>3.5.5</version>
+      <version>3.5.6</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+      <version>3.5.6</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>3.5.6</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-websocket</artifactId>
+      <version>3.5.6</version>
+    </dependency>
+
+    <!-- Otros -->
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-hibernate6</artifactId>
       <version>2.20.0</version>
     </dependency>
 
-
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
-      <version>6.5.3</version>
+      <version>6.5.5</version>
     </dependency>
 
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <optional>true</optional>
-      <version>1.18.38</version>
+      <version>1.18.42</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -88,35 +106,17 @@
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
-      <version>3.5.5</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-      <version>3.5.5</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
       <scope>runtime</scope>
+      <version>3.5.6</version>
       <optional>true</optional>
-      <version>3.5.5</version>
     </dependency>
 
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
-      <version>42.7.7</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-websocket</artifactId>
-      <version>3.5.5</version>
+      <version>42.7.8</version>
     </dependency>
 
     <dependency>
@@ -124,24 +124,31 @@
       <artifactId>java-jwt</artifactId>
       <version>4.5.0</version>
     </dependency>
-
-
   </dependencies>
 
   <build>
     <pluginManagement>
       <plugins>
+        <!-- Spring Boot plugin -->
         <plugin>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
-          <version>3.4.4</version>
+        </plugin>
+
+        <!-- Maven Compiler plugin con Lombok -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.14.0</version>
           <configuration>
-            <excludes>
-              <exclude>
+            <release>${java.version}</release>
+            <annotationProcessorPaths>
+              <path>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
-              </exclude>
-            </excludes>
+                <version>1.18.42</version>
+              </path>
+            </annotationProcessorPaths>
           </configuration>
         </plugin>
       </plugins>

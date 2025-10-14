@@ -7,7 +7,7 @@ WORKDIR /app
 COPY . .
 
 # Instalar las dependencias
-RUN npm install
+RUN npm install --force
 
 # Compila Angular con SSR (sin ejecutar el script de creación de env.ts aquí)
 RUN npm run build

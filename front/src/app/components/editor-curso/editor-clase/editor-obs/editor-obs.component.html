@@ -2,9 +2,9 @@
 <div id="audio-bar">
 	<div id="audio-level"></div>
 </div>
-<p id="statusOBS">Cargando...</p>
+<p id="statusOBS">{{ streamingService.status$ }}</p>
 <div id="enlaces"></div>
-@if (this.streamingService.enGrabacion === true) {
+@if (this.streamingService.ready$) {
 	<div class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="detenerEmision()" tabindex="0" (keydown.enter)="detenerEmision()">Detener Emisión</div>
 } @else {
 	<div class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="emiteOBS()" tabindex="0" (keydown.enter)="emiteOBS()">Emitir OBS</div>

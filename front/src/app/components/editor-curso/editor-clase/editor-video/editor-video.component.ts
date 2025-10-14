@@ -1,8 +1,7 @@
-import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, EventEmitter, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, Output } from '@angular/core';
 import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
-import { ClaseService } from '../../../../services/clase.service';
+import { StreamingService } from '../../../../services/streaming.service';
 @Component({
 	selector: 'app-editor-video',
 	imports: [],
@@ -12,19 +11,13 @@ import { ClaseService } from '../../../../services/clase.service';
 export class EditorVideoComponent implements AfterViewInit {
 	@Input() clase!: Clase;
 	@Output() readyEvent: EventEmitter<boolean> = new EventEmitter();
-	isBrowser: boolean;
 	player: Player | null = null;
 	backStream: string = '';
 
-	constructor(
-		private claseService: ClaseService,
-		@Inject(PLATFORM_ID) private platformId: Object,
-	) {
-		this.isBrowser = isPlatformBrowser(platformId);
-	}
+	constructor(private streamingService: StreamingService) {}
 
 	async ngAfterViewInit(): Promise<void> {
-		if (this.isBrowser && this.clase.direccion_clase) {
+		if (this.clase.direccion_clase) {
 			this.backStream = (window as any).__env?.BACK_STREAM ?? '';
 			const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
 			if (!videoPlayer) {
@@ -221,7 +214,10 @@ export class EditorVideoComponent implements AfterViewInit {
 					this.clase.id_clase = 0;
 				}
 				if (input.files && this.clase) {
-					this.claseService.subeVideo(input.files[0], this.clase.curso_clase, this.clase?.id_clase).subscribe((result) => {
+					const formData = new FormData();
+					formData.append('video', input.files[0], input.files[0].name);
+
+					this.streamingService.subeVideo(input.files[0], this.clase.curso_clase, this.clase?.id_clase).subscribe((result) => {
 						if (result && this.clase) {
 							this.clase.direccion_clase = result;
 							this.clase.curso_clase = this.clase.curso_clase;

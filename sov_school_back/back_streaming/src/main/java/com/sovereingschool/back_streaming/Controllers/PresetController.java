@@ -43,7 +43,7 @@ public class PresetController {
         try {
             Preset result = this.usuarioPresetsService.getPresetsForUser(id_usuario);
             if (result == null) {
-                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(HttpStatus.OK);
             }
             Map<String, PresetValue> presetsMap = result.getPresets();
             return new ResponseEntity<>(presetsMap, HttpStatus.OK);

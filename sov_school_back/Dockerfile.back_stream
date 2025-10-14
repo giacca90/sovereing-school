@@ -1,7 +1,6 @@
-# Etapa 1: Build de la aplicación
+# Etapa 1: Build de la aplicación Java y binario Go
 FROM maven:3.9.11 AS build
 
-# Crear directorio base
 WORKDIR /app
 
 # Copiar todos los módulos del proyecto multi-módulo
@@ -12,24 +11,43 @@ COPY ./pom.xml ./
 # Instalar el POM padre para que los módulos puedan encontrarlo
 RUN mvn -f pom.xml install -N
 
+# Compilar back_common
 WORKDIR /app/back_common
-# Compilar el microservicio
 RUN mvn clean install -DskipTests
 
+# Compilar back_streaming
 WORKDIR /app/back_streaming
 RUN mvn clean package -DskipTests
 
-# Etapa 2: Imagen final con solo el JAR
+# --- Nueva sección: Build del binario Go ---
+# Instalar Go temporalmente
+RUN apt-get update && apt-get install -y golang && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/back_streaming/src/main/resources/pion
+
+# Compilar binario Go
+RUN go build -o pion-server pion-server.go
+
+# Etapa 2: Imagen final solo con JAR y binario Go
 FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
-# Copiar el JAR compilado desde el build
+# Copiar el JAR de Java desde build
 COPY --from=build /app/back_streaming/target/*.jar app.jar
 
+# Copiar binario Go compilado
+COPY --from=build /app/back_streaming/src/main/resources/pion/pion-server ./pion-server
+
 # Instalar FFmpeg
-RUN apt-get update && apt-get upgrade -y && apt-get install ffmpeg -y && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8070
 
+# Dar permisos de ejecución al binario Go
+RUN chmod +x ./pion-server
+
+# ENTRYPOINT para Java
 ENTRYPOINT ["java", "-jar", "app.jar"]

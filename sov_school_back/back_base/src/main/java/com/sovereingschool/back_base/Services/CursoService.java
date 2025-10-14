@@ -82,7 +82,7 @@ public class CursoService implements ICursoService {
     @Override
     public Curso getCurso(Long id_curso) {
         return this.cursoRepo.findById(id_curso).orElseThrow(() -> {
-            System.err.println("Error en obtener el curso con ID " + id_curso);
+            System.err.println("CursoService: getCurso: Error en obtener el curso con ID " + id_curso + ": ");
             return new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
         });
     }
@@ -305,7 +305,7 @@ public class CursoService implements ICursoService {
     @Override
     public Boolean deleteCurso(Long id_curso) {
         this.cursoRepo.findById(id_curso).orElseThrow(() -> {
-            System.err.println("Error en obtener el curso con ID " + id_curso);
+            System.err.println("CursoService: deleteCurso: Error en obtener el curso con ID " + id_curso);
             return new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
         });
         if (this.getCurso(id_curso).getClases_curso() != null) {

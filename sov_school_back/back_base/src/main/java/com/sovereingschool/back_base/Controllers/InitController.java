@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sovereingschool.back_base.Interfaces.IInitAppService;
-import com.sovereingschool.back_base.Interfaces.IUsuarioService;
-import com.sovereingschool.back_common.Utils.JwtUtil;
 
 @RestController
 @PreAuthorize("hasAnyRole('GUEST', 'USER', 'PROF', 'ADMIN')")
@@ -25,12 +23,6 @@ public class InitController {
 
     @Autowired
     private IInitAppService initAppService;
-
-    @Autowired
-    private IUsuarioService usuarioService;
-
-    @Autowired
-    private JwtUtil jwtUtil;
 
     @GetMapping()
     public ResponseEntity<?> getInit() {

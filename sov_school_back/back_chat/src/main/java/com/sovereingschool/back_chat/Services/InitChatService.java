@@ -96,7 +96,8 @@ public class InitChatService {
             if (cursosChat != null && !cursosChat.isEmpty()) {
                 for (CursoChat cursoChat : cursosChat) {
                     Curso curso = cursoRepo.findById(cursoChat.getIdCurso()).orElseThrow(() -> {
-                        System.err.println("Error en obtener el curso con ID " + cursoChat.getIdCurso());
+                        System.err.println("InitChatService: initChat: Error en obtener el curso con ID "
+                                + cursoChat.getIdCurso());
                         throw new EntityNotFoundException("Error en obtener el curso con ID " + cursoChat.getIdCurso());
                     });
                     CursoChatDTO cursoChatDTO = new CursoChatDTO();
@@ -183,7 +184,8 @@ public class InitChatService {
                     });
 
             Curso curso = cursoRepo.findById(mensaje.getIdCurso()).orElseThrow(() -> {
-                System.err.println("Error en obtener el curso con ID " + mensaje.getIdCurso());
+                System.err.println(
+                        "InitChatService: getMensajeDTO: Error en obtener el curso con ID " + mensaje.getIdCurso());
                 throw new EntityNotFoundException("Error en obtener el curso con ID " + mensaje.getIdCurso());
             });
 
@@ -278,7 +280,7 @@ public class InitChatService {
         List<ClaseChatDTO> clases = new ArrayList<>();
         List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
         Curso curso = cursoRepo.findById(id_curso).orElseThrow(() -> {
-            System.err.println("Error en obtener el curso con ID " + id_curso);
+            System.err.println("InitChatService: notifyCoursesChat: Error en obtener el curso con ID " + id_curso);
             throw new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
         });
         String nombre_curso = curso.getNombre_curso();
@@ -370,7 +372,7 @@ public class InitChatService {
                     }
                 }
                 Curso curso = cursoRepo.findById(idCurso).orElseThrow(() -> {
-                    System.err.println("Error en obtener el curso con ID " + idCurso);
+                    System.err.println("InitChatService: notifyUsersChat: Error en obtener el curso con ID " + idCurso);
                     throw new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
                 });
                 String nombreCurso = curso.getNombre_curso();
