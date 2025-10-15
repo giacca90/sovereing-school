@@ -57,7 +57,7 @@
 		"@types/compression": "1.8.1",
 		"@types/cookie-parser": "1.4.9",
 		"@types/express": "5.0.3",
-		"@types/jasmine": "5.1.9",
+		"@types/jasmine": "5.1.10",
 		"@types/jsonwebtoken": "9.0.10",
 		"@types/node": "24.7.2",
 		"@types/video.js": "7.3.58",
