@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.DatagramSocket;
-import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,40 +37,11 @@ public class StreamingService {
     @Autowired
     private ClaseRepository claseRepo;
 
-    @Value("${variable.RTMP}")
-    private String RTMP;
+    @Value("${variable.rtmp}")
+    private String rtmp;
 
     @Value("${variable.VIDEOS_DIR}")
     private String uploadDir;
-
-    /**
-     * Función que devuelve un puerto libre en el rango 8010-8059
-     */
-    public int[] getFreePorts() throws IOException {
-        int videoPort = 0;
-        int audioPort = 0;
-
-        for (int port = 8010; port <= 8058; port++) { // 8058 porque necesitamos 2 puertos consecutivos
-            try (
-                    ServerSocket tcp1 = new ServerSocket(port);
-                    DatagramSocket udp1 = new DatagramSocket(port);
-                    ServerSocket tcp2 = new ServerSocket(port + 1);
-                    DatagramSocket udp2 = new DatagramSocket(port + 1)) {
-                tcp1.setReuseAddress(true);
-                udp1.setReuseAddress(true);
-                tcp2.setReuseAddress(true);
-                udp2.setReuseAddress(true);
-
-                // Si no lanza excepción, ambos puertos están libres
-                videoPort = port;
-                audioPort = port + 1;
-                return new int[] { videoPort, audioPort };
-            } catch (IOException ignored) {
-                // Alguno de los puertos está ocupado, seguimos buscando
-            }
-        }
-        throw new IOException("No hay puertos libres disponibles entre 8010 y 8059.");
-    }
 
     /**
      * Función para convertir los videos de un curso
@@ -84,23 +53,27 @@ public class StreamingService {
     @Async
     // TODO: Modificar para trabajar solo con clases concretas
     public void convertVideos(Curso curso) throws IOException, InterruptedException {
-        if (curso.getClases_curso() == null || curso.getClases_curso().isEmpty())
+        if (curso.getClases_curso() == null || curso.getClases_curso().isEmpty()) {
             throw new RuntimeException("Curso sin clases");
+        }
+        Path baseUploadDir = Paths.get(uploadDir);
         for (Clase clase : curso.getClases_curso()) {
-            Path baseUploadDir = Paths.get(uploadDir);
-            Path base = Paths.get(baseUploadDir.toString(), curso.getId_curso().toString(),
+            Path destinationPath = Paths.get(baseUploadDir.toString(), curso.getId_curso().toString(),
                     clase.getId_clase().toString());
 
-            // Verificar que la dirección de la clase no esté vacía y que sea diferente dela
+            // Verificar que la dirección de la clase no esté vacía y que sea diferente de
+            // la
             // base
-            if (!clase.getDireccion_clase().isEmpty() && !clase.getDireccion_clase().contains(base.toString())
-                    && !clase.getDireccion_clase().endsWith(".m3u8") && clase.getDireccion_clase().contains(".")) {
+            if (!clase.getDireccion_clase().isEmpty()
+                    && !clase.getDireccion_clase().contains(destinationPath.toString())
+                    && !clase.getDireccion_clase().endsWith(".m3u8")
+                    && clase.getDireccion_clase().contains(".")) {
 
                 // Extraer el directorio y el nombre del archivo de entrada
                 Path inputPath = Paths.get(clase.getDireccion_clase());
-                File baseFile = base.toFile();
+                File destinationFile = destinationPath.toFile();
                 File inputFile = inputPath.toFile();
-                File destino = new File(baseFile, inputPath.getFileName().toString());
+                File destino = new File(destinationFile, inputPath.getFileName().toString());
 
                 // Mover el archivo de entrada a la carpeta de destino
                 if (!inputFile.renameTo(destino)) {
@@ -114,7 +87,7 @@ public class StreamingService {
                     ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
 
                     // Establecer el directorio de trabajo
-                    processBuilder.directory(baseFile);
+                    processBuilder.directory(destinationFile);
                     processBuilder.redirectErrorStream(true);
 
                     Process process = processBuilder.start();
@@ -137,7 +110,7 @@ public class StreamingService {
                         throw new IOException("El proceso de FFmpeg falló con el código de salida " + exitCode);
                     }
 
-                    clase.setDireccion_clase(base.toString() + "/master.m3u8");
+                    clase.setDireccion_clase(destinationPath.toString() + "/master.m3u8");
                     this.claseRepo.save(clase);
                 }
             }
@@ -184,39 +157,13 @@ public class StreamingService {
             return;
         }
         ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
-        processBuilder.redirectErrorStream(true);
+
         processBuilder.directory(outputDir.toFile());
+        processBuilder.redirectErrorStream(true);
+
         Process process = processBuilder.start();
         // Guardar el proceso en el mapa
         ffmpegProcesses.put(streamId.substring(streamId.lastIndexOf("_") + 1), process);
-
-        /*
-         * // Hilo para escribir en el stdin de FFmpeg (solo para InputStream)
-         * if (inputStream instanceof InputStream) {
-         * System.out.println("Iniciando hilo de escritura en stdin de FFmpeg");
-         * new Thread(() -> {
-         * try {
-         * InputStream IS = (InputStream) inputStream; // Input desde el proceso Go
-         * OutputStream OS = process.getOutputStream(); // Salida hacia ffmpeg
-         * 
-         * byte[] buffer = new byte[409600];
-         * int bytesRead;
-         * 
-         * while ((bytesRead = IS.read(buffer)) != -1) {
-         * System.out.println("Enviando paquete a ffmpeg: " + bytesRead + " bytes");
-         * OS.write(buffer, 0, bytesRead);
-         * OS.flush();
-         * }
-         * 
-         * // NO cerramos OS si quieres mantener ffmpeg activo
-         * 
-         * } catch (IOException e) {
-         * System.err.println("Error al escribir en el stdin de FFmpeg: " +
-         * e.getMessage());
-         * }
-         * });
-         * }
-         */
 
         // Hilo para leer los logs de FFmpeg
         BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
@@ -290,10 +237,10 @@ public class StreamingService {
         }
     }
 
-    public Path getPreview(String id_preview) {
+    public Path getPreview(String idPreview) {
         Path baseUploadDir = Paths.get(uploadDir);
         Path previewDir = baseUploadDir.resolve("previews");
-        Path m3u8 = previewDir.resolve(id_preview + ".m3u8");
+        Path m3u8 = previewDir.resolve(idPreview + ".m3u8");
         // Espera a que se genere el preview
         while (!Files.exists(m3u8)) {
             // Espera medio segundo y reintenta

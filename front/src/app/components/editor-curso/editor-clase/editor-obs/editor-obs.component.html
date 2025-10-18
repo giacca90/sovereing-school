@@ -2,10 +2,10 @@
 <div id="audio-bar">
 	<div id="audio-level"></div>
 </div>
-<p id="statusOBS">{{ streamingService.status$ }}</p>
+<p id="statusOBS">{{ status }}</p>
 <div id="enlaces"></div>
-@if (this.streamingService.ready$) {
-	<div class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="detenerEmision()" tabindex="0" (keydown.enter)="detenerEmision()">Detener Emisión</div>
+@if (this.streamingService.emision$) {
+	<button class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="detenerEmision()">Detener Emisión</button>
 } @else {
-	<div class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="emiteOBS()" tabindex="0" (keydown.enter)="emiteOBS()">Emitir OBS</div>
+	<button class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="emiteOBS()">Emitir OBS</button>
 }

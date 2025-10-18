@@ -15,8 +15,8 @@ export class ChatService {
 	private jwtToken: string | null = localStorage.getItem('Token');
 
 	public initSubject = new BehaviorSubject<InitChatUsuario | null>(null);
-	private cursoSubject = new BehaviorSubject<CursoChat | null>(null);
-	private unsubscribe$ = new Subject<void>();
+	private readonly cursoSubject = new BehaviorSubject<CursoChat | null>(null);
+	private readonly unsubscribe$ = new Subject<void>();
 
 	private client: Client = new Client({
 		brokerURL: this.urlWss + '?token=' + this.jwtToken,
@@ -26,9 +26,9 @@ export class ChatService {
 	private currentSubscription: StompSubscription | null = null; // Asegúrate de tener esta referencia
 
 	constructor(
-		private loginService: LoginService,
-		@Inject(PLATFORM_ID) private platformId: object,
-		private http: HttpClient,
+		private readonly loginService: LoginService,
+		@Inject(PLATFORM_ID) private readonly platformId: object,
+		private readonly http: HttpClient,
 	) {
 		if (isPlatformBrowser(this.platformId)) {
 			this.client.onWebSocketError = (error) => {
@@ -37,7 +37,7 @@ export class ChatService {
 
 			this.client.onStompError = (frame) => {
 				const message = frame.headers['message'];
-				if (message && message.includes('Token inválido')) {
+				if (message?.includes('Token inválido')) {
 					this.loginService.refreshToken().subscribe({
 						next: (token: string | null) => {
 							if (token) {
@@ -64,16 +64,13 @@ export class ChatService {
 
 								// Activar el nuevo cliente STOMP
 								this.client.activate();
-								return;
 							} else {
 								console.error('No se pudo refrescar el token');
-								return;
 							}
 						},
 						error: (error: HttpErrorResponse) => {
 							console.error('Error al refrescar el token: ' + error.message);
 							this.loginService.logout();
-							return;
 						},
 					});
 				}

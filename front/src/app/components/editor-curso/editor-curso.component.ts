@@ -39,14 +39,14 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
-				this.idCurso = params['id_curso'];
+				this.idCurso = Number(params['id_curso']);
 			}),
 		);
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
 
 	async ngOnInit() {
-		if (this.idCurso == 0) {
+		if (this.idCurso === 0) {
 			if (this.loginService.usuario) {
 				this.curso = new Curso(0, '', [this.loginService.usuario], '', '', new Date(), [], [], '', 0);
 			} else {

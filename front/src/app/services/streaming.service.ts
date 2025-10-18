@@ -10,57 +10,54 @@ import { LoginService } from './login.service';
 export class StreamingService {
 	private ws: WebSocket | null = null;
 
-	private rtmpUrlSubject = new BehaviorSubject<string | null>(null);
+	// URL del flujo RTMP
+	private readonly rtmpUrlSubject = new BehaviorSubject<string | null>(null);
 	rtmpUrl$ = this.rtmpUrlSubject.asObservable(); // lo que expones
 
 	// Mensaje de estado para los componentes
-	private statusSubject = new BehaviorSubject<string>('');
+	private readonly statusSubject = new BehaviorSubject<string>('');
 	status$ = this.statusSubject.asObservable(); // lo que expones
 
-	private readySubject = new BehaviorSubject<boolean>(false);
+	// Avisa si está listo para emitir a los componentes
+	private readonly readySubject = new BehaviorSubject<boolean>(false);
 	ready$ = this.readySubject.asObservable(); // lo que expones
-	get isReady(): boolean {
-		return this.readySubject.getValue();
-	}
+
+	// Señal que indica si se está emitiendoOBS
+	private readonly emisionSubject = new BehaviorSubject<boolean>(false);
+	emision$ = this.emisionSubject.asObservable(); // lo que expones
 
 	public UrlPreview: string = '';
 	public streamId: string | null = null;
 	private pc!: RTCPeerConnection;
-	// TODO: revisar si hace falta almacenar los ICE candidates pendientes
 	private pendingCandidates: RTCIceCandidateInit[] = [];
 
 	constructor(
-		private http: HttpClient,
-		private loginService: LoginService,
-	) {}
+		private readonly http: HttpClient,
+		private readonly loginService: LoginService,
+	) {
+		this.ready$.subscribe(() => {
+			console.log('Estado de emisión:', this.emisionSubject.getValue());
+		});
+	}
 
 	get URL(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			return (window as any).__env.BACK_STREAM ?? '';
-		}
-		return '';
+		const win = globalThis?.window as any;
+		return win?.__env?.BACK_STREAM ?? '';
 	}
 
 	get backURL(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			return (window as any).__env.BACK_BASE ?? '';
-		}
-		return '';
+		const win = globalThis?.window as any;
+		return win?.__env?.BACK_BASE ?? '';
 	}
 
 	get webSocketUrlWebcam(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			return ((window as any).__env.BACK_STREAM_WSS ?? '') + '/live-webcam';
-		}
-		return '';
+		const win = globalThis?.window as any;
+		return win?.__env ? `${win.__env.BACK_STREAM_WSS ?? ''}/live-webcam` : '';
 	}
 
 	get webSocketUrlOBS(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			const ruta = ((window as any).__env.BACK_STREAM_WSS ?? '') + '/live-obs';
-			return ruta;
-		}
-		return '';
+		const win = globalThis?.window as any;
+		return win?.__env ? `${win.__env.BACK_STREAM_WSS ?? ''}/live-obs` : '';
 	}
 
 	/**
@@ -71,419 +68,6 @@ export class StreamingService {
 	 */
 	getVideo(id_curso: number, id_clase: number): Observable<Blob> {
 		return this.http.get(`${this.URL}/${id_curso}/${id_clase}`, { responseType: 'blob', withCredentials: true });
-	}
-
-	startWebOBS(): Promise<string> {
-		return new Promise((resolve, reject) => {
-			if (!window.WebSocket) {
-				const msg = '<span style="color: red; font-weight: bold;">WebSocket no es compatible con este navegador.</span>';
-				this.statusSubject.next(msg);
-				return reject(new Error(msg));
-			}
-
-			const token = localStorage.getItem('Token');
-			if (!token) {
-				return reject(new Error('Token JWT no encontrado en localStorage'));
-			}
-
-			this.ws = new WebSocket(`${this.webSocketUrlWebcam}?token=${token}`);
-
-			this.ws.onopen = () => {
-				console.log('Conexión WebSocket establecida.');
-				this.statusSubject.next('Conexión WebSocket establecida. Enviando ID del usuario...');
-				const message = { type: 'userId' };
-				this.ws?.send(JSON.stringify(message));
-			};
-
-			this.ws.onmessage = async (event) => {
-				const data = JSON.parse(event.data);
-				console.log('Recibido:', data);
-
-				// 🔹 Error de autenticación
-				if (data.type === 'auth') {
-					console.error('Error recibido del servidor:', data.message);
-					this.loginService.refreshToken().subscribe({
-						next: (newToken: string | null) => {
-							if (newToken) {
-								localStorage.setItem('Token', newToken);
-								this.startWebOBS().then(resolve).catch(reject);
-							}
-						},
-						error: (error: HttpErrorResponse) => {
-							this.ws?.close();
-							this.loginService.logout();
-							reject(new Error('Error al refrescar el token: ' + error.message));
-						},
-					});
-				}
-
-				// 🔹 Backend confirma streamId
-				if (data.type === 'streamId') {
-					console.log('ID del stream recibido:', data.streamId);
-					this.streamId = data.streamId;
-					this.statusSubject.next('Todo listo!!');
-					resolve(data.streamId as string);
-				}
-
-				// 🔹 Backend devuelve SDP answer
-				if (data.type === 'webrtc-answer') {
-					try {
-						if (!this.pc) {
-							console.error('RTCPeerConnection no inicializada');
-							return;
-						}
-						await this.pc.setRemoteDescription({
-							type: 'answer',
-							sdp: data.sdp,
-						});
-						console.log('Conexión WebRTC completada con éxito');
-						this.statusSubject.next('Conexión WebRTC completada con éxito');
-						this.readySubject.next(true);
-					} catch (err) {
-						console.error('Error al establecer la descripción remota:', err);
-						this.ws?.close();
-						this.readySubject.next(false);
-					}
-				}
-
-				// 🔹 Backend envía ICE candidate
-				if (data.type === 'candidate') {
-					try {
-						if (this.pc) {
-							await this.pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-							console.log('Candidate remoto añadido:', data.candidate);
-						}
-					} catch (err) {
-						console.error('Error al añadir candidate remoto:', err);
-					}
-				}
-			};
-
-			this.ws.onerror = (err) => {
-				reject(new Error('Error en WebSocket: ' + JSON.stringify(err)));
-			};
-
-			this.ws.onclose = () => {
-				this.statusSubject.next('Conexión WebSocket cerrada.');
-				this.readySubject.next(false);
-			};
-		});
-	}
-
-	/**
-	 * Función para emitir un video a través de WebRTC
-	 * @param stream MediaStream
-	 * @param clase Objeto Clase
-	 */
-	async emitirWebOBS(stream: MediaStream) {
-		try {
-			// 🧩 Validación del MediaStream
-			if (!stream) throw new Error('No se ha proporcionado ningún MediaStream válido.');
-
-			const videoTrack = stream.getVideoTracks()[0];
-			if (!videoTrack) throw new Error('El MediaStream no contiene pista de video.');
-
-			const { width, height, frameRate } = videoTrack.getSettings();
-			if (!width || !height || !frameRate) throw new Error('No se puede emitir sin datos de resolución o FPS.');
-
-			// 🧩 Verificación WebSocket
-			if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error('El WebSocket no está abierto o no existe.');
-			if (!this.streamId) throw new Error('No hay streamId asignado.');
-
-			// 📡 Avisar al backend que inicia emisión
-			this.ws.send(
-				JSON.stringify({
-					type: 'emitir',
-					videoSettings: { width, height, fps: frameRate },
-					streamId: this.streamId,
-				}),
-			);
-
-			// 🧠 Crear PeerConnection con ICE servers
-			const iceServers: RTCIceServer[] = [
-				{ urls: 'stun:stun.l.google.com:19302' }, // STUN público
-				// { urls: 'turn:turn.myserver.com', username: 'user', credential: 'pass' } // TURN opcional
-			];
-			this.pc = new RTCPeerConnection({ iceServers });
-
-			// 🔹 Buffer para candidates que lleguen antes de la SDP remota
-			const pendingCandidates: RTCIceCandidateInit[] = [];
-
-			// 🔹 Enviar ICE candidates al backend
-			this.pc.onicecandidate = (event) => {
-				if (event.candidate && this.ws?.readyState === WebSocket.OPEN) {
-					this.ws.send(
-						JSON.stringify({
-							type: 'candidate',
-							streamId: this.streamId,
-							candidate: event.candidate,
-						}),
-					);
-				}
-			};
-
-			// 📊 Logs de estado
-			this.pc.oniceconnectionstatechange = () => console.log('ICE state:', this.pc?.iceConnectionState);
-			this.pc.onconnectionstatechange = () => console.log('PeerConnection state:', this.pc?.connectionState);
-
-			// 🎥 Añadir tracks de audio y video
-			for (const track of stream.getTracks()) {
-				const sender = this.pc.addTrack(track, stream);
-
-				if (track.kind === 'video') {
-					const params = sender.getParameters();
-					if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
-					params.encodings[0].maxBitrate = 5_000_000; // 5 Mbps
-					params.encodings[0].scaleResolutionDownBy = 1.0;
-					params.encodings[0].maxFramerate = frameRate;
-					params.degradationPreference = 'maintain-resolution';
-
-					try {
-						await sender.setParameters(params);
-					} catch (err) {
-						console.warn('Error aplicando parámetros de video:', err);
-					}
-				}
-			}
-
-			// 🧾 Crear y enviar la oferta SDP
-			const offer = await this.pc.createOffer();
-			await this.pc.setLocalDescription(offer);
-			this.ws.send(JSON.stringify({ type: 'offer', streamId: this.streamId, sdp: offer.sdp }));
-
-			// 🔹 Manejar mensajes entrantes del backend
-			this.ws.onmessage = async (event) => {
-				const data = JSON.parse(event.data);
-
-				if (data.type === 'webrtc-answer') {
-					await this.pc.setRemoteDescription({ type: 'answer', sdp: data.sdp });
-
-					// Vaciar buffer de candidates pendientes
-					for (const candidate of pendingCandidates) {
-						await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
-					}
-					pendingCandidates.length = 0;
-
-					console.log('✅ Remote description aplicada y candidates pendientes agregados');
-				}
-
-				if (data.type === 'candidate') {
-					if (this.pc.remoteDescription && this.pc.remoteDescription.type) {
-						await this.pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-					} else {
-						pendingCandidates.push(data.candidate);
-					}
-				}
-			};
-
-			// ⚠️ Eventos de error / cierre de WebSocket
-			this.ws.onerror = (event: Event) => {
-				const error = event as ErrorEvent;
-				console.error('⚠️ Error en WebSocket:', error.message);
-				this.statusSubject.next(`❌ Error en WebSocket: ${error.message}`);
-				this.readySubject.next(false);
-			};
-
-			this.ws.onclose = () => {
-				console.log('🔌 WebSocket cerrado');
-				this.statusSubject.next('Conexión finalizada.');
-				this.readySubject.next(false);
-			};
-		} catch (err) {
-			console.error('🚨 Error en emitirWebOBS:', err);
-			this.statusSubject.next(`❌ Error: ${(err as Error).message}`);
-			this.readySubject.next(false);
-			throw err;
-		}
-	}
-
-	/**
-	 * Método para detener la grabación y la conexión
-	 */
-	stopMediaStreaming() {
-		this.detenerWebOBS();
-		this.detenerOBS();
-
-		if (this.ws) {
-			this.ws.close(); // Cerrar WebSocket
-			console.log('WebSocket cerrado.');
-		}
-
-		this.statusSubject.next('Transmisión detenida.');
-		this.readySubject.next(false);
-	}
-
-	/**
-	 * Función para iniciar la previsualización de OBS
-	 * @param userId Number: ID del usuario
-	 */
-	async startOBS() {
-		if (!window.WebSocket) {
-			console.error('WebSocket no es compatible con este navegador.');
-			this.statusSubject.next('WebSocket no es compatible con este navegador.');
-			return;
-		}
-
-		// Abrir conexión WebSocket
-		const token = localStorage.getItem('Token');
-		if (token) {
-			const url = `${this.webSocketUrlOBS}?token=${token}`;
-			console.log('URL:', url);
-			this.ws = new WebSocket(url);
-		} else {
-			console.error('Token JWT no encontrado en localStorage');
-			return;
-		}
-
-		this.ws.onopen = () => {
-			console.log('Conexión WebSocket establecida.');
-			this.statusSubject.next('Conexión WebSocket establecida. Enviando ID del usuario...');
-
-			// Enviar el ID del usuario al servidor
-			const message = { type: 'request_rtmp_url' };
-			this.ws?.send(JSON.stringify(message));
-		};
-
-		this.ws.onmessage = (event) => {
-			const data = JSON.parse(event.data);
-
-			if (data.type === 'auth') {
-				console.error('Error recibido del servidor:', data.message);
-				this.loginService.refreshToken().subscribe({
-					next: (token: string | null) => {
-						if (token) {
-							localStorage.setItem('Token', token);
-							this.startOBS();
-							return;
-						}
-					},
-					error: (error: HttpErrorResponse) => {
-						console.error('Error al refrescar el token: ' + error.message);
-						this.loginService.logout();
-						return;
-					},
-				});
-			}
-
-			if (data.type === 'rtmp_url') {
-				console.log('URL RTMP recibida:', data.rtmpUrl);
-				this.rtmpUrlSubject.next(data.rtmpUrl);
-				return data.rtmpUrl;
-			} else if (data.type === 'emitiendoOBS') {
-				console.log('Emisión de OBS iniciada.');
-				this.readySubject.next(true);
-				this.statusSubject.next('Emisión de OBS iniciada.');
-			} else if (data.type === 'error') {
-				console.error('Error recibido del servidor:', data.message);
-				this.readySubject.next(false);
-				this.statusSubject.next(`<span style="color: red; font-weight: bold;">Error: ${data.message}</span>`);
-			}
-		};
-
-		this.ws.onerror = (error) => {
-			console.error('Error en la conexión WebSocket:', error);
-			this.readySubject.next(false);
-			this.statusSubject.next('<span style="color: red; font-weight: bold;">Error en la conexión WebSocket. ' + error + '</span>');
-		};
-
-		this.ws.onclose = () => {
-			console.log('Conexión WebSocket cerrada.');
-			this.readySubject.next(false);
-			this.statusSubject.next('Conexión WebSocket cerrada.');
-		};
-	}
-
-	/**
-	 * Función para emitir una clase en OBS
-	 * @param curso Curso: Curso en el que se va a emitir la clase
-	 * @param clase Clase: Clase que se va a emitir
-	 */
-	async emitirOBS() {
-		if (!this.ws) {
-			throw new Error('No se puede conectar con Websocket');
-		}
-		//this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl }));
-		if (!this.rtmpUrl$) throw new Error('No se puede emitir OBS sin ruta RTMP');
-		this.readySubject.next(true);
-
-		// Enviar el evento de emitir OBS
-		this.ws.send(JSON.stringify({ 'event': 'emitirOBS', 'rtmpUrl': this.rtmpUrl$ }));
-		this.ws.onmessage = (event) => {
-			const data = JSON.parse(event.data);
-			if (data.type === 'start') {
-				console.log('Emisión de OBS iniciada.');
-				this.readySubject.next(true);
-				this.statusSubject.next('Emisión de OBS iniciada.');
-			} else if (data.type === 'info') {
-				console.log('Info recibida del servidor:', data.message);
-				this.statusSubject.next(`Info: ${data.message}`);
-			} else if (data.type === 'error') {
-				console.error('Error recibido del servidor:', data.message);
-				this.readySubject.next(false);
-				this.statusSubject.next(`<span style="color: red; font-weight: bold;">Error: ${data.message}</span>`);
-				this.ws?.close();
-			}
-		};
-	}
-
-	/**
-	 * Función para detener la grabación de OBS
-	 */
-	detenerOBS() {
-		if (this.ws) {
-			this.ws.send(JSON.stringify({ 'event': 'detenerStreamOBS', 'rtmpUrl': this.rtmpUrl$ }));
-			this.statusSubject.next('Deteniendo la emisión...');
-			this.readySubject.next(false);
-		} else {
-			console.error('No se pudo detener OBS');
-			this.statusSubject.next('<span style="color: red; font-weight: bold;">No se pudo detener OBS</span>');
-		}
-	}
-
-	/**
-	 * Función para detener la grabación de WebOBS
-	 */
-	detenerWebOBS() {
-		if (this.ws) {
-			this.ws.send(JSON.stringify({ 'type': 'detenerStreamWebRTC', 'streamId': this.streamId }));
-			this.statusSubject.next('Deteniendo la emisión...');
-			this.readySubject.next(false);
-		} else {
-			console.error('No se pudo detener WebRTC');
-			this.statusSubject.next('<span style="color: red; font-weight: bold;">No se pudo detener WebRTC</span>');
-		}
-	}
-
-	/**
-	 * Función para cerrar las conexiones WebSocket
-	 */
-	closeConnections() {
-		if (this.ws?.OPEN) {
-			this.ws.close();
-			this.ws = null;
-		}
-	}
-
-	/**
-	 * Función para obtener los presets de WebOBS
-	 * @returns Observable<Map<string, { elements: VideoElement[]; shortcut: string }>>: Presets obtenidos
-	 */
-	getPresets() {
-		return this.http.get(`${this.URL}/presets/get/${this.loginService.usuario?.id_usuario}`, { responseType: 'json', withCredentials: true });
-	}
-
-	/**
-	 * Función para guardar los presets de WebOBS
-	 * @param presets Map<string, { elements: VideoElement[]; shortcut: string }>: Presets a guardar
-	 */
-	savePresets(presets: Map<string, { elements: VideoElement[]; shortcut: string }>) {
-		const presetsObj = Object.fromEntries(presets);
-		console.log('Presets:', presets);
-		console.log('Presets JSON:', JSON.stringify(presetsObj));
-		console.log('URL:', `${this.URL}/presets/save/${this.loginService.usuario?.id_usuario}`);
-		this.http.put(`${this.URL}/presets/save/${this.loginService.usuario?.id_usuario}`, JSON.stringify(presetsObj)).subscribe((response) => {
-			console.log('Respuesta:', response);
-		});
 	}
 
 	/**
@@ -509,5 +93,416 @@ export class StreamingService {
 				return of(null);
 			}),
 		);
+	}
+
+	/**
+	 * Función para iniciar la trasmisión con WebOBS
+	 * @returns Promise<string> streamId
+	 */
+	startWebOBS(): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const win = globalThis?.window as any;
+
+			if (!win?.WebSocket) {
+				const msg = '❌ WebSocket no soportado en este navegador.';
+				this.statusSubject.next(msg);
+				return reject(new Error(msg));
+			}
+
+			const token = localStorage.getItem('Token');
+			if (!token) return reject(new Error('Token JWT no encontrado'));
+
+			this.ws = new WebSocket(`${this.webSocketUrlWebcam}?token=${token}`);
+
+			this.ws.onopen = () => {
+				console.log('🔗 Conexión WebSocket abierta');
+				this.statusSubject.next('Conexión establecida. Enviando ID de usuario...');
+				this.ws?.send(JSON.stringify({ type: 'userId' }));
+			};
+
+			// 👉 Configuramos manejadores una sola vez
+			this.setupWebSocketHandlersWebOBS(resolve, reject);
+		});
+	}
+
+	/**
+	 * Función para emitir un video a través de WebOBS
+	 * @param stream MediaStream
+	 */
+	async emitirWebOBS(stream: MediaStream) {
+		try {
+			if (!stream) throw new Error('No se proporcionó un MediaStream válido.');
+			if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error('WebSocket no está abierto.');
+			if (!this.streamId) throw new Error('No hay streamId disponible.');
+
+			const videoTrack = stream.getVideoTracks()[0];
+			if (!videoTrack) throw new Error('El MediaStream no contiene pista de video.');
+
+			const { width, height, frameRate } = videoTrack.getSettings();
+			if (!width || !height || !frameRate) throw new Error('No se puede emitir sin resolución o FPS.');
+
+			// 📡 Avisar inicio de emisión
+			this.ws.send(
+				JSON.stringify({
+					type: 'emitir',
+					videoSettings: { width, height, fps: frameRate },
+					streamId: this.streamId,
+				}),
+			);
+			this.emisionSubject.next(true);
+
+			this.pc = new RTCPeerConnection({
+				iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+			});
+			this.pendingCandidates = [];
+
+			this.pc.onicecandidate = (event) => {
+				if (event.candidate && this.ws?.readyState === WebSocket.OPEN) {
+					this.ws.send(
+						JSON.stringify({
+							type: 'candidate',
+							streamId: this.streamId,
+							candidate: event.candidate,
+						}),
+					);
+				}
+			};
+
+			// Añadir tracks
+			for (const track of stream.getTracks()) {
+				const sender = this.pc.addTrack(track, stream);
+				if (track.kind === 'video') {
+					const params = sender.getParameters();
+					if (!params.encodings?.length) params.encodings = [{}];
+					params.encodings[0].maxBitrate = 5_000_000;
+					params.encodings[0].maxFramerate = frameRate;
+					params.degradationPreference = 'maintain-resolution';
+					await sender.setParameters(params).catch((err) => console.warn('Error aplicando parámetros de video:', err));
+				}
+			}
+
+			// Crear oferta
+			const offer = await this.pc.createOffer();
+			await this.pc.setLocalDescription(offer);
+			this.ws.send(JSON.stringify({ type: 'offer', streamId: this.streamId, sdp: offer.sdp }));
+		} catch (err) {
+			console.error('🚨 Error en emitirWebOBS:', err);
+			this.statusSubject.next(`❌ Error: ${(err as Error).message}`);
+			this.readySubject.next(false);
+			this.emisionSubject.next(false);
+			throw err;
+		}
+	}
+
+	/**
+	 * Función para detener la grabación de WebOBS
+	 */
+	detenerWebOBS() {
+		if (this.ws) {
+			this.ws.send(JSON.stringify({ 'type': 'detenerStreamWebRTC', 'streamId': this.streamId }));
+			this.statusSubject.next('Deteniendo la emisión...');
+		} else {
+			console.error('No se pudo detener WebRTC');
+			this.statusSubject.next('<span style="color: red; font-weight: bold;">No se pudo detener WebRTC</span>');
+		}
+		this.readySubject.next(false);
+		this.emisionSubject.next(false);
+	}
+
+	/**
+	 * Función para iniciar la previsualización de OBS
+	 */
+	startOBS() {
+		const win = globalThis?.window as any;
+
+		if (!win?.WebSocket) {
+			const msg = '❌ WebSocket no soportado en este navegador.';
+			this.statusSubject.next(msg);
+			return;
+		}
+
+		// Abrir conexión WebSocket
+		const token = localStorage.getItem('Token');
+		if (!token) {
+			console.error('Token JWT no encontrado en localStorage');
+			return;
+		}
+
+		const url = `${this.webSocketUrlOBS}?token=${token}`;
+		console.log('🌐 URL WebSocket OBS:', url);
+
+		this.ws = new WebSocket(url);
+
+		this.ws.onopen = () => {
+			console.log('✅ Conexión WebSocket establecida con OBS');
+			this.statusSubject.next('Conexión WebSocket establecida. Pidiendo URL del servidor...');
+
+			// Pedir la URL RTMP al backend
+			const message = { type: 'request_rtmp_url' };
+			this.ws?.send(JSON.stringify(message));
+		};
+
+		// Configura todos los manejadores
+		this.setupWebSocketHandlersOBS();
+	}
+
+	/**
+	 * Función para emitir una clase en OBS
+	 */
+	async emitirOBS() {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+			this.readySubject.next(false);
+			this.emisionSubject.next(false);
+			throw new Error('No se puede conectar con WebSocket');
+		}
+
+		const rtmpUrl = this.rtmpUrlSubject.getValue();
+		if (!rtmpUrl) {
+			this.readySubject.next(false);
+			this.emisionSubject.next(false);
+			throw new Error('No se puede emitir OBS sin una ruta RTMP válida');
+		}
+
+		console.log('📡 Iniciando emisión OBS con RTMP:', rtmpUrl);
+
+		this.ws.send(JSON.stringify({ type: 'emitirOBS', rtmpUrl }));
+	}
+
+	/**
+	 * Función para detener la grabación de OBS
+	 */
+	detenerOBS() {
+		if (this.ws) {
+			this.ws.send(JSON.stringify({ 'type': 'detenerStreamOBS', 'rtmpUrl': this.rtmpUrl$ }));
+			this.statusSubject.next('Deteniendo la emisión...');
+		} else {
+			console.error('No se pudo detener OBS');
+			this.statusSubject.next('<span style="color: red; font-weight: bold;">No se pudo detener OBS</span>');
+		}
+	}
+
+	/**
+	 * Método para detener la grabación y la conexión
+	 */
+	stopMediaStreaming() {
+		this.detenerWebOBS();
+		this.detenerOBS();
+
+		if (this.ws) {
+			this.ws.close(); // Cerrar WebSocket
+			console.log('WebSocket cerrado.');
+		}
+
+		this.statusSubject.next('Transmisión detenida.');
+		this.readySubject.next(false);
+	}
+
+	/**
+	 * 🔧 Función auxiliar: configura los manejadores del WebSocket de OBS
+	 */
+	private setupWebSocketHandlersOBS() {
+		if (!this.ws) return;
+
+		this.ws.onmessage = (event) => {
+			const data = JSON.parse(event.data);
+			console.log('📩 Mensaje recibido (OBS):', data);
+
+			try {
+				switch (data.type) {
+					// 🔹 Error de autenticación
+					case 'auth':
+						console.error('Error recibido del servidor:', data.message);
+						this.loginService.refreshToken().subscribe({
+							next: (token: string | null) => {
+								if (token) {
+									localStorage.setItem('Token', token);
+									this.startOBS(); // reinicia la conexión
+								}
+							},
+							error: (error: HttpErrorResponse) => {
+								console.error('Error al refrescar el token:', error.message);
+								this.loginService.logout();
+							},
+						});
+						break;
+
+					// 🔹 Backend envía RTMP URL
+					case 'rtmp_url':
+						console.log('✅ URL RTMP recibida:', data.message);
+						this.rtmpUrlSubject.next(data.message);
+						this.readySubject.next(true);
+						this.statusSubject.next('Esperando conexión con OBS...');
+
+						// Prepara la URL para preview
+						this.UrlPreview = `${this.URL}/getPreview/${data.message.split('/').pop()}`;
+						console.log('🔗 URL Preview:', this.UrlPreview);
+						break;
+
+					// 🔹 Error genérico del servidor
+					case 'error':
+						console.error('Error recibido del servidor:', data.message);
+						this.readySubject.next(false);
+						this.emisionSubject.next(false);
+						this.statusSubject.next(`<span style="color: red; font-weight: bold;">Error: ${data.message}</span>`);
+						break;
+
+					// 🔹 Inicio de emisión OBS
+					case 'start':
+						console.log('🎥 Emisión de OBS iniciada.');
+						this.emisionSubject.next(true);
+						this.statusSubject.next('Emisión de OBS iniciada.');
+						break;
+
+					// 🔹 Información general
+					case 'info':
+						console.log('ℹ️ Info recibida del servidor:', data.message);
+						this.statusSubject.next(`Info: ${data.message}`);
+						break;
+
+					// 🔹 Mensaje desconocido
+					default:
+						console.warn('⚠️ Mensaje desconocido del servidor OBS:', data);
+						break;
+				}
+			} catch (err) {
+				console.error('❌ Error procesando mensaje OBS:', err);
+				this.ws?.close();
+				this.readySubject.next(false);
+			}
+		};
+
+		this.ws.onerror = (event: Event) => {
+			console.error('⚠️ Error en la conexión WebSocket OBS:', event);
+
+			this.readySubject.next(false);
+			this.emisionSubject.next(false);
+
+			let message = 'Error en la conexión WebSocket';
+			if (event instanceof ErrorEvent) message += ': ' + event.message;
+
+			this.statusSubject.next(`<span style="color: red; font-weight: bold;">${message}</span>`);
+		};
+
+		this.ws.onclose = () => {
+			console.log('🔌 Conexión WebSocket OBS cerrada.');
+			this.readySubject.next(false);
+			this.emisionSubject.next(false);
+			this.statusSubject.next('Conexión WebSocket cerrada.');
+		};
+	}
+
+	private setupWebSocketHandlersWebOBS(resolve: (v: string) => void, reject: (e: Error) => void) {
+		if (!this.ws) return;
+		this.ws.onmessage = async (event) => {
+			const data = JSON.parse(event.data);
+			console.log('📩 Mensaje recibido:', data);
+
+			try {
+				switch (data.type) {
+					// 🔹 Autenticación fallida
+					case 'auth':
+						console.error('Error de autenticación:', data.message);
+						this.loginService.refreshToken().subscribe({
+							next: (newToken) => {
+								if (newToken) {
+									localStorage.setItem('Token', newToken);
+									this.startWebOBS().then(resolve).catch(reject);
+								}
+							},
+							error: (err: HttpErrorResponse) => {
+								console.error('Error al refrescar token:', err.message);
+								this.ws?.close();
+								this.loginService.logout();
+								reject(new Error('Error al refrescar token: ' + err.message));
+							},
+						});
+						break;
+
+					// 🔹 Stream ID confirmado
+					case 'streamId':
+						console.log('✅ StreamId recibido:', data.streamId);
+						this.streamId = data.streamId;
+						this.statusSubject.next('Todo listo!!');
+						this.readySubject.next(true);
+						resolve(data.streamId as string);
+						break;
+
+					// 🔹 Respuesta WebRTC (SDP answer)
+					case 'webrtc-answer':
+						if (!this.pc) {
+							console.error('RTCPeerConnection no inicializada');
+							return;
+						}
+						await this.pc.setRemoteDescription({ type: 'answer', sdp: data.sdp });
+						for (const candidate of this.pendingCandidates) {
+							await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+						}
+						this.pendingCandidates.length = 0;
+						console.log('✅ WebRTC completado con éxito');
+						this.statusSubject.next('Conexión WebRTC completada con éxito');
+						break;
+
+					// 🔹 ICE candidate
+					case 'candidate':
+						if (!this.pc) {
+							console.warn('RTCPeerConnection no inicializada');
+							return;
+						}
+						if (this.pc.remoteDescription?.type) {
+							await this.pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+							console.log('🧊 Candidate remoto añadido:', data.candidate);
+						} else {
+							this.pendingCandidates.push(data.candidate);
+							console.log('🕓 Candidate en espera');
+						}
+						break;
+
+					default:
+						console.warn('⚠️ Tipo de mensaje desconocido:', data);
+				}
+			} catch (err) {
+				console.error('❌ Error procesando mensaje:', err);
+				this.ws?.close();
+				this.readySubject.next(false);
+			}
+		};
+
+		this.ws.onerror = (event: Event) => {
+			const error = event as ErrorEvent;
+			console.error('⚠️ Error WebSocket:', error.message);
+			this.statusSubject.next(`❌ Error en WebSocket: ${error.message}`);
+			this.readySubject.next(false);
+			this.emisionSubject.next(false);
+			reject(new Error(error.message));
+		};
+
+		this.ws.onclose = () => {
+			console.log('🔌 WebSocket cerrado');
+			this.statusSubject.next('Conexión cerrada.');
+			this.readySubject.next(false);
+			this.emisionSubject.next(false);
+		};
+	}
+
+	/**
+	 * Función para obtener los presets de WebOBS
+	 * @returns Observable<Map<string, { elements: VideoElement[]; shortcut: string }>>: Presets obtenidos
+	 */
+	getPresets() {
+		return this.http.get(`${this.URL}/presets/get/${this.loginService.usuario?.id_usuario}`, { responseType: 'json', withCredentials: true });
+	}
+
+	/**
+	 * Función para guardar los presets de WebOBS
+	 * @param presets Map<string, { elements: VideoElement[]; shortcut: string }>: Presets a guardar
+	 */
+	savePresets(presets: Map<string, { elements: VideoElement[]; shortcut: string }>) {
+		const presetsObj = Object.fromEntries(presets);
+		console.log('Presets:', presets);
+		console.log('Presets JSON:', JSON.stringify(presetsObj));
+		console.log('URL:', `${this.URL}/presets/save/${this.loginService.usuario?.id_usuario}`);
+		this.http.put(`${this.URL}/presets/save/${this.loginService.usuario?.id_usuario}`, JSON.stringify(presetsObj)).subscribe((response) => {
+			console.log('Respuesta:', response);
+		});
 	}
 }

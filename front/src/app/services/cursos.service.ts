@@ -11,8 +11,8 @@ export class CursosService {
 	public cursos: Curso[] = [];
 
 	constructor(
-		private http: HttpClient,
-		@Inject(PLATFORM_ID) private platformId: object,
+		private readonly http: HttpClient,
+		@Inject(PLATFORM_ID) private readonly platformId: object,
 	) {}
 
 	get backURL(): string {
@@ -33,25 +33,26 @@ export class CursosService {
 		if (id_curso == 0) {
 			return null;
 		}
-		for (let i = 0; i < this.cursos.length; i++) {
-			if (this.cursos[i].id_curso == id_curso) {
-				if (this.cursos[i].clases_curso === undefined || fromServer) {
+		for (const curso of this.cursos) {
+			if (curso.id_curso == id_curso) {
+				if (curso.clases_curso === undefined || fromServer) {
 					try {
 						const response = await firstValueFrom(this.http.get<Curso>(`${this.backURL}/cursos/getCurso/${id_curso}`));
-						this.cursos[i].clases_curso = response.clases_curso?.sort((a, b) => a.posicion_clase - b.posicion_clase);
-						this.cursos[i].descriccion_larga = response.descriccion_larga;
-						this.cursos[i].fecha_publicacion_curso = response.fecha_publicacion_curso;
-						this.cursos[i].planes_curso = response.planes_curso;
-						this.cursos[i].precio_curso = response.precio_curso;
-						this.cursos[i].clases_curso?.map((clase) => (clase.curso_clase = this.cursos[i].id_curso));
-						return this.cursos[i];
+						curso.clases_curso = response.clases_curso?.sort((a, b) => a.posicion_clase - b.posicion_clase);
+						curso.descriccion_larga = response.descriccion_larga;
+						curso.fecha_publicacion_curso = response.fecha_publicacion_curso;
+						curso.planes_curso = response.planes_curso;
+						curso.precio_curso = response.precio_curso;
+						curso.clases_curso?.forEach((clase) => (clase.curso_clase = curso.id_curso));
+						return curso;
 					} catch (error) {
 						console.error('Error en cargar curso:', error);
 						return null;
 					}
-				} else return this.cursos[i];
+				} else return curso;
 			}
 		}
+
 		return null;
 	}
 

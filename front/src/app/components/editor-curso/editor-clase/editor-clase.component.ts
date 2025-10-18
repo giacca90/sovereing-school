@@ -1,8 +1,8 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, Output, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, OnInit, Output, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationStart, Router } from '@angular/router';
-import { firstValueFrom, Observable, Subject, Subscription } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { VideoElement, WebOBS } from 'web-obs';
 import { Clase } from '../../../models/Clase';
 import { Curso } from '../../../models/Curso';
@@ -19,38 +19,46 @@ import { EditorVideoComponent } from './editor-video/editor-video.component';
 	templateUrl: './editor-clase.component.html',
 	styleUrl: './editor-clase.component.css',
 })
-export class EditorClaseComponent implements AfterViewInit, OnDestroy {
+export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	@Input() clase!: Clase;
 	@Input() curso!: Curso;
 	@Output() claseGuardada: EventEmitter<boolean> = new EventEmitter();
-	private subscription: Subscription = new Subscription();
+	private readonly subscriptions: Subscription[] = new Array<Subscription>();
+	private readonly navControl: Subscription = new Subscription();
 	private claseOriginal!: Clase;
-	//streamWebcam: MediaStream | null = null;
-	savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
 	isBrowser: boolean;
 	backBase = '';
+	// Presets guardados para WebOBS
+	savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
+	// Archivos guardados para WebOBS
 	savedFiles: File[] = [];
-	readyObserver: Subject<boolean> = new Subject<boolean>();
-	readySubscription: Subscription | null = null;
-	readyEstatico: boolean = false;
-	status: Observable<string> = this.streamingService.status$;
+
+	readyService: boolean = false;
+	readyComponent: boolean = false;
+	emitiendo: boolean = false;
+	status: string = '';
 	constructor(
-		private cursoService: CursosService,
-		private streamingService: StreamingService,
-		private loginService: LoginService,
-		private initService: InitService,
-		private router: Router,
-		@Inject(PLATFORM_ID) private platformId: Object,
+		private readonly cursoService: CursosService,
+		private readonly streamingService: StreamingService,
+		private readonly loginService: LoginService,
+		private readonly initService: InitService,
+		private readonly router: Router,
+		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
 
-	ngOnInit(): void {
-		this.subscription.add(
+	/**
+	 * Inicializa el componente
+	 *
+	 * Maneja eventos de navegación y subscripciones a los componentes hijos
+	 */
+	ngOnInit() {
+		this.navControl.add(
 			this.router.events.subscribe((event) => {
 				if (event instanceof NavigationStart) {
 					if (JSON.stringify(this.claseOriginal) !== JSON.stringify(this.clase)) {
-						const userConfirmed = window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
+						const userConfirmed = globalThis.window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
 						if (!userConfirmed) {
 							return;
 						}
@@ -58,74 +66,61 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 				}
 			}),
 		);
+		const { ready$, emision$, status$ } = this.streamingService;
+
+		this.subscriptions.push(
+			ready$.subscribe((ready) => (this.readyService = ready)),
+			emision$.subscribe((emitiendo) => (this.emitiendo = emitiendo)),
+			status$.subscribe((status) => {
+				console.log('Estado recibido desde el servicio:', status);
+				this.status = status;
+			}),
+		);
 	}
 
-	ngAfterViewInit(): void {
+	/**
+	 * Inicializa el componente después de haber sido renderizado
+	 *
+	 * Sube la vista y clona la clase original
+	 */
+	ngAfterViewInit() {
 		window.scrollTo(0, 0); // Subir la vista al inicio de la página
 		document.body.style.overflow = 'hidden';
 		this.claseOriginal = { ...this.clase };
 	}
 
-	async guardarCambiosClase() {
-		if (!this.confirmacion()) {
-			return;
-		}
-		if (this.clase.id_clase === 0 && this.clase.tipo_clase === 0) {
-			if (!this.readyEstatico) {
-				alert('Debes primero subir un video');
-				return;
-			}
-		}
+	/**
+	 * Guarda los cambios realizados en la clase
+	 *
+	 * Valida si es necesario subir un video
+	 *
+	 * Actualiza la clase existente o crea una nueva
+	 */
+	async guardarCambiosClase(): Promise<void> {
+		if (!this.confirmacion()) return;
 
-		let idx: number;
+		if (!this.validarVideo()) return;
+
 		if (this.clase.id_clase === 0) {
-			const clasesCurso = this.curso.clases_curso;
-			if (!clasesCurso) {
-				this.curso.clases_curso = new Array<Clase>();
-			}
-			if (this.curso.clases_curso) {
-				this.clase.posicion_clase = this.curso.clases_curso.length + 1;
-				idx = this.curso.clases_curso.push(this.clase) - 1;
-			}
+			this.prepararNuevaClase();
 		} else {
-			const clasesCurso = this.curso.clases_curso;
-			if (clasesCurso) {
-				idx = clasesCurso.findIndex((clase) => clase.id_clase === this.clase.id_clase);
-				if (idx !== -1) {
-					clasesCurso[idx] = { ...this.clase };
-				}
-			}
+			this.actualizarClaseExistente();
 		}
 
-		// TODO: quitar esto cuando se arregle el problema de que el curso_clase llega como string
-		this.clase.curso_clase = Number(this.clase.curso_clase);
-		if (this.clase.tipo_clase === 0) {
-			if (this.clase.curso_clase === 0) {
-				this.close();
-				return;
-			}
-			this.cursoService.updateCurso(this.curso).subscribe({
-				next: (success: Curso) => {
-					if (!success) {
-						console.error('Falló la actualización del curso en editor-clase');
-					}
-					this.close();
-				},
-				error: (error) => {
-					console.error('Error al actualizar el curso:', error);
-				},
-			});
-		}
-
-		if (this.clase.tipo_clase !== 0 && !this.streamingService.isReady) {
-			this.close();
-		}
+		await this.procesarClasePorTipo();
 	}
 
+	/**
+	 * Envia la señal que cierra este componente
+	 */
 	close() {
 		this.claseGuardada.emit(true);
 	}
 
+	/**
+	 * Elimina una clase
+	 * @param clase {Clase} Clase a eliminar
+	 */
 	eliminaClase(clase: Clase) {
 		if (confirm('Esto eliminará definitivamente la clase. Estás seguro??')) {
 			this.curso.clases_curso = this.curso.clases_curso?.filter((c) => c.id_clase !== clase.id_clase);
@@ -143,10 +138,21 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 		}
 	}
 
+	/**
+	 * Cambia el tipo de clase:
+	 *
+	 * Tipo de clase 0: Video estático
+	 *
+	 * Tipo de clase 1: OBS
+	 *
+	 * Tipo de clase 2: WebOBS
+	 * @param tipo {number} Tipo de clase
+	 */
 	cambiaTipoClase(tipo: number) {
-		this.streamingService.closeConnections();
-		this.readyObserver.next(false);
-		this.readySubscription?.unsubscribe();
+		this.streamingService.stopMediaStreaming();
+		this.readyComponent = false;
+		this.readyService = false;
+		this.status = '';
 		setTimeout(() => {
 			if (!this.clase) return;
 			const videoButton: HTMLButtonElement = document.getElementById('claseVideo') as HTMLButtonElement;
@@ -164,8 +170,6 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 			window.scrollTo(0, 0); // Subir la vista al inicio de la página
 			document.body.style.overflow = 'hidden';
 
-			//this.player?.dispose();
-			//this.player = null;
 			switch (tipo) {
 				case 0: {
 					// Video estatico
@@ -189,13 +193,12 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 						this.streamingService.getPresets().subscribe({
 							next: (res) => {
 								try {
-									//console.log('Presets recibidos:', res);
 									this.savedPresets = new Map(Object.entries(res));
 								} catch (error) {
-									//console.error('Error al parsear los presets:', error);
+									console.error('Error al procesar presets:', error);
 									this.savedPresets = new Map();
 								}
-								//console.log('Presets actualizados:', this.savedPresets);
+
 								if (this.clase) this.clase.tipo_clase = 2;
 								webcamButton.classList.add('text-blue-700');
 							},
@@ -215,18 +218,33 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 		}, 100);
 	}
 
-	ngOnDestroy(): void {
-		this.subscription.unsubscribe();
+	/**
+	 * Destruye el componente
+	 *
+	 * Cancela las subscripciones y restaura el estado del componente
+	 */
+	ngOnDestroy() {
+		this.navControl.unsubscribe();
+		for (const subscription of this.subscriptions) {
+			subscription.unsubscribe();
+		}
 		document.body.style.overflow = 'auto';
 	}
 
+	/**
+	 * Evento que se emite cuando el componente está listo
+	 * @param $event {boolean} Estado del componente
+	 */
 	readyEvent($event: boolean) {
-		this.readyEstatico = $event;
+		this.readyComponent = $event;
 	}
 
 	// Recuperar imagenes del curso y del usuario para el componente WebOBS
+	/**
+	 * Recupera las imagenes del curso y del usuario para el componente WebOBS
+	 */
 	async preparaWebcam() {
-		if (this.curso && this.curso.imagen_curso) {
+		if (this.curso?.imagen_curso) {
 			fetch(this.curso.imagen_curso, { credentials: 'include' }).then((response) => {
 				response.blob().then((blob) => {
 					if (!this.curso) return;
@@ -244,48 +262,61 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 			});
 		}
 
-		this.loginService.usuario?.foto_usuario.forEach((foto) => {
-			console.log('Foto del usuario:', foto);
-			fetch(foto, { credentials: 'include' }).then((response) => {
-				response.blob().then((blob) => {
-					const fileName = foto.split('/').pop();
-					const mimeType = blob.type || 'application/octet-stream';
-					if (fileName) {
-						const test = this.savedFiles?.find((file) => file.name === fileName);
-						if (!test) {
-							const file = new File([blob], fileName, { type: mimeType });
-							this.savedFiles?.push(file);
-						}
-					}
-				});
-			});
-		});
+		const fotos = this.loginService.usuario?.foto_usuario ?? [];
+
+		for (const url of fotos) {
+			console.log('📸 Foto del usuario:', url);
+
+			try {
+				const response = await fetch(url, { credentials: 'include' });
+				if (!response.ok) {
+					console.warn(`⚠️ No se pudo descargar ${url}: ${response.statusText}`);
+					continue;
+				}
+
+				const blob = await response.blob();
+				const fileName = url.split('/').pop();
+				const mimeType = blob.type || 'application/octet-stream';
+
+				if (!fileName) continue;
+
+				const yaExiste = this.savedFiles?.some((file) => file.name === fileName);
+				if (!yaExiste) {
+					const file = new File([blob], fileName, { type: mimeType });
+					this.savedFiles?.push(file);
+				}
+			} catch (error) {
+				console.error(`❌ Error al procesar ${url}:`, error);
+			}
+		}
 	}
 
-	emiteWebOBS(event: MediaStream | null) {
-		if (event === null) {
-			this.streamingService.detenerWebOBS();
-			this.readyObserver.next(false);
-			return;
-		}
-		if (!this.confirmacion()) {
-			this.readyObserver.next(false);
-			return;
-		}
-		if (event === null) {
+	/**
+	 * Emite un video a través de WebOBS
+	 *
+	 * @param mediaStream {MediaStream | null} Stream de la webcam. Si es null indica que el stream a terminado
+	 */
+	emiteWebOBS(mediaStream: MediaStream | null) {
+		// Puede ser la señal de que se acaba de emitir, o que no se ha seleccionado ninguna cámara
+		if (mediaStream === null) {
 			if (this.streamingService.ready$) {
 				this.streamingService.detenerWebOBS();
-				this.readyObserver.next(false);
+				this.readyComponent = false;
 				return;
 			}
 			alert('Debes conectarte primero con la webcam');
-			this.readyObserver.next(false);
+			this.readyComponent = false;
+			return;
+		}
+
+		if (!this.confirmacion()) {
+			this.readyComponent = false;
 			return;
 		}
 
 		if (this.curso.id_curso == 0) {
 			if (!confirm('El curso no existe. \nPara emitir en directo, primero hay que crear la clase\n¿Desea crear el curso con los datos actuales?')) {
-				this.readyObserver.next(false);
+				this.readyComponent = false;
 				return;
 			}
 			if (!this.streamingService.streamId) return;
@@ -304,47 +335,56 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 						console.error('Falló la actualización del curso en emitirOBS');
 						return;
 					}
+
 					this.curso = success;
-					this.readyObserver.next(true);
-					try {
-						this.streamingService.emitirWebOBS(event);
-					} catch (error) {
+					this.readyComponent = true;
+
+					this.streamingService.emitirWebOBS(mediaStream).catch((error) => {
 						console.error('Error al emitir webcam:', error);
-					}
+					});
 				},
 				error: (error) => {
-					console.error('Falló la actualización del curso en emitirOBS: ' + error);
+					console.error('Falló la actualización del curso en emitirOBS:', error);
 				},
 			});
 		}
-		// TODO:
-		this.readySubscription = this.streamingService.ready$.subscribe((ready) => {
-			this.readyObserver.next(ready);
-		});
 	}
 
-	async emiteOBS($event: string | null) {
-		if (!this.confirmacion()) {
-			this.readyObserver.next(false);
-			return;
-		}
-		if (!$event) {
+	/**
+	 * Emite un video a través de OBS
+	 *
+	 * @param streamUrl {string | null} URL del stream de la webcam. Si es null indica que el stream a terminado
+	 */
+	async emiteOBS(streamUrl: string | null) {
+		// Puede ser la señal de que se acaba de emitir, o que no se ha recibido ninguna URL
+		if (streamUrl === null) {
+			if (this.streamingService.ready$) {
+				this.streamingService.detenerOBS();
+				this.readyComponent = false;
+				return;
+			}
 			console.error('No se pudo obtener la URL del servidor');
-			this.readyObserver.next(false);
+			this.readyComponent = false;
 			return;
 		}
+
+		if (!this.confirmacion()) {
+			this.readyComponent = false;
+			return;
+		}
+
 		if (this.curso.id_curso == 0) {
 			if (!confirm('El curso no existe. \nPara emitir en directo, primero hay que crear la clase\n¿Desea crear el curso con los datos actuales?')) {
 				return;
 			}
 		}
 
-		this.readyObserver.next(true);
+		this.readyComponent = true;
+
 		try {
-			this.clase.direccion_clase = $event;
-			if (!this.curso.clases_curso) {
-				this.curso.clases_curso = new Array<Clase>();
-			}
+			this.clase.direccion_clase = streamUrl;
+			this.curso.clases_curso ??= [];
+
 			this.clase.posicion_clase = this.curso.clases_curso.length + 1;
 			const url = await firstValueFrom(this.streamingService.rtmpUrl$);
 			if (url) {
@@ -370,26 +410,84 @@ export class EditorClaseComponent implements AfterViewInit, OnDestroy {
 		}
 	}
 
-	confirmacion(): boolean {
+	/** Guarda los presets de WebOBS */
+	savePresets(data: Map<string, { elements: VideoElement[]; shortcut: string }>) {
+		this.streamingService.savePresets(data);
+	}
+
+	/**
+	 * función para confirmar que la clase está completa
+	 * @returns {boolean} true si la clase está completa
+	 */
+	private confirmacion(): boolean {
 		if (this.clase.nombre_clase == null || this.clase.nombre_clase == '') {
 			alert('Debes poner un nombre para la clase');
-			this.readyObserver.next(false);
+			this.readyComponent = false;
 			return false;
 		}
 		if (this.clase.descriccion_clase == null || this.clase.descriccion_clase == '') {
 			alert('Debes poner una descripción para la clase');
-			this.readyObserver.next(false);
+			this.readyComponent = false;
 			return false;
 		}
 		if (this.clase.contenido_clase == null || this.clase.contenido_clase == '') {
 			alert('Debes poner contenido para la clase');
-			this.readyObserver.next(false);
+			this.readyComponent = false;
 			return false;
 		}
 		return true;
 	}
 
-	savePresets(data: any) {
-		this.streamingService.savePresets(data);
+	/** Valida si es necesario subir un video
+	 * @returns {boolean} true si hay video
+	 */
+	private validarVideo(): boolean {
+		if (this.clase.id_clase === 0 && this.clase.tipo_clase === 0 && !this.readyComponent) {
+			alert('Debes primero subir un video');
+			return false;
+		}
+		return true;
+	}
+
+	/** Prepara la clase si es nueva */
+	private prepararNuevaClase() {
+		this.curso.clases_curso ??= [];
+		this.clase.posicion_clase = this.curso.clases_curso.length + 1;
+	}
+
+	/** Actualiza la clase existente en el array */
+	private actualizarClaseExistente() {
+		const clasesCurso = this.curso.clases_curso ?? [];
+		const idx = clasesCurso.findIndex((c) => c.id_clase === this.clase.id_clase);
+		if (idx !== -1) {
+			clasesCurso[idx] = { ...this.clase };
+		}
+	}
+
+	/** Procesa la clase según su tipo */
+	private async procesarClasePorTipo(): Promise<void> {
+		if (this.clase.tipo_clase === 0) {
+			if (this.clase.curso_clase === 0) {
+				this.curso.clases_curso?.push(this.clase);
+				this.close();
+				return;
+			}
+
+			try {
+				const success = await firstValueFrom(this.cursoService.updateCurso(this.curso));
+				if (!success) {
+					console.error('Falló la actualización del curso en editor-clase');
+				}
+				this.close();
+			} catch (error) {
+				console.error('Error al actualizar el curso:', error);
+			}
+			return;
+		}
+
+		// Clase de tipo distinto a 0
+		if (!this.readyService) {
+			this.close();
+		}
 	}
 }

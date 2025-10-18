@@ -18,7 +18,7 @@
 						}
 						<!-- Si es una clase OBS -->
 						@if (this.clase.tipo_clase === 1) {
-							<app-editor-obs (emision)="emiteOBS($event)" [readyObserve]="this.readyObserver"></app-editor-obs>
+							<app-editor-obs (emision)="emiteOBS($event)" [ready]="this.readyComponent" [status]="this.status"></app-editor-obs>
 						}
 					</div>
 				}
@@ -29,7 +29,7 @@
 			</div>
 			<!-- Si es una clase WebOBS -->
 			@if (this.clase.tipo_clase === 2) {
-				<web-obs class="m-2" (emision)="emiteWebOBS($event)" (savePresets)="savePresets($event)" [readyObserve]="this.readyObserver" [statusObserver]="this.status" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></web-obs>
+				<web-obs class="m-2" (emision)="emiteWebOBS($event)" (savePresets)="savePresets($event)" [ready]="readyService" [status]="status" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></web-obs>
 			}
 		} @else {
 			<div class="flex grow flex-col items-center md:flex-row md:items-start">
