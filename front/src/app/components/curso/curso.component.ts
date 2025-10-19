@@ -32,7 +32,7 @@ export class CursoComponent implements OnDestroy {
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
-				this.id_curso = params['id_curso'];
+				this.id_curso = Number(params['id_curso']);
 			}),
 		);
 

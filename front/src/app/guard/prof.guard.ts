@@ -18,25 +18,28 @@ export class ProfGuard implements CanActivate {
 	async canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Promise<boolean> {
 		if (isPlatformServer(this.platformId)) return false;
 		if (!this.loginService.usuario) {
+			console.error('No hay usuario logueado');
 			this.router.navigate(['/']);
 			return false;
 		}
 
-		const id_curso = route.params['id_curso'];
+		const id_curso: number = Number(route.params['id_curso']);
 
-		if (id_curso === '0') {
+		if (id_curso === 0) {
 			return true;
 		}
 
 		try {
 			const curso = await this.cursoService.getCurso(id_curso);
 			if (!curso) {
+				console.error('Curso no encontrado: ' + id_curso);
 				this.router.navigate(['/']);
 				return false;
 			}
 
 			const isProfesor = curso.profesores_curso.some((profesor) => profesor.id_usuario === this.loginService.usuario?.id_usuario);
 			if (!isProfesor) {
+				console.error('Usuario no es profesor del curso: ' + id_curso);
 				this.router.navigate(['/']);
 			}
 			return isProfesor;

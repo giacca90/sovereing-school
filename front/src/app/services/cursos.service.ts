@@ -72,6 +72,10 @@ export class CursosService {
 		return this.http.put<Curso>(`${this.backURL}/cursos/update`, curso, { observe: 'response', responseType: 'json' }).pipe(
 			map((response: HttpResponse<Curso>) => {
 				if (response.ok && response.body) {
+					const old = this.cursos.find((c) => c.id_curso === curso.id_curso);
+					if (!old) {
+						this.cursos.push(response.body);
+					}
 					return response.body;
 				} else {
 					console.error('Respuesta del back: ' + response.body);

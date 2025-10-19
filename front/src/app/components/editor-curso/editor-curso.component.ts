@@ -284,6 +284,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		if (event) {
 			//console.log('Guardando cambios en curso: ' + this.idCurso);
 			if (this.idCurso === 0) {
+				this.compruebaCambios();
 				this.claseEditar = null;
 				document.body.style.overflow = 'auto';
 				return;
@@ -294,6 +295,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 					//console.log('Curso actualizado:', curso);
 					if (curso) {
 						this.curso = curso;
+						this.compruebaCambios();
 						this.claseEditar = null;
 
 						document.body.style.overflow = 'auto';

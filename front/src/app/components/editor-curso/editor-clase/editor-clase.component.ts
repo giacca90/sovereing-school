@@ -337,7 +337,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 					}
 
 					//this.curso = success;
-					Object.assign(this.curso, success);
+					//Object.assign(this.curso, success);
 
 					this.readyComponent = true;
 
