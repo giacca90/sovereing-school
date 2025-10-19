@@ -16,44 +16,52 @@ export class CursosService {
 	) {}
 
 	get backURL(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			return (window as any).__env.BACK_BASE ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			return (globalThis.window as any).__env.BACK_BASE ?? '';
 		}
 		return '';
 	}
 
 	get backURLStreaming(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			return (window as any).__env.BACK_STREAM ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			return (globalThis.window as any).__env.BACK_STREAM ?? '';
 		}
 		return '';
 	}
 
-	async getCurso(id_curso: number, fromServer?: boolean): Promise<Curso | null> {
-		if (id_curso == 0) {
+	async getCurso(id_curso: number, fromServer = false): Promise<Curso | null> {
+		if (!id_curso) return null;
+
+		const curso = this.cursos.find((c) => c.id_curso === id_curso);
+		if (!curso) return null;
+
+		// Si ya tiene clases cargadas y no se fuerza la recarga → devolver directamente
+		if (curso.clases_curso && !fromServer) return curso;
+
+		try {
+			const response = await firstValueFrom(this.http.get<Curso>(`${this.backURL}/cursos/getCurso/${id_curso}`));
+
+			if (!response) {
+				console.error('Respuesta vacía al cargar curso');
+				return null;
+			}
+
+			// Actualiza solo las propiedades relevantes sin romper la referencia
+			Object.assign(curso, {
+				clases_curso: response.clases_curso?.sort((a, b) => a.posicion_clase - b.posicion_clase),
+				descriccion_larga: response.descriccion_larga,
+				fecha_publicacion_curso: response.fecha_publicacion_curso,
+				planes_curso: response.planes_curso,
+				precio_curso: response.precio_curso,
+			});
+
+			curso.clases_curso?.forEach((clase) => (clase.curso_clase = curso.id_curso));
+
+			return curso;
+		} catch (error) {
+			console.error('Error en cargar curso:', error);
 			return null;
 		}
-		for (const curso of this.cursos) {
-			if (curso.id_curso == id_curso) {
-				if (curso.clases_curso === undefined || fromServer) {
-					try {
-						const response = await firstValueFrom(this.http.get<Curso>(`${this.backURL}/cursos/getCurso/${id_curso}`));
-						curso.clases_curso = response.clases_curso?.sort((a, b) => a.posicion_clase - b.posicion_clase);
-						curso.descriccion_larga = response.descriccion_larga;
-						curso.fecha_publicacion_curso = response.fecha_publicacion_curso;
-						curso.planes_curso = response.planes_curso;
-						curso.precio_curso = response.precio_curso;
-						curso.clases_curso?.forEach((clase) => (clase.curso_clase = curso.id_curso));
-						return curso;
-					} catch (error) {
-						console.error('Error en cargar curso:', error);
-						return null;
-					}
-				} else return curso;
-			}
-		}
-
-		return null;
 	}
 
 	updateCurso(curso: Curso | null): Observable<Curso> {

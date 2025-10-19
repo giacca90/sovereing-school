@@ -14,7 +14,7 @@ export class EditorVideoComponent implements AfterViewInit {
 	player: Player | null = null;
 	backStream: string = '';
 
-	constructor(private streamingService: StreamingService) {}
+	constructor(private readonly streamingService: StreamingService) {}
 
 	async ngAfterViewInit(): Promise<void> {
 		if (this.clase.direccion_clase) {
@@ -220,7 +220,6 @@ export class EditorVideoComponent implements AfterViewInit {
 					this.streamingService.subeVideo(input.files[0], this.clase.curso_clase, this.clase?.id_clase).subscribe((result) => {
 						if (result && this.clase) {
 							this.clase.direccion_clase = result;
-							this.clase.curso_clase = this.clase.curso_clase;
 							button.classList.remove('border-gray-500', 'text-gray-500');
 							button.classList.add('border-black');
 							button_guardar_clase.classList.remove('border-gray-500', 'text-gray-500');

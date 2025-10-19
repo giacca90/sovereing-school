@@ -1,6 +1,9 @@
 package com.sovereingschool.back_base.Controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.time.Duration;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -29,11 +32,16 @@ import com.sovereingschool.back_common.Utils.JwtUtil;
 @RequestMapping("/login")
 public class LoginController {
 
-	@Autowired
+	private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
+
 	private ILoginService loginService;
 
-	@Autowired
 	private JwtUtil jwtUtil;
+
+	public LoginController(ILoginService loginService, JwtUtil jwtUtil) {
+		this.loginService = loginService;
+		this.jwtUtil = jwtUtil;
+	}
 
 	@GetMapping("/{correo}")
 	public ResponseEntity<?> conpruebaCorreo(@PathVariable String correo) {
@@ -43,7 +51,7 @@ public class LoginController {
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
 			response = "Error en obtener el correo del usuario: " + e.getMessage();
-			return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -66,7 +74,7 @@ public class LoginController {
 					.httpOnly(true) // No accesible desde JavaScript
 					.secure(true) // Solo por HTTPS
 					.path("/") // Ruta donde será accesible
-					.maxAge(15 * 24 * 60 * 60) // 15 días
+					.maxAge(Duration.ofDays(15)) // 15 días
 					.sameSite("None") // Cambia a "None" si trabajas con frontend separado
 					.build();
 
@@ -133,7 +141,7 @@ public class LoginController {
 				response = "El correo electrónico no puede ser vació";
 				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 			}
-			if (login.getCorreo_electronico().length() < 1) {
+			if (login.getCorreo_electronico().isEmpty()) {
 				response = "El correo electrónico no puede ser vació";
 				return new ResponseEntity<>(response, HttpStatus.FAILED_DEPENDENCY);
 			}
@@ -141,7 +149,7 @@ public class LoginController {
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
 			response = "Error en cambiar de correo: " + e.getMessage();
-			return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -205,7 +213,7 @@ public class LoginController {
 					.httpOnly(true) // No accesible desde JavaScript
 					.secure(true) // Solo por HTTPS
 					.path("/") // Ruta donde será accesible
-					.maxAge(15 * 24 * 60 * 60) // 15 días
+					.maxAge(Duration.ofDays(15)) // 15 días
 					.sameSite("None") // Cambia a "None" si trabajas con frontend separado
 					.build();
 
@@ -234,18 +242,18 @@ public class LoginController {
 					.httpOnly(true) // No accesible desde JavaScript
 					.secure(true) // Solo por HTTPS
 					.path("/") // Ruta donde será accesible
-					.maxAge(15 * 24 * 60 * 60) // 15 días
+					.maxAge(Duration.ofDays(15)) // 15 días
 					.sameSite("None") // Cambia a "None" si trabajas con frontend separado
 					.build();
 			return ResponseEntity.ok()
 					.header("Set-Cookie", refreshTokenCookie.toString())
 					.body(response);
 		} catch (JWTVerificationException e) {
-			System.err.println(e.getMessage());
+			logger.error("Error en login con token: {}", e.getMessage());
 			response = e.getMessage();
 			return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
 		} catch (Exception e) {
-			System.err.println("Error en login con token: " + e.getMessage());
+			logger.error("Error en login con token: {}", e.getMessage());
 			response = "Error en login con token: " + e.getMessage();
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}

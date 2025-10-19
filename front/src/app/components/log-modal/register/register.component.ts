@@ -21,9 +21,9 @@ export class RegisterComponent implements OnInit, OnDestroy {
 	private keySub?: Subscription;
 
 	constructor(
-		private modalService: LoginModalService,
-		private loginService: LoginService,
-		private registerService: RegisterService,
+		private readonly modalService: LoginModalService,
+		private readonly loginService: LoginService,
+		private readonly registerService: RegisterService,
 	) {}
 
 	ngOnInit(): void {
@@ -79,7 +79,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
 			return;
 		}
 
-		if ((await this.loginService.compruebaCorreo(correo)) == false) {
+		if ((await this.loginService.compruebaCorreo(correo)) === false) {
 			this.fase = 1;
 			this.nuevoUsuario.correo_electronico = correo;
 			this.nuevoUsuario.nombre_usuario = (document.getElementById('nombre2') as HTMLInputElement).value;
@@ -114,7 +114,6 @@ export class RegisterComponent implements OnInit, OnDestroy {
 			const mex: HTMLParagraphElement = document.createElement('p');
 			mex.textContent = 'Este correo ya está registrado!!!';
 			message.appendChild(mex);
-			return;
 		}
 	}
 
@@ -151,11 +150,9 @@ export class RegisterComponent implements OnInit, OnDestroy {
 				if (button) {
 					button.addEventListener('click', () => this.close());
 				}
-				return;
 			});
 		} else {
 			message.textContent = 'Las dos contraseñas no coinciden';
-			return;
 		}
 	}
 

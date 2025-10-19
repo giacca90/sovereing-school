@@ -14,18 +14,9 @@ export class LoginService {
 	USER_KEY = makeStateKey<Usuario>('usuario');
 
 	constructor(
-		private http: HttpClient,
-		@Inject(PLATFORM_ID) private platformId: Object,
-	) {
-		/* afterNextRender(() => {
-			if (this.usuario === null) {
-				const token = localStorage.getItem('Token');
-				if (token) {
-					this.loginWithToken(token);
-				}
-			}
-		}); */
-	}
+		private readonly http: HttpClient,
+		@Inject(PLATFORM_ID) private readonly platformId: Object,
+	) {}
 
 	async cargarUsuarioDesdeTransferState(): Promise<void> {
 		if (isPlatformBrowser(this.platformId)) {
@@ -41,30 +32,29 @@ export class LoginService {
 		}
 
 		if (isPlatformServer(this.platformId)) {
-			// TODO: Sustituir global por otra cosa
-			this.usuario = (global as any).ssrUsuario || null;
+			this.usuario = (globalThis as any).ssrUsuario || null;
 		}
 	}
 
 	get apiUrl(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			const url = (window as any).__env.BACK_BASE ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			const url = (globalThis.window as any).__env.BACK_BASE ?? '';
 			return url + '/login/';
 		}
 		return '';
 	}
 
 	get loginSSRUrl(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			const url = (window as any).__env.FRONT_URL ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			const url = (globalThis.window as any).__env.FRONT_URL ?? '';
 			return url + '/ssr-login';
 		}
 		return '';
 	}
 
 	get logoutSSRUrl(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			const url = (window as any).__env.FRONT_URL ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			const url = (globalThis.window as any).__env.FRONT_URL ?? '';
 			return url + '/ssr-logout';
 		}
 		return '';
@@ -112,30 +102,11 @@ export class LoginService {
 						localStorage.setItem('Token', response.body.accessToken);
 						// Avisamos al SSR de que estamos logueados
 						this.loginSSR(response.body.accessToken);
-						/* this.http
-							.post<{ ok: boolean }>(
-								this.loginSSRUrl,
-								{ token: response.body.accessToken }, // enviar el token que recibimos del backend
-								{ observe: 'response', withCredentials: true },
-							)
-							.subscribe({
-								next: (resp: HttpResponse<{ ok: boolean }>) => {
-									if (resp.status !== 200 || !resp.body?.ok) {
-										console.error('Error en avisar al SSR de que estamos logueados: ' + resp.status);
-										console.error(resp.body);
-									}
-								},
-								error: (error: HttpErrorResponse) => {
-									console.error('Avisar al SSR de que estamos logueados fallido:', error);
-								},
-							});
- */
+
 						resolve(true);
 						sub.unsubscribe();
-						return;
 					} else {
 						console.error('Error en comprobar las password: ' + response.status);
-						return;
 					}
 				},
 				error: (error: HttpErrorResponse) => {
@@ -163,7 +134,7 @@ export class LoginService {
 		);
 	}
 
-	loginWithToken(token: string): void {
+	loginWithToken(token: string) {
 		this.http.post<Usuario>(this.apiUrl + 'loginWithToken', token, { observe: 'response', withCredentials: true }).subscribe({
 			next: (response: HttpResponse<Usuario>) => {
 				if (response.ok && response.body) {
@@ -172,7 +143,6 @@ export class LoginService {
 			},
 			error: (error: HttpErrorResponse) => {
 				console.error('Error en loginWithToken:', error.message);
-				this;
 			},
 		});
 	}

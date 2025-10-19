@@ -16,9 +16,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -34,14 +34,19 @@ import com.sovereingschool.back_streaming.Models.ResolutionProfile;
 public class StreamingService {
     private final Map<String, Process> ffmpegProcesses = new ConcurrentHashMap<>();
 
-    @Autowired
     private ClaseRepository claseRepo;
+
+    private Logger logger = LoggerFactory.getLogger(StreamingService.class);
 
     @Value("${variable.rtmp}")
     private String rtmp;
 
     @Value("${variable.VIDEOS_DIR}")
     private String uploadDir;
+
+    public StreamingService(ClaseRepository claseRepo) {
+        this.claseRepo = claseRepo;
+    }
 
     /**
      * Función para convertir los videos de un curso
@@ -99,13 +104,13 @@ public class StreamingService {
                             System.err.println("FFmpeg: " + line);
                         }
                     } catch (IOException e) {
-                        System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
+                        logger.error("Error leyendo salida de FFmpeg: {}", e.getMessage());
                         process.destroy();
                         throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
                     }
 
                     int exitCode = process.waitFor();
-                    System.out.println("Salida del proceso de FFmpeg: " + exitCode);
+                    logger.info("Salida del proceso de FFmpeg: {}", exitCode);
                     if (exitCode != 0) {
                         throw new IOException("El proceso de FFmpeg falló con el código de salida " + exitCode);
                     }
@@ -153,7 +158,7 @@ public class StreamingService {
         } else if (inputStream instanceof InputStream) {
             ffmpegCommand = this.creaComandoFFmpeg("pipe:0", true, streamId, videoSetting);
         } else {
-            System.err.println("Tipo de entrada no soportado");
+            logger.error("Tipo de entrada no soportado");
             return;
         }
         ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
@@ -178,7 +183,7 @@ public class StreamingService {
                     // Enviar SDP a FFmpeg (solo para WebRTC)
                     if (!sdpSent && inputStream instanceof InputStream && line.contains("ffmpeg version")) {
                         try {
-                            System.out.println("➡️ Enviando SDP a FFmpeg...");
+                            logger.info("➡️ Enviando SDP a FFmpeg...");
                             OutputStream os = process.getOutputStream();
                             InputStream sdpStream = (InputStream) inputStream;
 
@@ -191,14 +196,14 @@ public class StreamingService {
                             os.close(); // cerramos stdin, el SDP ya está completo
 
                             sdpSent = true;
-                            System.out.println("✅ SDP enviado y stdin cerrado");
+                            logger.info("✅ SDP enviado y stdin cerrado");
                         } catch (IOException e) {
-                            System.err.println("Error al enviar SDP a FFmpeg: " + e.getMessage());
+                            logger.error("Error al enviar SDP a FFmpeg: {}", e.getMessage());
                         }
                     }
                 }
             } catch (IOException e) {
-                System.err.println("Error leyendo salida de FFmpeg: " + e.getMessage());
+                logger.error("Error leyendo salida de FFmpeg: {}", e.getMessage());
                 throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
             }
         });
@@ -211,24 +216,24 @@ public class StreamingService {
         Process process = ffmpegProcesses.remove(sessionId);
 
         if (process == null) {
-            System.err.println("⚠️ No se encontró proceso FFmpeg activo para sessionId=" + sessionId);
+            logger.error("⚠️ No se encontró proceso FFmpeg activo para sessionId={}", sessionId);
             return;
         }
 
         if (!process.isAlive()) {
-            System.out.println("✅ FFmpeg ya estaba detenido para sessionId=" + sessionId);
+            logger.info("✅ FFmpeg ya estaba detenido para sessionId={}", sessionId);
             return;
         }
 
         try {
-            System.out.println("🛑 Deteniendo FFmpeg enviando SIGTERM...");
+            logger.info("🛑 Deteniendo FFmpeg enviando SIGTERM...");
             process.destroy(); // Señal de terminación suave
 
             if (!process.waitFor(3, TimeUnit.SECONDS)) {
-                System.err.println("⏰ FFmpeg no respondió, forzando terminación (SIGKILL)...");
+                logger.error("⏰ FFmpeg no respondió, forzando terminación (SIGKILL)...");
                 process.destroyForcibly();
             } else {
-                System.out.println("✅ FFmpeg detenido correctamente (exitCode=" + process.exitValue() + ")");
+                logger.info("✅ FFmpeg detenido correctamente (exitCode={})", process.exitValue());
             }
 
         } catch (InterruptedException e) {
@@ -247,7 +252,7 @@ public class StreamingService {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-                System.err.println("Error al esperar a que se genere el preview: " + e.getMessage());
+                logger.error("Error al esperar a que se genere el preview: {}", e.getMessage());
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Error al esperar a que se genere el preview: " + e.getMessage());
             }
@@ -283,7 +288,7 @@ public class StreamingService {
         }
         // Obtener la resolución del video
         if (width == null || height == null || fps == null) {
-            System.out.println("Obteniendo la resolución del video con ffprobe");
+            logger.info("Obteniendo la resolución del video con ffprobe");
             ProcessBuilder processBuilder = new ProcessBuilder("ffprobe",
                     "-v", "error",
                     "-select_streams", "v:0",
@@ -296,7 +301,7 @@ public class StreamingService {
             String line;
 
             while ((line = reader.readLine()) != null) {
-                System.out.println("FFProbe: " + line);
+                logger.info("FFProbe: {}", line);
                 String[] parts = line.split(",");
                 width = parts[0];
                 height = parts[1];
@@ -313,14 +318,14 @@ public class StreamingService {
 
             process.waitFor();
             if (width == "0" || height == "0" || fps == "0") {
-                System.err.println("La resolución es 0");
+                logger.error("La resolución es 0");
                 throw new RuntimeException("No se pudo obtener la resolución del streaming");
             }
             if (width == null || height == null || fps == null) {
-                System.err.println("La resolución es null, reintentando con ffprobe");
+                logger.error("La resolución es null, reintentando con ffprobe");
                 this.creaComandoFFmpeg(inputFilePath, live, streamId, videoSetting);
             }
-            System.out.println("Resolución: " + width + "x" + height + "@" + fps);
+            logger.info("Resolución: {}x{}@{}", width, height, fps);
         }
 
         int inputWidth = Integer.parseInt(width);
@@ -338,8 +343,7 @@ public class StreamingService {
                         b.getWidth() * b.getHeight(),
                         a.getWidth() * a.getHeight()))
                 // Elimina duplicados si los hubiera
-                .distinct()
-                .collect(Collectors.toList());
+                .distinct().toList();
 
         // Debug
         /*
@@ -416,9 +420,7 @@ public class StreamingService {
                     "-f", "sdp", "-i", "-",
                     "-fflags", "+genpts",
                     "-use_wallclock_as_timestamps", "1",
-                    "-fps_mode", "passthrough"
-            // "-s", videoSetting[0] + "x" + videoSetting[1]
-            ));
+                    "-fps_mode", "passthrough"));
         } else {
             ffmpegCommand.addAll(List.of("-i", inputFilePath));
         }
@@ -450,7 +452,7 @@ public class StreamingService {
                     "-c:a", "aac", "original.mp4"));
         }
 
-        System.out.println("Comando FFmpeg: " + String.join(" ", ffmpegCommand));
+        logger.info("Comando FFmpeg: {}", String.join(" ", ffmpegCommand));
         return ffmpegCommand;
     }
 }

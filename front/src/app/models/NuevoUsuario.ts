@@ -15,6 +15,4 @@ export class NuevoUsuario {
 	public cursos_usuario: Curso[] | null = null;
 
 	public fecha_registro_usuario: Date | null = null;
-
-	constructor() {}
 }

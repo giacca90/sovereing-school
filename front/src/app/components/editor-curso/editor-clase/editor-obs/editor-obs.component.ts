@@ -13,6 +13,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	@Input() ready?: boolean; // Avisa cuando está listo para emitir (opcional)
 	@Input() status?: string; // Estado del servicio de streaming (opcional)
 	@Output() emision: EventEmitter<string | null> = new EventEmitter();
+	emitiendo: boolean = false;
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
 	player: any;
@@ -23,6 +24,9 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
+		this.streamingService.emision$.subscribe((v) => {
+			this.emitiendo = v;
+		});
 	}
 
 	ngAfterViewInit(): void {
@@ -150,10 +154,8 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 			return;
 		}
 
-		if (this.ready) {
-			const url = await firstValueFrom(this.streamingService.rtmpUrl$);
-			this.emision.emit(url);
-		}
+		const url = await firstValueFrom(this.streamingService.rtmpUrl$);
+		this.emision.emit(url);
 	}
 
 	detenerEmision() {

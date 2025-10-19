@@ -5,13 +5,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @EntityScan(basePackages = "com.sovereingschool.back_common.Models")
-@EnableJpaRepositories(basePackages = {
-		"com.sovereingschool.back_chat.Repositories", // si aún usás repos locales
-		"com.sovereingschool.back_common.Repositories" // para los repos que moviste
-})
+@EnableMongoRepositories(basePackages = "com.sovereingschool.back_chat.Repositories")
+@EnableJpaRepositories(basePackages = "com.sovereingschool.back_common.Repositories")
 @ComponentScan(basePackages = {
 		"com.sovereingschool.back_chat",
 		"com.sovereingschool.back_common"

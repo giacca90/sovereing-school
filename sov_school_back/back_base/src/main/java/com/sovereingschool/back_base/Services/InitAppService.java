@@ -3,7 +3,8 @@ package com.sovereingschool.back_base.Services;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -28,23 +29,25 @@ import reactor.core.publisher.Mono;
 @Transactional
 public class InitAppService implements IInitAppService {
 
-    @Autowired
     private CursoRepository cursoRepo;
-
-    @Autowired
     private ClaseRepository claseRepo;
-
-    @Autowired
     private UsuarioRepository usuarioRepo;
-
-    @Autowired
     private JwtUtil jwtUtil;
-
-    @Autowired
     private WebClientConfig webClientConfig;
+
+    private Logger logger = LoggerFactory.getLogger(InitAppService.class);
 
     @Value("${variable.FRONT_DOCKER}")
     private String frontDocker;
+
+    public InitAppService(CursoRepository cursoRepo, ClaseRepository claseRepo, UsuarioRepository usuarioRepo,
+            JwtUtil jwtUtil, WebClientConfig webClientConfig) {
+        this.cursoRepo = cursoRepo;
+        this.claseRepo = claseRepo;
+        this.usuarioRepo = usuarioRepo;
+        this.jwtUtil = jwtUtil;
+        this.webClientConfig = webClientConfig;
+    }
 
     @Override
     public List<Usuario> getProfesores() {
@@ -99,8 +102,7 @@ public class InitAppService implements IInitAppService {
 
     @Override
     public String getInitToken() {
-        String initToken = this.jwtUtil.generateInitToken();
-        return initToken;
+        return this.jwtUtil.generateInitToken();
     }
 
     @Override
@@ -117,24 +119,24 @@ public class InitAppService implements IInitAppService {
                     .onStatus(
                             status -> status.isError(),
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                System.err.println("Error HTTP del SSR: " + errorBody);
+                                logger.error("Error HTTP del SSR: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del SSR: " + errorBody));
                             }))
                     .bodyToMono(String.class)
                     .onErrorResume(e -> {
-                        System.err.println("Error al conectar con el microservicio del front: " + e.getMessage());
+                        logger.error("Error al conectar con el microservicio del front: {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     })
                     .subscribe(res -> {
                         if (res == null || !res.contains("Cache global actualizado con éxito")) {
-                            System.err.println("Error en actualizar el cache global");
-                            System.err.println(res);
+                            logger.error("Error en actualizar el cache global");
+                            logger.error(res);
                             throw new RuntimeException("Error en actualizar el cache global");
                         }
                     });
 
         } catch (Exception e) {
-            System.err.println("Error al actualizar el SSR: " + e.getMessage());
+            logger.error("Error al actualizar el SSR: {}", e.getMessage());
         }
     }
 

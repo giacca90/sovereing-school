@@ -9,10 +9,10 @@
 		@if (this.tipo === 1) {
 			<input id="buscadorUsuarios" placeholder="Busca usuario" class="m-2 w-[99%] rounded-lg border border-black p-2 dark:border-gray-400" (input)="buscaUsuarios($event)" type="text" />
 			@for (usr of this.usuariosSel; track $index) {
-				<div (click)="mostrarUsuario(usr.id_usuario)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
+				<div (click)="mostrarUsuario(usr.id_usuario)" (keydown.enter)="mostrarUsuario(usr.id_usuario)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
 					<p>{{ usr.id_usuario }}</p>
 					<div class="ml-4 h-8 w-8">
-						<img [src]="usr.foto_usuario[0]" class="h-full w-full" />
+						<img [src]="usr.foto_usuario[0]" class="h-full w-full" alt="" />
 					</div>
 					<div class="flex grow items-center text-center">
 						<p class="m-2">{{ usr.nombre_usuario }}</p>
@@ -24,7 +24,7 @@
 							<p class="m-2">Cursos creados: {{ this.cursosService.getCursosProfe(usr).length }}</p>
 						}
 					</div>
-					<svg class="z-10 cursor-pointer" (click)="eliminaUsuario(usr)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
+					<svg class="z-10 cursor-pointer" (click)="eliminaUsuario(usr)" (keydown.enter)="eliminaUsuario(usr)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 				</div>
 				<div id="user-data-{{ usr.id_usuario }}" class="m-2 flex flex-col rounded-lg border border-black p-2 dark:border-gray-400" style="display: none">
 					<div class="flex">
@@ -34,7 +34,7 @@
 							<div class="flex">
 								@for (foto of usr.foto_usuario; track $index) {
 									<div class="h-auto w-1/2 border border-black dark:border-gray-400">
-										<img [src]="foto" class="h-full w-full" />
+										<img [src]="foto" class="h-full w-full" alt="" />
 									</div>
 								}
 							</div>
@@ -65,10 +65,10 @@
 		@if (this.tipo === 2) {
 			<input id="buscadorCursos" placeholder="Busca curso" class="m-2 w-[99%] rounded-lg border border-black p-2 dark:border-gray-400" (input)="buscaCursos($event)" type="text" />
 			@for (curs of this.cursosSel; track $index) {
-				<div (click)="mostrarCurso(curs.id_curso)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
+				<div (click)="mostrarCurso(curs.id_curso)" (keydown.enter)="mostrarCurso(curs.id_curso)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
 					<p>{{ curs.id_curso }}</p>
 					<div class="ml-4 h-8 w-8">
-						<img [src]="curs.imagen_curso" class="h-full w-full" />
+						<img [src]="curs.imagen_curso" class="h-full w-full" alt="" />
 					</div>
 					<div class="flex grow items-center text-center">
 						<p class="m-2">{{ curs.nombre_curso }}</p>
@@ -78,7 +78,7 @@
 						}
 						<p class="m-2">Clases: {{ curs.clases_curso?.length }}</p>
 					</div>
-					<svg class="z-10 cursor-pointer" (click)="eliminaCurso(curs)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
+					<svg class="z-10 cursor-pointer" (click)="eliminaCurso(curs)" (keydown.enter)="eliminaCurso(curs)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 				</div>
 				<div id="curso-data-{{ curs.id_curso }}" class="m-2 rounded-lg border border-black p-2 dark:border-gray-400" style="display: none">
 					<p>Nombre: {{ curs.nombre_curso }}</p>
@@ -98,17 +98,17 @@
 		@if (this.tipo === 3) {
 			<input id="buscadorChats" placeholder="Busca chat" class="m-2 w-[99%] rounded-lg border border-black p-2 dark:border-gray-400" (input)="buscaChats($event)" type="text" />
 			@for (chat of this.chatsSel; track $index) {
-				<div (click)="mostrarChat(chat.id_curso)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
+				<div (click)="mostrarChat(chat.id_curso)" (keydown.enter)="mostrarChat(chat.id_curso)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
 					<p>{{ chat.id_curso }}</p>
 					<div class="ml-4 h-8 w-8">
-						<img [src]="chat.foto_curso" class="h-full w-full" />
+						<img [src]="chat.foto_curso" class="h-full w-full" alt="" />
 					</div>
 					<div class="flex grow items-center text-center">
 						<p class="m-2">{{ chat.nombre_curso }}</p>
 						<p class="m-2">Clases: {{ chat.clases.length }}</p>
 						<p class="m-2">Mensajes: {{ chat.mensajes.length }}</p>
 					</div>
-					<svg class="z-10 cursor-pointer" (click)="eliminaChat(chat)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
+					<svg class="z-10 cursor-pointer" (click)="eliminaChat(chat)" (keydown.enter)="eliminaChat(chat)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 				</div>
 				<div id="chat-data-{{ chat.id_curso }}" class="m-2 rounded-lg border border-black p-2 dark:border-gray-400" style="display: none">
 					<div class="flex">
@@ -125,7 +125,7 @@
 						</div>
 						<div class="m-2 flex w-1/2 flex-col rounded-lg border border-black dark:border-gray-400">
 							@for (clase of chat.clases; track $index) {
-								<div (click)="mostrarClaseChat(clase.id_clase)" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
+								<div (click)="mostrarClaseChat(clase.id_clase)" (keydown.enter)="mostrarClaseChat(clase.id_clase)" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
 									<p class="m-2 grow">{{ clase.nombre_clase }}</p>
 									<p>{{ clase.mensajes.length }} mensajes</p>
 								</div>

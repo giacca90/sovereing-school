@@ -20,8 +20,8 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	public id_curso: number = 0;
 	public id_clase: number = 0;
 	public momento: number | null = null;
-	private isBrowser: boolean;
-	private subscription: Subscription = new Subscription();
+	private readonly isBrowser: boolean;
+	private readonly subscription: Subscription = new Subscription();
 	public loading: boolean = true;
 	public curso: Curso | null = null;
 	public clase: Clase | null = null;
@@ -30,9 +30,9 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	player: Player | null = null;
 
 	constructor(
-		private route: ActivatedRoute,
-		private cdr: ChangeDetectorRef,
-		@Inject(PLATFORM_ID) private platformId: object,
+		private readonly route: ActivatedRoute,
+		private readonly cdr: ChangeDetectorRef,
+		@Inject(PLATFORM_ID) private readonly platformId: object,
 		public cursoService: CursosService,
 		public router: Router,
 	) {
@@ -71,14 +71,14 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 			}),
 		);
 		if (isPlatformBrowser(this.platformId)) {
-			this.backStream = (window as any).__env?.BACK_STREAM ?? '';
+			this.backStream = (globalThis.window as any).__env?.BACK_STREAM ?? '';
 		}
 	}
 
 	loadData() {
 		this.cursoService.getCurso(this.id_curso).then((result) => {
 			this.curso = result;
-			if (this.curso && this.curso.clases_curso) {
+			if (this.curso?.clases_curso) {
 				const result = this.curso.clases_curso.find((clase) => clase.id_clase == this.id_clase);
 				if (result) {
 					this.clase = result;
@@ -137,8 +137,8 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				const vhs = (this.player?.tech() as any).vhs;
 
 				// ✅ Activar modo automático desde el inicio
-				for (let i = 0; i < qualityLevels.length; i++) {
-					qualityLevels[i].enabled = true;
+				for (let ql of qualityLevels) {
+					ql.enabled = true;
 				}
 				vhs.autoLevelEnabled = true;
 
@@ -208,9 +208,9 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				const added = new Set();
 				qualityLevels.on('addqualitylevel', () => {
 					let changes = false;
-					for (let i = 0; i < qualityLevels.length; i++) {
-						if (!added.has(qualityLevels[i].height)) {
-							added.add(qualityLevels[i].height);
+					for (const ql of qualityLevels) {
+						if (!added.has(ql.height)) {
+							added.add(ql.height);
 							changes = true;
 						}
 					}
@@ -224,13 +224,14 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 					autoItem.setAttribute('data-quality', 'auto');
 					autoItem.onclick = () => {
 						currentSelection = 'auto';
-						for (let i = 0; i < qualityLevels.length; i++) {
-							qualityLevels[i].enabled = true;
+						for (const ql of qualityLevels) {
+							ql.enabled = true;
 						}
+
 						vhs.autoLevelEnabled = true;
 
 						// Forzar el estimador de ancho de banda a un valor alto (ejemplo: 5 Mbps)
-						if (vhs && vhs.bandwidthEstimator && typeof vhs.bandwidthEstimator.sample === 'function') {
+						if (vhs.bandwidthEstimator && typeof vhs.bandwidthEstimator.sample === 'function') {
 							vhs.bandwidthEstimator.sample(5_000_000, 1000); // 5 Mbps en 1s
 						}
 
@@ -259,7 +260,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 								let seeked = false;
 								let jump = null;
 
-								if (buffered && buffered.length && originalTime) {
+								if (buffered?.length && originalTime) {
 									for (let i = 0; i < buffered.length; i++) {
 										const start = buffered.start(i);
 										const end = buffered.end(i);
@@ -395,7 +396,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		document.body.appendChild(curtain);
 
 		// Cierra la cortina al hacer clic fuera de ella
-		window.addEventListener(
+		globalThis.window.addEventListener(
 			'click',
 			(event) => {
 				if (!curtain.contains(event.target as Node)) {

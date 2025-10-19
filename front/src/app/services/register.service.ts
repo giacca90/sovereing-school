@@ -1,20 +1,16 @@
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { NuevoUsuario } from '../models/NuevoUsuario';
-import { LoginService } from './login.service';
 
 @Injectable({
 	providedIn: 'root',
 })
 export class RegisterService {
-	constructor(
-		private http: HttpClient,
-		private loginService: LoginService,
-	) {}
+	constructor(private readonly http: HttpClient) {}
 
 	get apiUrl(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			return (window as any).__env.BACK_BASE ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			return (globalThis.window as any).__env.BACK_BASE ?? '';
 		}
 		return '';
 	}

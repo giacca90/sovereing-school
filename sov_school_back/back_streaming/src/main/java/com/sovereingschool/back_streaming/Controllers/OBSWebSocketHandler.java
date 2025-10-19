@@ -66,7 +66,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
 
             Authentication auth = (Authentication) session.getAttributes().get("Auth");
             if (!isAuthorized(auth)) {
-                System.err.println("Acceso denegado: usuario no autorizado");
+                logger.error("Acceso denegado: usuario no autorizado");
                 session.sendMessage(new TextMessage(
                         "{\"type\":\"auth\",\"message\":\"" + "Acceso denegado: usuario no autorizado" + "\"}"));
                 session.close(CloseStatus.POLICY_VIOLATION);
@@ -75,13 +75,13 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
 
             sessions.put(session.getId(), session);
             String username = (String) session.getAttributes().get("username");
-            System.out.println("Conexión establecida en OBS para el usuario: " + username);
+            logger.info("Conexión establecida en OBS para el usuario: {}", username);
         } catch (Exception e) {
-            System.err.println("Error en enviar el mensaje de error en OBS: " + e.getMessage());
+            logger.error("Error en enviar el mensaje de error en OBS: {}", e.getMessage());
             try {
                 session.close(CloseStatus.SERVER_ERROR);
             } catch (IOException ex) {
-                System.err.println("Error en cerrar la conexión: " + ex.getMessage());
+                logger.error("Error en cerrar la conexión: {}", ex.getMessage());
             } finally {
                 sessions.remove(session.getId());
             }
@@ -161,7 +161,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                                 .map(Path::toFile)
                                 .forEach(File::delete);
                     } catch (IOException e) {
-                        System.err.println("Error al eliminar la carpeta de la previsualización: " + e.getMessage());
+                        logger.error("Error al eliminar la carpeta de la previsualización: {}", e.getMessage());
                         throw new RuntimeException(
                                 "Error al eliminar la carpeta de la previsualización: " + e.getMessage());
                     }
@@ -170,10 +170,10 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                         Files.delete(m3u8);
                     }
                 } else {
-                    System.out.println("No se encontró una carpeta para el sessionId: " + sessionId);
+                    logger.info("No se encontró una carpeta para el sessionId: {}", sessionId);
                 }
             } catch (IOException e) {
-                System.err.println("Error al buscar la carpeta: " + e.getMessage());
+                logger.error("Error al buscar la carpeta: {}", e.getMessage());
             }
         }
     }
@@ -232,10 +232,10 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    System.err.println("FFmpeg preview: " + line); // Mostrar logs en la consola
+                    logger.error("FFmpeg preview: {}", line); // Mostrar logs en la consola
                 }
             } catch (IOException e) {
-                System.err.println("Error leyendo salida de FFmpeg preview: " + e.getMessage());
+                logger.error("Error leyendo salida de FFmpeg preview: {}", e.getMessage());
                 throw new RuntimeException("Error leyendo salida de FFmpeg preview: " + e.getMessage());
             }
         });
@@ -264,7 +264,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         } catch (RuntimeException e) {
             sendMessage(session, "error", e.getMessage());
         } catch (Exception e) {
-            System.err.println("Error en el manejo del mensaje en OBS: " + e.getMessage());
+            logger.error("Error en el manejo del mensaje en OBS: {}", e.getMessage());
             sendMessage(session, "error", "Error en el manejo del mensaje en OBS: " + e.getMessage());
         }
     }
@@ -280,8 +280,8 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
 
         String rtmpUrl = RTMP_URL + userId + "_" + session.getId();
         String rtmpUrlDocker = RTMP_DOCKER + userId + "_" + session.getId();
-        System.out.println("RTMP URL: " + rtmpUrl);
-        System.out.println("RTMP URL DOCKER: " + rtmpUrlDocker);
+        logger.info("RTMP URL: {}", rtmpUrl);
+        logger.info("RTMP URL DOCKER: {}", rtmpUrlDocker);
 
         executor.execute(() -> {
             Thread currentThread = Thread.currentThread();
@@ -289,7 +289,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             try {
                 this.startPreview(rtmpUrlDocker);
             } catch (IOException | InterruptedException e) {
-                System.err.println("Error al iniciar la previsualización: " + e.getMessage());
+                logger.error("Error al iniciar la previsualización: {}", e.getMessage());
                 currentThread.interrupt();
                 previews.remove(session.getId());
             }
@@ -329,7 +329,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             String payload = String.format("{\"type\":\"%s\",\"message\":\"%s\"}", type, message);
             session.sendMessage(new TextMessage(payload));
         } catch (IOException e) {
-            System.err.println("Error enviando mensaje WebSocket: " + e.getMessage());
+            logger.error("Error enviando mensaje WebSocket: {}", e.getMessage());
         }
     }
 
@@ -351,7 +351,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         String userId = streamId.substring(0, streamId.lastIndexOf('_'));
         if (ffmpegThreads.containsKey(sessionId)) {
-            System.err.println("El proceso FFmpeg ya está corriendo para el usuario " + userId);
+            logger.error("El proceso FFmpeg ya está corriendo para el usuario {}", userId);
             throw new RuntimeException("El proceso FFmpeg ya está corriendo para el usuario " + userId);
         }
 
@@ -364,7 +364,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             } catch (Exception e) {
                 currentThread.interrupt();
                 ffmpegThreads.remove(sessionId);
-                System.err.println("Error al iniciar FFmpeg para usuario " + userId + ": " + e.getMessage());
+                logger.error("Error al iniciar FFmpeg para usuario {}: {}", userId, e.getMessage());
                 throw new RuntimeException("Error al iniciar FFmpeg para usuario " + userId + ": " + e.getMessage());
             }
         });

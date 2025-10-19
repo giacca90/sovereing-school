@@ -17,13 +17,13 @@ import { UsuariosService } from '../../services/usuarios.service';
 export class HomeComponent {
 	swiperInstance?: Swiper;
 
-	isBrowser = typeof window !== 'undefined';
+	isBrowser = typeof globalThis.window !== 'undefined';
 
 	constructor(
 		public cursoService: CursosService,
-		private usuarioService: UsuariosService,
+		private readonly usuarioService: UsuariosService,
 		public initService: InitService,
-		private cdr: ChangeDetectorRef,
+		private readonly cdr: ChangeDetectorRef,
 		public router: Router,
 	) {
 		if (this.isBrowser) {
@@ -128,7 +128,7 @@ export class HomeComponent {
 
 			this.usuarioService.profes.forEach((profe: Usuario) => {
 				const div = document.createElement('div');
-				const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+				const isDarkMode = globalThis.window.matchMedia && globalThis.window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 				div.classList.add('border', isDarkMode ? 'border-gray-400' : 'border-black', 'rounded-lg', 'flex', 'h-full', 'p-2', 'flex-1', 'opacity-0', 'transition-opacity', 'duration-1000', 'items-center');
 

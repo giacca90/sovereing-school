@@ -22,7 +22,7 @@
 						<div id="clase-{{ clase.id_clase }}" class="m-2 flex grow items-start rounded-lg border border-black p-2 dark:border-gray-400" draggable="true" (dragstart)="onDragStart($event, clase.id_clase)" (dragover)="this.onDragOver($event, clase.id_clase)" (drop)="this.onDrop($event)" (dragend)="this.onDragEnd($event)">
 							<p class="grow md:grow-0">{{ clase.nombre_clase }}</p>
 							<p class="ml-2 hidden grow text-gray-500 md:block">{{ clase.descriccion_clase }}</p>
-							<svg class="cursor-pointer" xmlns="http://www.w3.org/2000/svg" (click)="eliminaClase(clase)" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
+							<svg class="cursor-pointer" xmlns="http://www.w3.org/2000/svg" (click)="eliminaClase(clase)" (keydown.enter)="eliminaClase(clase)" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 						</div>
 						<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="editarClase(clase)">Editar <span class="hidden md:inline">esta clase</span></button>
 					</div>

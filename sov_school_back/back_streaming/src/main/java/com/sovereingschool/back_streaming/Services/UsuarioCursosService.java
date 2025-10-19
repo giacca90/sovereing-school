@@ -3,9 +3,9 @@ package com.sovereingschool.back_streaming.Services;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -30,23 +30,26 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class UsuarioCursosService implements IUsuarioCursosService {
 
-    @Autowired
     private StreamingService streamingService;
-
-    @Autowired
     private UsuarioRepository usuarioRepository; // Repositorio de PostgreSQL para usuarios
-
-    @Autowired
     private CursoRepository cursoRepository; // Repositorio de PostgreSQL para clases
-
-    @Autowired
     private ClaseRepository claseRepository; // Repositorio de PostgreSQL para clases
-
-    @Autowired
     private UsuarioCursosRepository usuarioCursosRepository; // Repositorio de MongoDB
-
-    @Autowired
     private MongoTemplate mongoTemplate;
+
+    private Logger logger = LoggerFactory.getLogger(UsuarioCursosService.class);
+
+    public UsuarioCursosService(StreamingService streamingService, UsuarioRepository usuarioRepository,
+            CursoRepository cursoRepository,
+            ClaseRepository claseRepository, UsuarioCursosRepository usuarioCursosRepository,
+            MongoTemplate mongoTemplate) {
+        this.usuarioRepository = usuarioRepository;
+        this.cursoRepository = cursoRepository;
+        this.claseRepository = claseRepository;
+        this.usuarioCursosRepository = usuarioCursosRepository;
+        this.mongoTemplate = mongoTemplate;
+        this.streamingService = streamingService;
+    }
 
     @Override
     public void syncUserCourses() {
@@ -63,13 +66,13 @@ public class UsuarioCursosService implements IUsuarioCursosService {
                     classStatus.setCompleted(false);
                     classStatus.setProgress(0);
                     return classStatus;
-                }).collect(Collectors.toList());
+                }).toList();
 
                 StatusCurso courseStatus = new StatusCurso();
                 courseStatus.setId_curso(course.getId_curso());
                 courseStatus.setClases(classStatuses);
                 return courseStatus;
-            }).collect(Collectors.toList());
+            }).toList();
 
             UsuarioCursos userCourses = new UsuarioCursos();
             userCourses.setId_usuario(user.getId_usuario());
@@ -95,13 +98,13 @@ public class UsuarioCursosService implements IUsuarioCursosService {
                     classStatus.setCompleted(false);
                     classStatus.setProgress(0);
                     return classStatus;
-                }).collect(Collectors.toList());
+                }).toList();
 
                 StatusCurso courseStatus = new StatusCurso();
                 courseStatus.setId_curso(course.getId_curso());
                 courseStatus.setClases(classStatuses);
                 return courseStatus;
-            }).collect(Collectors.toList());
+            }).toList();
         }
 
         UsuarioCursos userCourses = new UsuarioCursos();
@@ -116,7 +119,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     @Override
     public String getClase(Long id_usuario, Long id_curso, Long id_clase) {
         UsuarioCursos usuario = this.usuarioCursosRepository.findByIdUsuario(id_usuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el usuario del streaming. id_usuario: " + id_usuario);
+            logger.error("Error en obtener el usuario del streaming. id_usuario: {}", id_usuario);
             throw new EntityNotFoundException("Error en obtener el usuario del streaming");
         });
 
@@ -131,12 +134,12 @@ public class UsuarioCursosService implements IUsuarioCursosService {
 
                 String direccion = this.claseRepository.findById(id_clase).get().getDireccion_clase();
                 if (direccion == null) {
-                    System.err.println("Clase no encontrada");
+                    logger.error("Clase no encontrada");
                     return null;
                 }
                 return this.claseRepository.findById(id_clase).get().getDireccion_clase();
             } catch (Exception e) {
-                System.err.println("Error en obtener la clase: " + e.getMessage());
+                logger.error("Error en obtener la clase: {}", e.getMessage());
             }
         }
 
@@ -170,7 +173,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
             if (usuarioCursos == null || usuarioCursos.size() == 0) {
-                System.err.println("No se encontró el documento.");
+                logger.error("No se encontró el documento.");
                 return false;
             }
 
@@ -186,7 +189,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             }
             return true;
         } catch (Exception e) {
-            System.err.println("Error en añadir la cueva clase: " + e.getMessage());
+            logger.error("Error en añadir la cueva clase: {}", e.getMessage());
             return false;
         }
     }
@@ -199,7 +202,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
             if (usuarioCursos == null || usuarioCursos.size() == 0) {
-                System.err.println("No se encontró el documento.");
+                logger.error("No se encontró el documento.");
                 return false;
             }
 
@@ -219,14 +222,14 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             }
             return true;
         } catch (Exception e) {
-            System.err.println("Error en borrar la clase: " + e.getMessage());
+            logger.error("Error en borrar la clase: {}", e.getMessage());
             return false;
         }
     }
 
     public Long getStatus(Long id_usuario, Long id_curso) {
         UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(id_usuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el usuario del chat");
+            logger.error("Error en obtener el usuario del chat");
             throw new EntityNotFoundException("Error en obtener el usuario del chat");
         });
         if (usuarioCursos.getRol_usuario().name().equals("PROFESOR")
@@ -256,7 +259,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
         if (usuarioCursos == null || usuarioCursos.size() == 0) {
-            System.err.println("No se encontró el documento.");
+            logger.error("No se encontró el documento.");
             return false;
         }
 
@@ -301,7 +304,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
                 this.streamingService.convertVideos(curso);
             }
         } catch (IOException | InterruptedException e) {
-            System.err.println("Error en convertir los videos del curso: " + e.getMessage());
+            logger.error("Error en convertir los videos del curso: {}", e.getMessage());
             throw new RuntimeException("Error en convertir los videos del curso: " + e.getMessage());
         }
     }

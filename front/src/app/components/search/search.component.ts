@@ -16,9 +16,9 @@ export class SearchComponent {
 	result: boolean = false;
 
 	constructor(
-		private cursoService: CursosService,
-		private cdr: ChangeDetectorRef,
-		private ngZone: NgZone,
+		private readonly cursoService: CursosService,
+		private readonly cdr: ChangeDetectorRef,
+		private readonly ngZone: NgZone,
 		public router: Router,
 	) {
 		afterNextRender(() => {

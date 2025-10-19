@@ -2,7 +2,8 @@ package com.sovereingschool.back_streaming.Services;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.sovereingschool.back_common.Models.Usuario;
@@ -15,11 +16,16 @@ import jakarta.transaction.Transactional;
 @Service
 @Transactional
 public class UsuarioPresetsService {
-    @Autowired
-    private PresetRepository presetRepository;
 
-    @Autowired
+    private PresetRepository presetRepository;
     private UsuarioRepository usuarioRepository;
+
+    private Logger logger = LoggerFactory.getLogger(UsuarioPresetsService.class);
+
+    public UsuarioPresetsService(PresetRepository presetRepository, UsuarioRepository usuarioRepository) {
+        this.presetRepository = presetRepository;
+        this.usuarioRepository = usuarioRepository;
+    }
 
     public boolean createPresetsForEligibleUsers() {
         try {
@@ -31,7 +37,7 @@ public class UsuarioPresetsService {
             });
             return true;
         } catch (Exception e) {
-            System.err.println("Error en crear DDBB de presets: " + e.getMessage());
+            logger.error("Error en crear DDBB de presets: {}", e.getMessage());
             return false;
         }
     }

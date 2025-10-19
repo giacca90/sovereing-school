@@ -29,13 +29,13 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	isBrowser: boolean;
 
 	constructor(
-		private route: ActivatedRoute,
-		private router: Router,
+		private readonly route: ActivatedRoute,
+		private readonly router: Router,
 		public cursoService: CursosService,
 		public loginService: LoginService,
 		public streamingService: StreamingService,
-		private initService: InitService,
-		@Inject(PLATFORM_ID) private platformId: Object,
+		private readonly initService: InitService,
+		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
@@ -74,7 +74,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 							this.curso = curso;
 						}
 					});
-					const userConfirmed = window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
+					const userConfirmed = globalThis.window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
 					if (!userConfirmed) {
 						this.router.navigateByUrl(this.router.url); // Mantén al usuario en la misma página
 					}
@@ -83,7 +83,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		);
 
 		if (isPlatformBrowser(this.platformId)) {
-			this.backBase = (window as any).__env?.BACK_BASE ?? '';
+			this.backBase = (globalThis.window as any).__env?.BACK_BASE ?? '';
 		}
 	}
 
@@ -175,6 +175,8 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 
 	compruebaCambios() {
 		this.cursoService.getCurso(this.curso.id_curso).then((curso) => {
+			console.log('this.curso: ' + JSON.stringify(this.curso));
+			console.log('curso: ' + JSON.stringify(curso));
 			this.editado = JSON.stringify(this.curso) !== JSON.stringify(curso);
 		});
 	}
@@ -241,9 +243,9 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	}
 
 	deleteCurso() {
-		const confirm = window.confirm('Esta acción borrará definitivamente este curso, incluida todas sus clases con su contenido. \n Tampoco el administrador de la plataforma podrá recuperar el curso una vez borrado.');
+		const confirm = globalThis.window.confirm('Esta acción borrará definitivamente este curso, incluida todas sus clases con su contenido. \n Tampoco el administrador de la plataforma podrá recuperar el curso una vez borrado.');
 		if (confirm) {
-			const confirm2 = window.confirm('ESTÁS ABSOLUTAMENTE SEGURO DE LO QUE HACES??');
+			const confirm2 = globalThis.window.confirm('ESTÁS ABSOLUTAMENTE SEGURO DE LO QUE HACES??');
 			if (confirm2 && this.curso) {
 				this.cursoService.deleteCurso(this.curso).subscribe({
 					next: (result: boolean) => {
@@ -281,18 +283,19 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 	async claseGuardada(event: boolean) {
 		if (event) {
 			//console.log('Guardando cambios en curso: ' + this.idCurso);
-			if (this.idCurso == 0) {
+			if (this.idCurso === 0) {
 				this.claseEditar = null;
 				document.body.style.overflow = 'auto';
 				return;
 			}
 			this.cursoService
-				.getCurso(this.idCurso, true)
+				.getCurso(this.curso.id_curso, true)
 				.then((curso) => {
 					//console.log('Curso actualizado:', curso);
 					if (curso) {
 						this.curso = curso;
 						this.claseEditar = null;
+
 						document.body.style.overflow = 'auto';
 					} else {
 						console.error('No se pudo obtener el curso');

@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.bson.Document;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.ChangeStreamOptions;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -38,29 +39,30 @@ import reactor.util.retry.Retry;
 @Service
 @Transactional
 public class InitChatService {
-    @Autowired
     private UsuarioChatRepository usuarioChatRepo;
-
-    @Autowired
     private MensajeChatRepository mensajeChatRepo;
-
-    @Autowired
     private UsuarioRepository usuarioRepo;
-
-    @Autowired
     private CursoRepository cursoRepo;
-
-    @Autowired
     private CursoChatRepository cursoChatRepo;
-
-    @Autowired
     private ClaseRepository claseRepo;
-
-    @Autowired
     private SimpMessagingTemplate simpMessagingTemplate;
-
-    @Autowired
     private ReactiveMongoTemplate reactiveMongoTemplate;
+
+    private Logger logger = LoggerFactory.getLogger(InitChatService.class);
+
+    public InitChatService(CursoChatRepository cursoChatRepo, ClaseRepository claseRepo,
+            UsuarioChatRepository usuarioChatRepo, MensajeChatRepository mensajeChatRepo,
+            UsuarioRepository usuarioRepo, CursoRepository cursoRepo, SimpMessagingTemplate simpMessagingTemplate,
+            ReactiveMongoTemplate reactiveMongoTemplate) {
+        this.cursoChatRepo = cursoChatRepo;
+        this.claseRepo = claseRepo;
+        this.usuarioChatRepo = usuarioChatRepo;
+        this.mensajeChatRepo = mensajeChatRepo;
+        this.usuarioRepo = usuarioRepo;
+        this.cursoRepo = cursoRepo;
+        this.simpMessagingTemplate = simpMessagingTemplate;
+        this.reactiveMongoTemplate = reactiveMongoTemplate;
+    }
 
     /**
      * Función para inicializar el chat de un usuario
@@ -76,7 +78,7 @@ public class InitChatService {
             throw new IllegalArgumentException("El ID de usuario no puede ser nulo");
         }
         UsuarioChat usuarioChat = this.usuarioChatRepo.findByIdUsuario(idUsuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el usuario chat: no se encuentra el documento");
+            logger.error("Error en obtener el usuario chat: no se encuentra el documento");
             throw new EntityNotFoundException("Error en obtener el usuario chat: no se encuentra el documento");
         });
 
@@ -96,8 +98,8 @@ public class InitChatService {
             if (cursosChat != null && !cursosChat.isEmpty()) {
                 for (CursoChat cursoChat : cursosChat) {
                     Curso curso = cursoRepo.findById(cursoChat.getIdCurso()).orElseThrow(() -> {
-                        System.err.println("InitChatService: initChat: Error en obtener el curso con ID "
-                                + cursoChat.getIdCurso());
+                        logger.error("InitChatService: initChat: Error en obtener el curso con ID {}",
+                                cursoChat.getIdCurso());
                         throw new EntityNotFoundException("Error en obtener el curso con ID " + cursoChat.getIdCurso());
                     });
                     CursoChatDTO cursoChatDTO = new CursoChatDTO();
@@ -148,7 +150,7 @@ public class InitChatService {
             MensajeChat respuesta = null;
             if (mensaje.getRespuesta() != null) {
                 respuesta = mensajeChatRepo.findById(mensaje.getRespuesta()).orElseThrow(() -> {
-                    System.err.println("Error en obtener la respuesta del mensaje");
+                    logger.error("Error en obtener la respuesta del mensaje");
                     throw new EntityNotFoundException("Error en obtener la respuesta del mensaje");
                 });
             }
@@ -156,7 +158,7 @@ public class InitChatService {
             if (respuesta != null) {
                 String nombreUsuario = this.usuarioRepo.findNombreUsuarioForId(respuesta.getIdUsuario())
                         .orElseThrow(() -> {
-                            System.err.println("Error en obtener el nombre del usuario");
+                            logger.error("Error en obtener el nombre del usuario");
                             throw new EntityNotFoundException("Error en obtener el nombre del usuario");
                         });
                 respuestaDTO = new MensajeChatDTO(
@@ -179,13 +181,13 @@ public class InitChatService {
 
             String nombreUsuario = this.usuarioRepo.findNombreUsuarioForId(mensaje.getIdUsuario())
                     .orElseThrow(() -> {
-                        System.err.println("Error en obtener el nombre del usuario");
+                        logger.error("Error en obtener el nombre del usuario");
                         throw new EntityNotFoundException("Error en obtener el nombre del usuario");
                     });
 
             Curso curso = cursoRepo.findById(mensaje.getIdCurso()).orElseThrow(() -> {
-                System.err.println(
-                        "InitChatService: getMensajeDTO: Error en obtener el curso con ID " + mensaje.getIdCurso());
+                logger.error("InitChatService: getMensajeDTO: Error en obtener el curso con ID {}",
+                        mensaje.getIdCurso());
                 throw new EntityNotFoundException("Error en obtener el curso con ID " + mensaje.getIdCurso());
             });
 
@@ -229,12 +231,12 @@ public class InitChatService {
                 .map(event -> {
                     Document doc = event.getBody();
                     if (doc == null) {
-                        System.err.println("[users_chat] Documento nulo detectado");
+                        logger.error("[users_chat] Documento nulo detectado");
                         return new Document();
                     }
                     return doc;
                 })
-                .doOnError(err -> System.err.println("[users_chat] Error en el stream: " + err.getMessage()))
+                .doOnError(err -> logger.error("[users_chat] Error en el stream: {}", err.getMessage()))
                 .retryWhen(Retry.backoff(10, Duration.ofSeconds(5))
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()));
 
@@ -242,7 +244,7 @@ public class InitChatService {
             try {
                 notifyUsersChat(doc);
             } catch (Exception e) {
-                System.err.println("[users_chat] Error al procesar documento: " + e.getMessage());
+                logger.error("[users_chat] Error al procesar documento: {}", e.getMessage());
             }
         });
 
@@ -251,12 +253,12 @@ public class InitChatService {
                 .map(event -> {
                     Document doc = event.getBody();
                     if (doc == null) {
-                        System.err.println("[courses_chat] Documento nulo detectado");
+                        logger.error("[courses_chat] Documento nulo detectado");
                         return new Document();
                     }
                     return doc;
                 })
-                .doOnError(err -> System.err.println("[courses_chat] Error en el stream: " + err.getMessage()))
+                .doOnError(err -> logger.error("[courses_chat] Error en el stream: {}", err.getMessage()))
                 .retryWhen(Retry.backoff(10, Duration.ofSeconds(5))
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()));
 
@@ -264,7 +266,7 @@ public class InitChatService {
             try {
                 notifyCoursesChat(doc);
             } catch (Exception e) {
-                System.err.println("[courses_chat] Error al procesar documento: " + e.getMessage());
+                logger.error("[courses_chat] Error al procesar documento: {}", e.getMessage());
             }
         });
     }
@@ -280,7 +282,7 @@ public class InitChatService {
         List<ClaseChatDTO> clases = new ArrayList<>();
         List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
         Curso curso = cursoRepo.findById(id_curso).orElseThrow(() -> {
-            System.err.println("InitChatService: notifyCoursesChat: Error en obtener el curso con ID " + id_curso);
+            logger.error("InitChatService: notifyCoursesChat: Error en obtener el curso con ID {}", id_curso);
             throw new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
         });
         String nombre_curso = curso.getNombre_curso();
@@ -307,7 +309,7 @@ public class InitChatService {
                 }
                 String nombreClase = this.claseRepo.findNombreClaseById(claseChatDocument.getLong("idClase"))
                         .orElseThrow(() -> {
-                            System.err.println("Error en obtener el nombre de la clase en notifyCourseChat");
+                            logger.error("Error en obtener el nombre de la clase en notifyCourseChat");
                             throw new EntityNotFoundException("Error en obtener el nombre de la clase");
                         });
                 clases.add(new ClaseChatDTO(
@@ -344,7 +346,7 @@ public class InitChatService {
         if (cursosId != null && !cursosId.isEmpty()) {
             for (String cursoId : cursosId) {
                 CursoChat cursoChat = cursoChatRepo.findById(cursoId).orElseThrow(() -> {
-                    System.err.println("Error en obtener el curso del chat");
+                    logger.error("Error en obtener el curso del chat");
                     throw new EntityNotFoundException("Error en obtener el curso del chat");
                 });
                 Long idCurso = cursoChat.getIdCurso();
@@ -360,7 +362,7 @@ public class InitChatService {
                         }
                         String nombreClase = this.claseRepo.findNombreClaseById(claseChat.getIdClase())
                                 .orElseThrow(() -> {
-                                    System.err.println("Error en obtener el nombre de la clase");
+                                    logger.error("Error en obtener el nombre de la clase");
                                     throw new EntityNotFoundException("Error en obtener el nombre de la clase");
                                 });
                         clasesDTO.add(new ClaseChatDTO(
@@ -372,7 +374,7 @@ public class InitChatService {
                     }
                 }
                 Curso curso = cursoRepo.findById(idCurso).orElseThrow(() -> {
-                    System.err.println("InitChatService: notifyUsersChat: Error en obtener el curso con ID " + idCurso);
+                    logger.error("InitChatService: notifyUsersChat: Error en obtener el curso con ID {}", idCurso);
                     throw new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
                 });
                 String nombreCurso = curso.getNombre_curso();

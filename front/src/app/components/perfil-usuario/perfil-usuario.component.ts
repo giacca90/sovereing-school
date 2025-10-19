@@ -18,12 +18,12 @@ export class PerfilUsuarioComponent implements OnDestroy {
 	editable: boolean = false;
 	usuario: Usuario | null = null;
 	fotos: Map<string, File> = new Map();
-	private subscription: Subscription = new Subscription();
+	private readonly subscription: Subscription = new Subscription();
 
 	constructor(
-		private loginService: LoginService,
-		private usuarioService: UsuariosService,
-		private initService: InitService,
+		private readonly loginService: LoginService,
+		private readonly usuarioService: UsuariosService,
+		private readonly initService: InitService,
 	) {
 		this.usuario = JSON.parse(JSON.stringify(this.loginService.usuario));
 	}

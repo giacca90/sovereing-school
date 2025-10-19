@@ -7,7 +7,7 @@
 		} @else {
 			@for (mensaje of this.chats; track $index) {
 				@if (mensaje.id_mensaje) {
-					<div (click)="navegaMensaje(mensaje)" (keydown.enter)="navegaMensaje(mensaje)" tabindex="0" class="relative m-2 flex grow cursor-pointer flex-col rounded-lg border border-black p-2 dark:border-gray-400">
+					<div (click)="navegaMensaje(mensaje)" (keydown.enter)="navegaMensaje(mensaje)" class="relative m-2 flex grow cursor-pointer flex-col rounded-lg border border-black p-2 dark:border-gray-400">
 						<div style="background-image: url('{{ mensaje.foto_usuario }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
 
 						<p>{{ mensaje.nombre_usuario }}</p>
@@ -33,7 +33,7 @@
 			<p class="ml-4">NO TIENES CHATS ACTIVOS</p>
 		} @else {
 			@for (curso of this.cursos; track $index) {
-				<div (click)="navegaCurso(curso)" (keydown.enter)="navegaCurso(curso)" tabindex="0" class="relative m-2 flex grow cursor-pointer flex-col rounded-lg border border-black p-2 dark:border-gray-400">
+				<div (click)="navegaCurso(curso)" (keydown.enter)="navegaCurso(curso)" class="relative m-2 flex grow cursor-pointer flex-col rounded-lg border border-black p-2 dark:border-gray-400">
 					<div style="background-image: url('{{ curso.foto_curso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
 					<p class="font-bold text-green-700">{{ curso.nombre_curso }}</p>
 					@if (curso.mensajes[0].id_clase) {

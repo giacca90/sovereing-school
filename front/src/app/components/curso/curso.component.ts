@@ -19,14 +19,14 @@ export class CursoComponent implements OnDestroy {
 	private id_curso: number = 0;
 	public curso: Curso | null = null;
 	public nombresProfesores: string | undefined = '';
-	private subscription: Subscription = new Subscription();
+	private readonly subscription: Subscription = new Subscription();
 	public modalCourse: Curso | null = null;
 	private escKeyListener: any;
 
 	constructor(
-		private route: ActivatedRoute,
-		private cursoService: CursosService,
-		private usuarioService: UsuariosService,
+		private readonly route: ActivatedRoute,
+		private readonly cursoService: CursosService,
+		private readonly usuarioService: UsuariosService,
 		public loginService: LoginService,
 		public router: Router,
 	) {

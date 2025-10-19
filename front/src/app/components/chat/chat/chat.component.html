@@ -38,7 +38,7 @@
 								}
 								<p>{{ mex.mensaje }}</p>
 							</div>
-							<svg (click)="this.respuestaClase = mex; this.respuesta = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white"><path d="M9.2773 7.77888C9.57 7.48578 9.56967 7.01091 9.27658 6.71822C8.98349 6.42552 8.50861 6.42585 8.21592 6.71894L3.21931 11.7224C2.92678 12.0153 2.92692 12.4899 3.21962 12.7826L8.21623 17.7803C8.50909 18.0732 8.98396 18.0732 9.27689 17.7804C9.56981 17.4875 9.56986 17.0126 9.277 16.7197L5.557 13H13.3988C14.9936 13 16.2099 12.758 17.2878 12.2355L17.5342 12.11C18.6427 11.5171 19.5171 10.6427 20.11 9.53424C20.7194 8.39473 21 7.11626 21 5.39877C21 4.98456 20.6642 4.64877 20.25 4.64877C19.8358 4.64877 19.5 4.98456 19.5 5.39877C19.5 6.88263 19.2723 7.91977 18.7872 8.82684C18.3342 9.67391 17.6739 10.3342 16.8268 10.7872C15.9895 11.235 15.0414 11.4635 13.7334 11.4959L13.3988 11.5H5.562L9.2773 7.77888Z" fill="currentColor" /></svg>
+							<svg (click)="this.respuestaClase = mex; this.respuesta = null; this.cdr.detectChanges()" (keydown.enter)="this.respuestaClase = mex; this.respuesta = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white"><path d="M9.2773 7.77888C9.57 7.48578 9.56967 7.01091 9.27658 6.71822C8.98349 6.42552 8.50861 6.42585 8.21592 6.71894L3.21931 11.7224C2.92678 12.0153 2.92692 12.4899 3.21962 12.7826L8.21623 17.7803C8.50909 18.0732 8.98396 18.0732 9.27689 17.7804C9.56981 17.4875 9.56986 17.0126 9.277 16.7197L5.557 13H13.3988C14.9936 13 16.2099 12.758 17.2878 12.2355L17.5342 12.11C18.6427 11.5171 19.5171 10.6427 20.11 9.53424C20.7194 8.39473 21 7.11626 21 5.39877C21 4.98456 20.6642 4.64877 20.25 4.64877C19.8358 4.64877 19.5 4.98456 19.5 5.39877C19.5 6.88263 19.2723 7.91977 18.7872 8.82684C18.3342 9.67391 17.6739 10.3342 16.8268 10.7872C15.9895 11.235 15.0414 11.4635 13.7334 11.4959L13.3988 11.5H5.562L9.2773 7.77888Z" fill="currentColor" /></svg>
 						</div>
 					}
 					<br />
@@ -49,7 +49,7 @@
 									<p class="grow text-gray-500">En respuesta a: {{ respuestaClase.nombre_usuario }}</p>
 									<img class="h-7 w-7" src="{{ respuestaClase.foto_usuario }}" alt="usuario" />
 								</div>
-								<svg (click)="this.respuesta = null; this.respuestaClase = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<svg (click)="this.respuesta = null; this.respuestaClase = null; this.cdr.detectChanges()" (keydown.enter)="this.respuesta = null; this.respuestaClase = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 									<path d="M20.7457 3.32851C20.3552 2.93798 19.722 2.93798 19.3315 3.32851L12.0371 10.6229L4.74275 3.32851C4.35223 2.93798 3.71906 2.93798 3.32854 3.32851C2.93801 3.71903 2.93801 4.3522 3.32854 4.74272L10.6229 12.0371L3.32856 19.3314C2.93803 19.722 2.93803 20.3551 3.32856 20.7457C3.71908 21.1362 4.35225 21.1362 4.74277 20.7457L12.0371 13.4513L19.3315 20.7457C19.722 21.1362 20.3552 21.1362 20.7457 20.7457C21.1362 20.3551 21.1362 19.722 20.7457 19.3315L13.4513 12.0371L20.7457 4.74272C21.1362 4.3522 21.1362 3.71903 20.7457 3.32851Z" fill="currentColor" />
 								</svg>
 							</div>
@@ -60,7 +60,7 @@
 						<div class="rounded-t-lg border border-black border-b-transparent p-2 dark:border-gray-400">
 							<div class="flex">
 								<p class="grow text-gray-500">Pregunta en el momento {{ pregunta.minute }}:{{ pregunta.second }}</p>
-								<svg (click)="cierraPregunta(clase.id_clase)" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<svg (click)="cierraPregunta(clase.id_clase)" (keydown.enter)="cierraPregunta(clase.id_clase)" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 									<path d="M20.7457 3.32851C20.3552 2.93798 19.722 2.93798 19.3315 3.32851L12.0371 10.6229L4.74275 3.32851C4.35223 2.93798 3.71906 2.93798 3.32854 3.32851C2.93801 3.71903 2.93801 4.3522 3.32854 4.74272L10.6229 12.0371L3.32856 19.3314C2.93803 19.722 2.93803 20.3551 3.32856 20.7457C3.71908 21.1362 4.35225 21.1362 4.74277 20.7457L12.0371 13.4513L19.3315 20.7457C19.722 21.1362 20.3552 21.1362 20.7457 20.7457C21.1362 20.3551 21.1362 19.722 20.7457 19.3315L13.4513 12.0371L20.7457 4.74272C21.1362 4.3522 21.1362 3.71903 20.7457 3.32851Z" fill="currentColor" />
 								</svg>
 							</div>
@@ -90,7 +90,7 @@
 					}
 					<p>{{ mensaje.mensaje }}</p>
 				</div>
-				<svg (click)="this.respuesta = mensaje; this.respuestaClase = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white"><path d="M9.2773 7.77888C9.57 7.48578 9.56967 7.01091 9.27658 6.71822C8.98349 6.42552 8.50861 6.42585 8.21592 6.71894L3.21931 11.7224C2.92678 12.0153 2.92692 12.4899 3.21962 12.7826L8.21623 17.7803C8.50909 18.0732 8.98396 18.0732 9.27689 17.7804C9.56981 17.4875 9.56986 17.0126 9.277 16.7197L5.557 13H13.3988C14.9936 13 16.2099 12.758 17.2878 12.2355L17.5342 12.11C18.6427 11.5171 19.5171 10.6427 20.11 9.53424C20.7194 8.39473 21 7.11626 21 5.39877C21 4.98456 20.6642 4.64877 20.25 4.64877C19.8358 4.64877 19.5 4.98456 19.5 5.39877C19.5 6.88263 19.2723 7.91977 18.7872 8.82684C18.3342 9.67391 17.6739 10.3342 16.8268 10.7872C15.9895 11.235 15.0414 11.4635 13.7334 11.4959L13.3988 11.5H5.562L9.2773 7.77888Z" fill="currentColor" /></svg>
+				<svg (click)="this.respuesta = mensaje; this.respuestaClase = null; this.cdr.detectChanges()" (keydown.enter)="this.respuesta = mensaje; this.respuestaClase = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white"><path d="M9.2773 7.77888C9.57 7.48578 9.56967 7.01091 9.27658 6.71822C8.98349 6.42552 8.50861 6.42585 8.21592 6.71894L3.21931 11.7224C2.92678 12.0153 2.92692 12.4899 3.21962 12.7826L8.21623 17.7803C8.50909 18.0732 8.98396 18.0732 9.27689 17.7804C9.56981 17.4875 9.56986 17.0126 9.277 16.7197L5.557 13H13.3988C14.9936 13 16.2099 12.758 17.2878 12.2355L17.5342 12.11C18.6427 11.5171 19.5171 10.6427 20.11 9.53424C20.7194 8.39473 21 7.11626 21 5.39877C21 4.98456 20.6642 4.64877 20.25 4.64877C19.8358 4.64877 19.5 4.98456 19.5 5.39877C19.5 6.88263 19.2723 7.91977 18.7872 8.82684C18.3342 9.67391 17.6739 10.3342 16.8268 10.7872C15.9895 11.235 15.0414 11.4635 13.7334 11.4959L13.3988 11.5H5.562L9.2773 7.77888Z" fill="currentColor" /></svg>
 			</div>
 		}
 		<br />
@@ -101,7 +101,7 @@
 						<p class="grow text-gray-500">En respuesta a: {{ respuesta.nombre_usuario }}</p>
 						<img class="h-7 w-7" src="{{ respuesta.foto_usuario }}" alt="usuario" />
 					</div>
-					<svg (click)="this.respuesta = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<svg (click)="this.respuesta = null; this.cdr.detectChanges()" (keydown.enter)="this.respuesta = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 						<path d="M20.7457 3.32851C20.3552 2.93798 19.722 2.93798 19.3315 3.32851L12.0371 10.6229L4.74275 3.32851C4.35223 2.93798 3.71906 2.93798 3.32854 3.32851C2.93801 3.71903 2.93801 4.3522 3.32854 4.74272L10.6229 12.0371L3.32856 19.3314C2.93803 19.722 2.93803 20.3551 3.32856 20.7457C3.71908 21.1362 4.35225 21.1362 4.74277 20.7457L12.0371 13.4513L19.3315 20.7457C19.722 21.1362 20.3552 21.1362 20.7457 20.7457C21.1362 20.3551 21.1362 19.722 20.7457 19.3315L13.4513 12.0371L20.7457 4.74272C21.1362 4.3522 21.1362 3.71903 20.7457 3.32851Z" fill="currentColor" />
 					</svg>
 				</div>

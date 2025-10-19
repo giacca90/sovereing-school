@@ -3,7 +3,8 @@ package com.sovereingschool.back_chat.Controllers;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,14 +32,19 @@ import jakarta.persistence.EntityNotFoundException;
 @RestController
 @PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 public class ChatController {
-    @Autowired
+
     private SimpMessagingTemplate messagingTemplate;
-
-    @Autowired
     private InitChatService initChatService;
-
-    @Autowired
     private CursoChatService cursoChatService;
+
+    private Logger logger = LoggerFactory.getLogger(ChatController.class);
+
+    public ChatController(SimpMessagingTemplate messagingTemplate, InitChatService initChatService,
+            CursoChatService cursoChatService) {
+        this.messagingTemplate = messagingTemplate;
+        this.initChatService = initChatService;
+        this.cursoChatService = cursoChatService;
+    }
 
     /* Sección para el websocket */
     @MessageMapping("/init")
@@ -55,7 +61,7 @@ public class ChatController {
         } catch (IllegalArgumentException | EntityNotFoundException e) {
             return e.getMessage();
         } catch (Exception e) {
-            System.err.println("Error en el websocket de init: " + e.getMessage());
+            logger.error("Error en el websocket de init: {}", e.getMessage());
             return "Error en obtener en init del chat: " + e.getMessage();
         }
     }
@@ -69,7 +75,7 @@ public class ChatController {
         } catch (EntityNotFoundException e) {
             messagingTemplate.convertAndSend("/init_chat/" + idCurso, e.getMessage());
         } catch (Exception e) {
-            System.err.println("Error en obtener el chat del curso: " + e.getMessage());
+            logger.error("Error en obtener el chat del curso: {}", e.getMessage());
             messagingTemplate.convertAndSend("/init_chat/" + idCurso,
                     "Error en obtener el chat del curso: " + e.getMessage());
         }
@@ -82,7 +88,7 @@ public class ChatController {
         } catch (IllegalArgumentException | NoSuchElementException | DataAccessException e) {
             messagingTemplate.convertAndSend("/chat/", e.getMessage());
         } catch (Exception e) {
-            System.err.println("Error en guardar mensaje: " + e.getMessage());
+            logger.error("Error en guardar mensaje: {}", e.getMessage());
             messagingTemplate.convertAndSend("/chat/", "Error en guardar mensaje: " + e.getMessage());
         }
     }

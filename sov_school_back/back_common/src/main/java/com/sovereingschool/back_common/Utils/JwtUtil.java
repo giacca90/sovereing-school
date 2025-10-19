@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -50,6 +52,8 @@ public class JwtUtil {
     @Value("${security.jwt.user.generator}")
     private String userGenerator;
 
+    private Logger logger = LoggerFactory.getLogger(JwtUtil.class);
+
     public Date getExpiredForServer() {
         return new Date(System.currentTimeMillis() + 60 * 60 * 1000); // 1 hour
     }
@@ -86,7 +90,7 @@ public class JwtUtil {
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.joining(","));
 
-        String jwtToken = JWT.create()
+        return JWT.create()
                 .withIssuer(this.userGenerator)
                 .withSubject(username)
                 .withClaim("rol", roles)
@@ -97,8 +101,6 @@ public class JwtUtil {
                 .withJWTId(UUID.randomUUID().toString())
                 .withNotBefore(new Date(System.currentTimeMillis())) //
                 .sign(algorithm);
-
-        return jwtToken;
     }
 
     /**
@@ -109,7 +111,7 @@ public class JwtUtil {
 
     public String generateInitToken() {
         Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
-        String jwtToken = JWT.create()
+        return JWT.create()
                 .withIssuer(this.userGenerator)
                 .withSubject("Visitante")
                 .withClaim("rol", "ROLE_GUEST")
@@ -118,14 +120,12 @@ public class JwtUtil {
                 .withJWTId(UUID.randomUUID().toString())
                 .withNotBefore(new Date(System.currentTimeMillis())) //
                 .sign(algorithm);
-
-        return jwtToken;
     }
 
     public String generateRegistrationToken(NewUsuario newUsuario) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
-            String jwtToken = JWT.create()
+            return JWT.create()
                     .withIssuer(this.userGenerator)
                     .withSubject(newUsuario.getCorreo_electronico())
                     .withClaim("rol", "ROLE_USER")
@@ -135,9 +135,8 @@ public class JwtUtil {
                     .withJWTId(UUID.randomUUID().toString())
                     .withNotBefore(new Date(System.currentTimeMillis())) //
                     .sign(algorithm);
-            return jwtToken;
         } catch (Exception e) {
-            System.err.println("Error al generar el token de registro: " + e.getMessage());
+            logger.error("Error al generar el token de registro: {}", e.getMessage());
             throw new RuntimeException("Error al generar el token de registro: " + e.getMessage());
         }
     }
@@ -277,8 +276,7 @@ public class JwtUtil {
             }
 
             List<SimpleGrantedAuthority> authorities = Arrays.stream(rolesString.split(","))
-                    .map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList());
+                    .map(SimpleGrantedAuthority::new).toList();
 
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, token,
                     authorities);

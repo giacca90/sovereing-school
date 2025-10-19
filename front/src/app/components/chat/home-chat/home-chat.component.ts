@@ -22,15 +22,15 @@ export class HomeChatComponent {
 	constructor(
 		public router: Router,
 		public loginService: LoginService,
-		private chatService: ChatService,
-		private cdr: ChangeDetectorRef,
-		private ngZone: NgZone,
+		private readonly chatService: ChatService,
+		private readonly cdr: ChangeDetectorRef,
+		private readonly ngZone: NgZone,
 	) {
 		afterNextRender(() => {
 			if (this.loginService.usuario) {
 				this.chatService.initSubject.subscribe({
 					next: (init: InitChatUsuario | null) => {
-						if (init && init.mensajes && init.cursos && init.idUsuario === this.loginService.usuario?.id_usuario) {
+						if (init?.mensajes && init.cursos && init.idUsuario === this.loginService.usuario?.id_usuario) {
 							this.chats = init.mensajes;
 							this.cursos = init.cursos;
 							this.cargando = false;

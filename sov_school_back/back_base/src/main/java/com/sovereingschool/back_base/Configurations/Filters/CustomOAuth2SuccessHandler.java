@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -25,23 +26,34 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler {
-    @Autowired
+    private static final Logger logger = LoggerFactory.getLogger(CustomOAuth2SuccessHandler.class);
     private LoginService loginService;
-
-    @Autowired
     private UsuarioService usuarioService;
 
-    @Autowired
     private ObjectMapper objectMapper;
-
     @Value("${variable.FRONT}")
     private String front;
+
+    /**
+     * Constructor de CustomOAuth2SuccessHandler
+     *
+     * @param loginService
+     * @param usuarioService
+     * @param objectMapper
+     */
+    public CustomOAuth2SuccessHandler(LoginService loginService, UsuarioService usuarioService,
+            ObjectMapper objectMapper) {
+        this.loginService = loginService;
+        this.usuarioService = usuarioService;
+        this.objectMapper = objectMapper;
+
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
         if (!(authentication.getPrincipal() instanceof OAuth2User oauthUser)) {
-            System.err.println("Tipo de autenticación no compatible.");
+            logger.error("Tipo de autenticación no compatible.");
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Tipo de autenticación no compatible.");
             return;
         }
@@ -51,7 +63,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         String email = (String) attributes.get("email");
 
         if (email == null || email.isEmpty()) {
-            System.err.println("No se pudo obtener el correo electrónico.");
+            logger.error("No se pudo obtener el correo electrónico.");
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "No se pudo obtener el correo electrónico.");
             return;
         }

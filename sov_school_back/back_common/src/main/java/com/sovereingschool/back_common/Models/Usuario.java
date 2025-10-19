@@ -26,14 +26,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/* @AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter
-@ToString */
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Data
 @Builder
 @Entity
 @Table(name = "usuario")

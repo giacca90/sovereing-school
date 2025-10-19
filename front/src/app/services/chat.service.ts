@@ -86,16 +86,16 @@ export class ChatService {
 	}
 
 	get urlWss(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			const url = (window as any).__env.BACK_CHAT_WSS ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			const url = (globalThis.window as any).__env.BACK_CHAT_WSS ?? '';
 			return url + '/chat-socket';
 		}
 		return '';
 	}
 
 	get url(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			const url = (window as any).__env.BACK_CHAT ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			const url = (globalThis.window as any).__env.BACK_CHAT ?? '';
 			return url;
 		}
 		return '';

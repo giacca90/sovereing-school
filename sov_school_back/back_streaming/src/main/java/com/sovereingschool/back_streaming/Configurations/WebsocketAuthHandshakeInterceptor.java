@@ -2,7 +2,8 @@ package com.sovereingschool.back_streaming.Configurations;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.lang.NonNull;
@@ -19,8 +20,13 @@ import com.sovereingschool.back_common.Utils.JwtUtil;
 @Component
 public class WebsocketAuthHandshakeInterceptor implements HandshakeInterceptor {
 
-    @Autowired
     private JwtUtil jwtUtils;
+
+    private Logger logger = LoggerFactory.getLogger(WebsocketAuthHandshakeInterceptor.class);
+
+    public WebsocketAuthHandshakeInterceptor(JwtUtil jwtUtils) {
+        this.jwtUtils = jwtUtils;
+    }
 
     @Override
     public boolean beforeHandshake(@NonNull ServerHttpRequest request,
@@ -33,7 +39,7 @@ public class WebsocketAuthHandshakeInterceptor implements HandshakeInterceptor {
                     .getQueryParams();
             String token = params.getFirst("token");
             if (token == null || token.isEmpty()) {
-                System.err.println("Error en el handshake de WebSocket: no hay token en la ruta");
+                logger.error("Error en el handshake de WebSocket: no hay token en la ruta");
                 attributes.put("Error", "Error: no hay token en la ruta");
             }
             Authentication auth = this.jwtUtils.createAuthenticationFromToken(token);
@@ -46,7 +52,7 @@ public class WebsocketAuthHandshakeInterceptor implements HandshakeInterceptor {
             // Aunque no tenga token, permites el handshake (validarás luego en el Handler)
             return true;
         } catch (Exception e) {
-            System.err.println("Error en el handshake de WebSocket: " + e.getMessage());
+            logger.error("Error en el handshake de WebSocket: {}", e.getMessage());
             attributes.put("Error", e.getMessage());
             return true;
         }

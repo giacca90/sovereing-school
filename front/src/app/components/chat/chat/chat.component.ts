@@ -26,8 +26,8 @@ export class ChatComponent implements OnInit, OnDestroy {
 	constructor(
 		public chatService: ChatService,
 		public loginService: LoginService,
-		private route: ActivatedRoute,
-		private router: Router,
+		private readonly route: ActivatedRoute,
+		private readonly router: Router,
 		public cdr: ChangeDetectorRef,
 	) {
 		if (!this.idCurso) {

@@ -11,7 +11,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mail.MailAuthenticationException;
@@ -73,27 +74,16 @@ public class UsuarioService implements IUsuarioService {
     }
 
     private final PasswordEncoder passwordEncoder;
-
-    @Autowired
     private UsuarioRepository usuarioRepo;
-
-    @Autowired
     private CursoRepository cursoRepo;
-
-    @Autowired
     private LoginRepository loginRepo;
-
-    @Autowired
     private JwtUtil jwtUtil;
-
-    @Autowired
     private WebClientConfig webClientConfig;
-
-    @Autowired
     private JavaMailSender mailSender;
-
-    @Autowired
     private InitAppService initAppService;
+    private SpringTemplateEngine templateEngine;
+
+    private Logger logger = LoggerFactory.getLogger(UsuarioService.class);
 
     @Value("${variable.BACK_CHAT_DOCKER}")
     private String backChatURL;
@@ -110,11 +100,17 @@ public class UsuarioService implements IUsuarioService {
     @Value("${variable.FOTOS_DIR}")
     private String uploadDir;
 
-    @Autowired
-    private SpringTemplateEngine templateEngine;;
-
-    UsuarioService(PasswordEncoder passwordEncoder) {
+    public UsuarioService(PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepo,
+            CursoRepository cursoRepo, LoginRepository loginRepo, JwtUtil jwtUtil,
+            WebClientConfig webClientConfig, JavaMailSender mailSender, InitAppService initAppService) {
         this.passwordEncoder = passwordEncoder;
+        this.usuarioRepo = usuarioRepo;
+        this.cursoRepo = cursoRepo;
+        this.loginRepo = loginRepo;
+        this.jwtUtil = jwtUtil;
+        this.webClientConfig = webClientConfig;
+        this.mailSender = mailSender;
+        this.initAppService = initAppService;
     }
 
     /**
@@ -166,22 +162,22 @@ public class UsuarioService implements IUsuarioService {
                         .onStatus(
                                 status -> status.isError(),
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                    System.err.println("Error HTTP del microservicio de stream: " + errorBody);
+                                    logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                                 }))
                         .bodyToMono(String.class)
                         .onErrorResume(e -> {
-                            System.err.println("Error al conectar con el microservicio de chat: " + e.getMessage());
+                            logger.error("Error al conectar con el microservicio de chat: {}", e.getMessage());
                             return Mono.empty(); // Continuar sin interrumpir la aplicación
                         }).subscribe(res -> {
                             // Maneja el resultado cuando esté disponible
                             if (res == null || !res.equals("Usuario chat creado con exito!!!")) {
-                                System.err.println("Error en crear el usuario en el chat: ");
-                                System.err.println(res);
+                                logger.error("Error en crear el usuario en el chat: ");
+                                logger.error(res);
                             }
                         });
             } catch (Exception e) {
-                System.err.println("Error en crear el usuario en el chat: " + e.getMessage());
+                logger.error("Error en crear el usuario en el chat: {}", e.getMessage());
             }
 
             // Crear el usuario en el microservicio de stream
@@ -194,24 +190,23 @@ public class UsuarioService implements IUsuarioService {
                         .onStatus(
                                 status -> status.isError(), // compatible con HttpStatusCode
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                    System.err.println("Error HTTP del microservicio de stream: " + errorBody);
+                                    logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                                 }))
                         .bodyToMono(String.class)
                         .onErrorResume(e -> {
-                            System.err
-                                    .println("Excepción al conectar con el microservicio de stream: " + e.getMessage());
+                            logger.error("Excepción al conectar con el microservicio de stream: {}", e.getMessage());
                             return Mono.empty();
                         })
                         .subscribe(res -> {
                             if (res == null || !res.equals("Nuevo Usuario Insertado con Exito!!!")) {
-                                System.err.println("Error inesperado al crear el usuario en el stream:");
-                                System.err.println(res);
+                                logger.error("Error inesperado al crear el usuario en el stream:");
+                                logger.error(res);
                             }
                         });
 
             } catch (Exception e) {
-                System.err.println("Error en crear el usuario en el stream: " + e.getMessage());
+                logger.error("Error en crear el usuario en el stream: {}", e.getMessage());
             }
 
             // Creamos la respuesta con JWT
@@ -237,14 +232,14 @@ public class UsuarioService implements IUsuarioService {
             try {
                 this.initAppService.refreshSSR();
             } catch (Exception e) {
-                System.err.println("Error en actualizar el SSR: " + e.getMessage());
+                logger.error("Error en actualizar el SSR: {}", e.getMessage());
                 throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
             }
 
             return new AuthResponse(true, "Usuario creado con éxito", usuarioInsertado, accessToken, refreshToken);
 
         } catch (DataIntegrityViolationException e) {
-            System.err.println("El usuario ya existe");
+            logger.error("El usuario ya existe");
             throw new DataIntegrityViolationException("El usuario ya existe");
         }
     }
@@ -260,7 +255,7 @@ public class UsuarioService implements IUsuarioService {
     @Override
     public Usuario getUsuario(Long id_usuario) {
         return this.usuarioRepo.findUsuarioForId(id_usuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el usuario con ID " + id_usuario);
+            logger.error("Error en obtener el usuario con ID {}", id_usuario);
             return new EntityNotFoundException("Error en obtener el usuario con ID " + id_usuario);
         });
     }
@@ -278,7 +273,7 @@ public class UsuarioService implements IUsuarioService {
     @Override
     public String getNombreUsuario(Long id_usuario) {
         return this.usuarioRepo.findNombreUsuarioForId(id_usuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el nombre del usuario con ID " + id_usuario);
+            logger.error("Error en obtener el nombre del usuario con ID {}", id_usuario);
             return new EntityNotFoundException("Error en obtener el nombre del usuario con ID " + id_usuario);
         });
     }
@@ -313,7 +308,7 @@ public class UsuarioService implements IUsuarioService {
     @Override
     public RoleEnum getRollUsuario(Long id_usuario) {
         return this.usuarioRepo.findRollUsuarioForId(id_usuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el rol del usuario con ID " + id_usuario);
+            logger.error("Error en obtener el rol del usuario con ID {}", id_usuario);
             return new EntityNotFoundException("Error en obtener el rol del usuario con ID " + id_usuario);
         });
     }
@@ -331,7 +326,7 @@ public class UsuarioService implements IUsuarioService {
     @Override
     public Plan getPlanUsuario(Long id_usuario) {
         return this.usuarioRepo.findPlanUsuarioForId(id_usuario).orElseThrow(() -> {
-            System.err.println("Error en obtener el plan del usuario con ID " + id_usuario);
+            logger.error("Error en obtener el plan del usuario con ID {}", id_usuario);
             return new EntityNotFoundException("Error en obtener el plan del usuario con ID " + id_usuario);
         });
     }
@@ -385,10 +380,10 @@ public class UsuarioService implements IUsuarioService {
                     if (Files.exists(photoPath)) {
                         Files.delete(photoPath);
                     } else {
-                        System.out.println("La foto no existe: " + photoPath.toString());
+                        logger.error("La foto no existe: {}", photoPath.toString());
                     }
                 } catch (IOException e) {
-                    System.err.println("Error al eliminar la foto: " + photoPath.toString() + ": " + e.getMessage());
+                    logger.error("Error al eliminar la foto: {}: {}", photoPath.toString(), e.getMessage());
                     throw new RuntimeException(
                             "Error al eliminar la foto: " + photoPath.toString() + ": " + e.getMessage());
                 }
@@ -415,7 +410,7 @@ public class UsuarioService implements IUsuarioService {
     public Integer changePlanUsuario(Usuario usuario) {
         return this.usuarioRepo.changePlanUsuarioForId(usuario.getId_usuario(), usuario.getPlan_usuario())
                 .orElseThrow(() -> {
-                    System.err.println("Error en cambiar el plan del usuario");
+                    logger.error("Error en cambiar el plan del usuario");
                     return new EntityNotFoundException("Error en cambiar el plan del usuario");
                 });
     }
@@ -451,29 +446,30 @@ public class UsuarioService implements IUsuarioService {
                     .onStatus(
                             status -> status.isError(),
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                System.err.println("Error HTTP del microservicio de stream: " + errorBody);
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)
                     .onErrorResume(e -> {
-                        System.err.println("Error al conectar con el microservicio de stream: " + e.getMessage());
+                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     }).subscribe(res -> {
                         // Maneja el resultado cuando esté disponible
                         if (res == null || !res.equals("Usuario creado con exito!!!")) {
-                            System.err.println("Error en crear el usuario en el stream:");
-                            System.err.println(res);
+                            logger.error("Error en crear el usuario en el stream:");
+                            logger.error(res);
+
                         }
                     });
         } catch (Exception e) {
-            System.err.println("Error en crear el usuario en el stream: " + e.getMessage());
+            logger.error("Error en crear el usuario en el stream: {}", e.getMessage());
         }
 
         // Añadir el usuario al microservicio de chat
         // TODO: Implementar la lógica para añadir el usuario al microservicio de chat
 
         return this.usuarioRepo.changeUsuarioForId(cursosUsuario.getId_usuario(), old_usuario.get()).orElseThrow(() -> {
-            System.err.println("Error en cambiar los cursos del usuario");
+            logger.error("Error en cambiar los cursos del usuario");
             return new RuntimeException("Error en cambiar los cursos del usuario");
         });
     }
@@ -491,7 +487,7 @@ public class UsuarioService implements IUsuarioService {
     @Override
     public String deleteUsuario(Long id) {
         this.usuarioRepo.findUsuarioForId(id).orElseThrow(() -> {
-            System.err.println("Error en obtener el usuario con ID " + id);
+            logger.error("Error en obtener el usuario con ID {}", id);
             return new EntityNotFoundException("Error en obtener el usuario con ID " + id);
         });
         try {
@@ -502,15 +498,15 @@ public class UsuarioService implements IUsuarioService {
             try {
                 this.initAppService.refreshSSR();
             } catch (Exception e) {
-                System.err.println("Error en actualizar el SSR: " + e.getMessage());
+                logger.error("Error en actualizar el SSR: {}", e.getMessage());
                 throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
             }
             return "Usuario eliminado con éxito!!!";
         } catch (IllegalArgumentException e) {
-            System.out.println("Error en eliminar el usuario con ID " + id);
+            logger.error("Error en eliminar el usuario con ID {}", id);
             throw new IllegalArgumentException("Error en eliminar el usuario con ID " + id);
         } catch (Exception e) {
-            System.out.println("Error en eliminar el usuario con ID " + id);
+            logger.error("Error en eliminar el usuario con ID {}", id);
             throw new RuntimeException("Error en eliminar el usuario con ID " + id);
         }
 
@@ -554,23 +550,23 @@ public class UsuarioService implements IUsuarioService {
             return true;
         } catch (MailAuthenticationException e) {
             // Error de autenticación con el servidor SMTP
-            System.err.println("Error de autenticación al enviar el correo: " + e.getMessage());
+            logger.error("Error de autenticación al enviar el correo: {}", e.getMessage());
             throw new RuntimeException("Error de autenticación al enviar el correo: " + e.getMessage());
         } catch (MailSendException e) {
             // Error al enviar el mensaje
-            System.err.println("Error al enviar el correo: " + e.getMessage());
+            logger.error("Error al enviar el correo: {}", e.getMessage());
             throw new RuntimeException("Error al enviar el correo: " + e.getMessage());
         } catch (MailException e) {
             // Otros errores relacionados con el envío de correos
-            System.err.println("Error general al enviar el correo: " + e.getMessage());
+            logger.error("Error general al enviar el correo: {}", e.getMessage());
             throw new RuntimeException("Error general al enviar el correo: " + e.getMessage());
         } catch (MessagingException e) {
             // Error al construir el mensaje MIME
-            System.err.println("Error al construir el mensaje de correo: " + e.getMessage());
+            logger.error("Error al construir el mensaje de correo: {}", e.getMessage());
             throw new RuntimeException("Error al construir el mensaje de correo: " + e.getMessage());
         } catch (Exception e) {
             // Cualquier otro error inesperado
-            System.err.println("Error inesperado al enviar el correo: " + e.getMessage());
+            logger.error("Error inesperado al enviar el correo: {}", e.getMessage());
             throw new RuntimeException("Error inesperado al enviar el correo: " + e.getMessage());
         }
     }
@@ -579,7 +575,7 @@ public class UsuarioService implements IUsuarioService {
         try {
             return this.usuarioRepo.findAll();
         } catch (Exception e) {
-            System.err.println("Error al obtener todos los usuarios: " + e.getMessage());
+            logger.error("Error al obtener todos los usuarios: {}", e.getMessage());
             throw new RuntimeException("Error al obtener todos los usuarios: " + e.getMessage());
         }
     }

@@ -8,9 +8,9 @@ import { LoginService } from '../services/login.service';
 })
 export class AdminGuard implements CanActivate {
 	constructor(
-		private router: Router,
-		private loginService: LoginService,
-		@Inject(PLATFORM_ID) private platformId: object,
+		private readonly router: Router,
+		private readonly loginService: LoginService,
+		@Inject(PLATFORM_ID) private readonly platformId: object,
 	) {}
 
 	canActivate(): boolean {

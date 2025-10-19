@@ -3,9 +3,9 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
 import express from 'express';
-import fs from 'fs';
-import * as http from 'http';
-import * as https from 'https';
+import fs from 'node:fs';
+import * as http from 'node:http';
+import * as https from 'node:https';
 import { join } from 'node:path';
 import { Init } from './app/models/Init';
 import { Usuario } from './app/models/Usuario';
@@ -45,7 +45,6 @@ app.use(
 		res.locals['envScript'] = envScript;
 
 		const token = req.cookies['ssrUserToken'];
-		//console.log('[SSR] Verificando token');
 
 		if (token) {
 			const payload = verificarJwt(token);
@@ -54,7 +53,7 @@ app.use(
 					if (!payload.id_usuario) return;
 					const usuario = await fetchUsuario(payload.id_usuario);
 					res.locals['usuario'] = usuario || null;
-					(global as any).ssrUsuario = usuario || null;
+					(globalThis as any).ssrUsuario = usuario || null;
 
 					res.cookie('ssrUserToken', token, {
 						httpOnly: true,
@@ -65,14 +64,14 @@ app.use(
 				} catch (err) {
 					console.error('[SSR] Error al obtener usuario:', err);
 					res.locals['usuario'] = null;
-					(global as any).ssrUsuario = null;
+					(globalThis as any).ssrUsuario = null;
 				}
 			} else {
 				res.clearCookie('ssrUserToken');
 			}
 		} else {
 			res.locals['usuario'] = null;
-			(global as any).ssrUsuario = null;
+			(globalThis as any).ssrUsuario = null;
 		}
 
 		next();

@@ -4,7 +4,7 @@
 </div>
 <p id="statusOBS">{{ status }}</p>
 <div id="enlaces"></div>
-@if (this.streamingService.emision$) {
+@if (this.emitiendo) {
 	<button class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="detenerEmision()">Detener Emisión</button>
 } @else {
 	<button class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="emiteOBS()">Emitir OBS</button>

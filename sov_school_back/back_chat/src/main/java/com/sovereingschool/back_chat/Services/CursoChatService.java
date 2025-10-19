@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -40,29 +41,25 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class CursoChatService {
 
-    @Autowired
     private CursoChatRepository cursoChatRepo;
-
-    @Autowired
     private InitChatService initChatService;
-
-    @Autowired
     private CursoRepository cursoRepo;
-
-    @Autowired
     private ClaseRepository claseRepo;
-
-    @Autowired
     private UsuarioRepository usuarioRepo;
-
-    @Autowired
     private MensajeChatRepository mensajeChatRepo;
-
-    @Autowired
     private UsuarioChatRepository usuarioChatRepo;
-
-    @Autowired
     private JwtUtil jwtUtil;
+
+    private Logger logger = LoggerFactory.getLogger(CursoChatService.class);
+
+    public CursoChatService(CursoChatRepository cursoChatRepo, MensajeChatRepository mensajeChatRepo,
+            UsuarioChatRepository usuarioChatRepo, InitChatService initChatService, ClaseRepository claseRepo) {
+        this.cursoChatRepo = cursoChatRepo;
+        this.mensajeChatRepo = mensajeChatRepo;
+        this.usuarioChatRepo = usuarioChatRepo;
+        this.initChatService = initChatService;
+        this.claseRepo = claseRepo;
+    }
 
     /**
      * Función para obtener el chat de un curso
@@ -73,11 +70,11 @@ public class CursoChatService {
      */
     public CursoChatDTO getCursoChat(Long idCurso) {
         CursoChat cursoChat = cursoChatRepo.findByIdCurso(idCurso).orElseThrow(() -> {
-            System.err.println("Error en obtener el chat del curso");
+            logger.error("Error en obtener el chat del curso");
             throw new EntityNotFoundException("Error en obtener el chat del curso");
         });
         Curso curso = cursoRepo.findById(idCurso).orElseThrow(() -> {
-            System.err.println("Error en obtener el curso");
+            logger.error("Error en obtener el curso");
             throw new EntityNotFoundException("Error en obtener el curso");
         });
         CursoChatDTO cursoChatDTO = null;
@@ -167,7 +164,7 @@ public class CursoChatService {
 
             // Actualizar CursoChat
             CursoChat cursoChat = cursoChatRepo.findByIdCurso(mensajeChatDTO.getId_curso()).orElseThrow(() -> {
-                System.err.println("Error en obtener el curso del chat");
+                logger.error("Error en obtener el curso del chat");
                 throw new EntityNotFoundException("Error en obtener el curso del chat");
             });
             if (mensajeChatDTO.getId_clase() == null || mensajeChatDTO.getId_clase() == 0) {
@@ -186,7 +183,7 @@ public class CursoChatService {
             // Actualizar UsuarioChat
             UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(mensajeChatDTO.getId_usuario())
                     .orElseThrow(() -> {
-                        System.err.println("Error en obtener el usuario del chat");
+                        logger.error("Error en obtener el usuario del chat");
                         throw new EntityNotFoundException("Error en obtener el usuario del chat");
                     });
             if (usuarioChat.getCursos().stream().noneMatch(id -> Objects.equals(id, cursoChat.getId()))) {
@@ -202,7 +199,7 @@ public class CursoChatService {
                                 "Curso no encontrado con id: " + mensajeChatDTO.getId_curso()));
                 for (Usuario prof : curso.getProfesores_curso()) {
                     UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(prof.getId_usuario()).orElseThrow(() -> {
-                        System.err.println("Error en obtener el profesor del curso");
+                        logger.error("Error en obtener el profesor del curso");
                         throw new EntityNotFoundException("Error en obtener el profesor del curso");
                     });
                     profChat.getMensajes().add(savedId);
@@ -214,14 +211,14 @@ public class CursoChatService {
             if (respId != null) {
                 UsuarioChat respUsuario = usuarioChatRepo
                         .findByIdUsuario(mensajeChatRepo.findById(respId).get().getIdUsuario()).orElseThrow(() -> {
-                            System.err.println("Error en obtener el usuario del chat en la respuesta");
+                            logger.error("Error en obtener el usuario del chat en la respuesta");
                             throw new EntityNotFoundException("Error en obtener el usuario del chat en la respuesta");
                         });
                 respUsuario.getMensajes().add(savedId);
                 usuarioChatRepo.save(respUsuario);
             }
         } catch (JsonProcessingException e) {
-            System.err.println("Error al parsear JSON del mensaje: " + e.getMessage() + " en el mensaje: " + message);
+            logger.error("Error al parsear JSON del mensaje: {} en el mensaje: {}", e.getMessage(), message);
             throw new IllegalArgumentException(
                     "Formato JSON inválido: " + e.getOriginalMessage() + " en el mensaje: " + message, e);
         }
@@ -250,7 +247,7 @@ public class CursoChatService {
                     new ArrayList<String>()); // List<String> mensajes
             usuarioChatRepo.save(usuarioChat);
         } catch (JsonProcessingException e) {
-            System.err.println("Error al parsear JSON del usuario: " + e.getMessage());
+            logger.error("Error al parsear JSON del usuario: {}", e.getMessage());
             throw new RuntimeException("Error al parsear JSON del usuario: " + e.getMessage());
         }
     }
@@ -288,7 +285,7 @@ public class CursoChatService {
                     null); // List<String> mensajes
             cursoChatRepo.save(cursoChat);
         } catch (JsonProcessingException e) {
-            System.err.println("Error al parsear JSON del curso: " + e.getMessage());
+            logger.error("Error al parsear JSON del curso: {}", e.getMessage());
             throw new RuntimeException("Error al parsear JSON del curso: " + e.getMessage());
         }
     }
@@ -314,7 +311,7 @@ public class CursoChatService {
                     new ArrayList<String>());
 
             CursoChat cursoChat = cursoChatRepo.findByIdCurso(clase.getCurso_clase().getId_curso()).orElseThrow(() -> {
-                System.err.println("Error en obtener el curso del chat");
+                logger.error("Error en obtener el curso del chat");
                 throw new EntityNotFoundException("Error en obtener el curso del chat");
             });
             List<ClaseChat> clasesChat = cursoChat.getClases();
@@ -326,7 +323,7 @@ public class CursoChatService {
                 cursoChatRepo.save(cursoChat);
             }
         } catch (JsonProcessingException e) {
-            System.err.println("Error al parsear JSON del chat de la clase: " + e.getMessage());
+            logger.error("Error al parsear JSON del chat de la clase: {}", e.getMessage());
             throw new RuntimeException("Error al parsear JSON del chat de la clase: " + e.getMessage());
         }
     }
@@ -341,7 +338,7 @@ public class CursoChatService {
     public void mensajeLeido(String message) {
         String[] lMex = message.replaceAll("\"", "").split(",");
         UsuarioChat usuario = this.usuarioChatRepo.findByIdUsuario(Long.parseLong(lMex[0])).orElseThrow(() -> {
-            System.err.println("Error en obtener el usuario del chat");
+            logger.error("Error en obtener el usuario del chat");
             throw new EntityNotFoundException("Error en obtener el usuario del chat");
         });
         if (usuario != null) {
@@ -363,13 +360,13 @@ public class CursoChatService {
     public void borrarClaseChat(Long idCurso, Long idClase) {
 
         CursoChat cursoChat = this.cursoChatRepo.findByIdCurso(idCurso).orElseThrow(() -> {
-            System.err.println("Error en obtener el curso del chat");
+            logger.error("Error en obtener el curso del chat");
             throw new EntityNotFoundException("Error en obtener el curso del chat");
         });
         if (cursoChat != null) {
             List<ClaseChat> clases = cursoChat.getClases();
             for (ClaseChat clase : clases) {
-                if (clase.getIdClase() == idClase) {
+                if (clase.getIdClase().equals(idClase)) {
                     clases.remove(clase);
                     break;
                 }
@@ -377,7 +374,7 @@ public class CursoChatService {
             cursoChat.setClases(clases);
             this.cursoChatRepo.save(cursoChat);
         } else {
-            System.err.println("No se pudo borrar la clase del chat, el curso no existe");
+            logger.error("No se pudo borrar la clase del chat, el curso no existe");
             throw new EntityNotFoundException("No se pudo borrar la clase del chat, el curso no existe");
         }
     }
@@ -390,7 +387,7 @@ public class CursoChatService {
      */
     public void borrarCursoChat(Long idCurso) {
         CursoChat cursoChat = this.cursoChatRepo.findByIdCurso(idCurso).orElseThrow(() -> {
-            System.err.println("Error en obtener el curso del chat");
+            logger.error("Error en obtener el curso del chat");
             throw new EntityNotFoundException("Error en obtener el curso del chat");
         });
         this.cursoChatRepo.delete(cursoChat);
@@ -408,7 +405,7 @@ public class CursoChatService {
         accessor.setSessionId(sessionId);
         accessor.setUser(newAuth);
 
-        System.out.println("🔄 Token refrescado con éxito para sesión: " + sessionId);
+        logger.info("🔄 Token refrescado con éxito para sesión: {}", sessionId);
     }
 
     /**
@@ -441,7 +438,7 @@ public class CursoChatService {
                 List<Usuario> profesores = curso.getProfesores_curso();
                 for (Usuario profesor : profesores) {
                     UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getId_usuario()).orElseThrow(() -> {
-                        System.err.println("Error en obtener el profesor del curso");
+                        logger.error("Error en obtener el profesor del curso");
                         throw new EntityNotFoundException("Error en obtener el profesor del curso");
                     });
                     profChat.getCursos().add(cursoChat.getId());
@@ -449,7 +446,7 @@ public class CursoChatService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error en inicializar chat: " + e.getMessage());
+            logger.error("Error en inicializar chat: {}", e.getMessage());
             throw new RuntimeException("Error en inicializar chat: " + e.getMessage());
         }
     }
@@ -471,7 +468,7 @@ public class CursoChatService {
                 List<Usuario> profesores = curso.getProfesores_curso();
                 for (Usuario profesor : profesores) {
                     UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getId_usuario()).orElseThrow(() -> {
-                        System.err.println("Error en obtener el profesor del curso");
+                        logger.error("Error en obtener el profesor del curso");
                         throw new EntityNotFoundException("Error en obtener el profesor del curso");
                     });
                     profChat.getCursos().add(cursoChat.getId());
@@ -496,7 +493,7 @@ public class CursoChatService {
             cursoChat.setClases(clasesChat);
             cursoChatRepo.save(cursoChat);
         } catch (RuntimeException e) {
-            System.err.println("Error en actualizar el curso en el chat: " + e.getMessage());
+            logger.error("Error en actualizar el curso en el chat: {}", e.getMessage());
             throw new RuntimeException("Error en actualizar el curso en el chat: " + e.getMessage());
         }
     }
@@ -535,7 +532,7 @@ public class CursoChatService {
             }
             return null;
         } catch (Exception e) {
-            System.err.println("Error al obtener todos los cursos del chat: " + e.getMessage());
+            logger.error("Error al obtener todos los cursos del chat: {}", e.getMessage());
             throw new RuntimeException("Error al obtener todos los cursos del chat: " + e.getMessage());
         }
     }

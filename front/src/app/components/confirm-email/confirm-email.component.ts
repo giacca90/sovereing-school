@@ -13,15 +13,15 @@ import { LoginService } from '../../services/login.service';
 export class ConfirmEmailComponent implements OnInit {
 	private token: string | null = null;
 	constructor(
-		private route: ActivatedRoute,
-		private router: Router,
-		private http: HttpClient,
-		private loginService: LoginService,
+		private readonly route: ActivatedRoute,
+		private readonly router: Router,
+		private readonly http: HttpClient,
+		private readonly loginService: LoginService,
 	) {}
 
 	get backURL(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			return (window as any).__env.BACK_BASE ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			return (globalThis.window as any).__env.BACK_BASE ?? '';
 		}
 		return '';
 	}
@@ -45,7 +45,7 @@ export class ConfirmEmailComponent implements OnInit {
 					mensaje2.innerHTML = 'Vas a ser redirigido en un momento...';
 					setTimeout(() => {
 						this.router.navigate(['/']).then(() => {
-							window.location.reload();
+							globalThis.window.location.reload();
 						});
 					}, 1500);
 				}
@@ -59,7 +59,7 @@ export class ConfirmEmailComponent implements OnInit {
 				mensaje2.innerHTML = error.error;
 				setTimeout(() => {
 					this.router.navigate(['/']).then(() => {
-						window.location.reload();
+						globalThis.window.location.reload();
 					});
 				}, 3000);
 			},

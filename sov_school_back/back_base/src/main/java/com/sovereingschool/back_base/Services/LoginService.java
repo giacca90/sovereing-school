@@ -5,7 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.hibernate.Hibernate;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -35,18 +36,20 @@ import jakarta.transaction.Transactional;
 @Service
 @Transactional
 public class LoginService implements UserDetailsService, ILoginService {
-
-    @Autowired
     private LoginRepository loginRepository;
-
-    @Autowired
     private UsuarioRepository usuarioRepository;
-
-    @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
     private JwtUtil jwtUtil;
+
+    private Logger logger = LoggerFactory.getLogger(LoginService.class);
+
+    public LoginService(LoginRepository loginRepository, UsuarioRepository usuarioRepository,
+            PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+        this.loginRepository = loginRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+    }
 
     public Long compruebaCorreo(String correo) {
         return this.loginRepository.compruebaCorreo(correo).orElse(0L);
@@ -67,7 +70,7 @@ public class LoginService implements UserDetailsService, ILoginService {
     public String getCorreoLogin(Long id_usuario) {
         return this.loginRepository.findCorreoLoginForId(id_usuario).orElseThrow(
                 () -> {
-                    System.err.println("getCorreoLogin: Error en obtener el correo del usuario con ID " + id_usuario);
+                    logger.error("getCorreoLogin: Error en obtener el correo del usuario con ID {}", id_usuario);
                     return new EntityNotFoundException(
                             "getCorreoLogin: Error en obtener el correo del usuario con ID " + id_usuario);
                 });
@@ -84,7 +87,7 @@ public class LoginService implements UserDetailsService, ILoginService {
     public String getPasswordLogin(Long id_usuario) {
         return this.loginRepository.findPasswordLoginForId(id_usuario).orElseThrow(
                 () -> {
-                    System.err.println("Error en obtener la contraseña del usuario con ID " + id_usuario);
+                    logger.error("Error en obtener la contraseña del usuario con ID {}", id_usuario);
                     return new EntityNotFoundException(
                             "Error en obtener la contraseña del usuario con ID " + id_usuario);
                 });
@@ -141,13 +144,13 @@ public class LoginService implements UserDetailsService, ILoginService {
 
         Optional<Login> login = this.loginRepository.getLoginForCorreo(correo);
         if (login.isEmpty()) {
-            System.err.println("Correo electronico " + correo + " no encontrado");
+            logger.error("Correo electronico {} no encontrado", correo);
             throw new UsernameNotFoundException("Correo electronico " + correo + " no encontrado");
         }
 
         Optional<Usuario> usuario = this.usuarioRepository.findById(login.get().getId_usuario());
         if (usuario.isEmpty()) {
-            System.err.println("Usuario no encontrado en loadUserByUsername");
+            logger.error("Usuario no encontrado en loadUserByUsername");
             throw new UsernameNotFoundException("Usuario no encontrado");
         }
 
@@ -176,7 +179,7 @@ public class LoginService implements UserDetailsService, ILoginService {
     public AuthResponse loginUser(Long id, String password) {
         String correo = this.loginRepository.findCorreoLoginForId(id)
                 .orElseThrow(() -> {
-                    System.err.println("loginUser: Error en obtener el correo del usuario con ID " + id);
+                    logger.error("loginUser: Error en obtener el correo del usuario con ID {}", id);
                     return new EntityNotFoundException(
                             "loginUser: Error en obtener el correo del usuario con ID " + id);
                 });
@@ -199,13 +202,13 @@ public class LoginService implements UserDetailsService, ILoginService {
         Optional<Usuario> usuarioOpt = this.usuarioRepository.findById(
                 this.loginRepository.getLoginForCorreo(auth.getName())
                         .orElseThrow(() -> {
-                            System.err.println("Error en obtener el login con el correo " + auth.getName());
+                            logger.error("Error en obtener el login con el correo {}", auth.getName());
                             return new EntityNotFoundException(
                                     "Error en obtener el login con el correo " + auth.getName());
                         })
                         .getId_usuario());
         if (usuarioOpt.isEmpty()) {
-            System.err.println("Usuario no encontrado en loginUser");
+            logger.error("Usuario no encontrado en loginUser");
             throw new UsernameNotFoundException("Usuario no encontrado");
         }
         Usuario usuario = usuarioOpt.get();
@@ -229,13 +232,13 @@ public class LoginService implements UserDetailsService, ILoginService {
     public AuthResponse refreshAccessToken(Long id) {
         String correo = this.loginRepository.findCorreoLoginForId(id)
                 .orElseThrow(() -> {
-                    System.err.println("refreshAccessToken: Error en obtener el correo del usuario con ID " + id);
+                    logger.error("refreshAccessToken: Error en obtener el correo del usuario con ID {}", id);
                     return new EntityNotFoundException(
                             "refreshAccessToken: Error en obtener el correo del usuario con ID " + id);
                 });
         UserDetails userDetails = this.loadUserByUsername(correo);
         if (userDetails == null) {
-            System.err.println("Usuario no encontrado en refreshAccessToken");
+            logger.error("Usuario no encontrado en refreshAccessToken");
             throw new BadCredentialsException("Usuario no encontrado");
         }
 
@@ -262,13 +265,13 @@ public class LoginService implements UserDetailsService, ILoginService {
             Long id_usuario = jwtUtil.getIdUsuario(token);
             Optional<Usuario> opUsuario = this.usuarioRepository.findById(id_usuario);
             if (opUsuario.isEmpty()) {
-                System.err.println("Usuario no encontrado en loginWithToken: id_usuario: " + id_usuario);
+                logger.error("Usuario no encontrado en loginWithToken: id_usuario: {}", id_usuario);
                 throw new BadCredentialsException("Usuario no encontrado");
             }
             Usuario usuario = opUsuario.get();
             return usuario;
         } catch (JWTVerificationException | InsufficientAuthenticationException | BadCredentialsException e) {
-            System.err.println("Error en hacer login con token: " + e.getMessage());
+            logger.error("Error en hacer login con token: {}", e.getMessage());
             throw new JWTVerificationException("Error en hacer login con token: " + e.getMessage());
         }
     }

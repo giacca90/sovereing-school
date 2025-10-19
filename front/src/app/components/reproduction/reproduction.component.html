@@ -32,11 +32,11 @@
 			@if (this.curso && this.curso.clases_curso) {
 				@for (class of this.curso.clases_curso; track class) {
 					@if (class.id_clase == this.id_clase) {
-						<div class="mb-2 cursor-pointer font-bold hover:text-green-700" (click)="this.navega(class)" tabindex="0" (keydown.enter)="this.navega(class)">
+						<div class="mb-2 cursor-pointer font-bold hover:text-green-700" (click)="this.navega(class)" (keydown.enter)="this.navega(class)">
 							{{ class.nombre_clase }}
 						</div>
 					} @else {
-						<div class="mb-2 cursor-pointer hover:text-green-700" (click)="this.navega(class)" tabindex="0" (keydown.enter)="this.navega(class)">
+						<div class="mb-2 cursor-pointer hover:text-green-700" (click)="this.navega(class)" (keydown.enter)="this.navega(class)">
 							{{ class.nombre_clase }}
 						</div>
 					}

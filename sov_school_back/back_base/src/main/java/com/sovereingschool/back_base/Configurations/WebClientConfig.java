@@ -1,6 +1,9 @@
 package com.sovereingschool.back_base.Configurations;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+
+import javax.net.ssl.SSLException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -30,8 +33,9 @@ public class WebClientConfig {
 
 	// Bean global que siempre envía JWT
 	@Bean
-	public WebClient webClient(WebClient.Builder builder) throws Exception {
-		HttpClient httpClient = createHttpClient();
+	public WebClient webClient(WebClient.Builder builder) throws SSLException {
+		HttpClient httpClient;
+		httpClient = createHttpClient();
 
 		String authToken = this.jwtUtil.generateToken(null, "server", null);
 
@@ -44,7 +48,17 @@ public class WebClientConfig {
 
 	// Método para crear WebClient con baseUrl y headers específicos, igual que
 	// antes
-	public WebClient createSecureWebClient(String baseUrl) throws Exception {
+	/**
+	 * Método para crear WebClient con baseUrl y headers específicos
+	 * 
+	 * @param baseUrl {@link String} con la URL base
+	 * @return {@link WebClient} con baseUrl y headers específicos
+	 * @throws URISyntaxException {@link URISyntaxException} cuando no se puede
+	 *                            parsear la URL
+	 * @throws SSLException       {@link SSLException} cuando no se puede crear el
+	 *                            HttpClient
+	 */
+	public WebClient createSecureWebClient(String baseUrl) throws URISyntaxException, SSLException {
 		URI uri = new URI(baseUrl);
 		String host = uri.getHost();
 		int port = uri.getPort();
@@ -66,8 +80,13 @@ public class WebClientConfig {
 				.build();
 	}
 
-	// Método interno que decide si usar InsecureTrustManagerFactory o SSL normal
-	private HttpClient createHttpClient() throws Exception {
+	/**
+	 * Método interno que decide si usar InsecureTrustManagerFactory o SSL normal
+	 *
+	 * @throws SSLException {@link SSLException} cuando no se puede crear el
+	 *                      HttpClient
+	 */
+	private HttpClient createHttpClient() throws SSLException {
 		if (insecureSsl) {
 			SslContext sslContext = SslContextBuilder.forClient()
 					.trustManager(InsecureTrustManagerFactory.INSTANCE)

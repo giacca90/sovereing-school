@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -24,7 +25,6 @@ import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
 
 import org.imgscalr.Scalr;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -73,10 +73,7 @@ public class UsuarioController {
 		return objStream.readObject();
 	}
 
-	@Autowired
 	private IUsuarioService usuarioService;
-
-	@Autowired
 	private JwtUtil jwtUtil;
 
 	@Value("${variable.FOTOS_DIR}")
@@ -85,13 +82,18 @@ public class UsuarioController {
 	@Value("${variable.BACK_BASE}")
 	private String back_base;
 
+	public UsuarioController(IUsuarioService usuarioService, JwtUtil jwtUtil) {
+		this.usuarioService = usuarioService;
+		this.jwtUtil = jwtUtil;
+	}
+
 	@GetMapping("/{id}")
 	public ResponseEntity<?> getUsuario(@PathVariable Long id) {
 		Object response = new Object();
 		try {
 			Usuario usuario = this.usuarioService.getUsuario(id);
 			response = usuario;
-			return new ResponseEntity<>(usuario, HttpStatus.OK);
+			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
 		} catch (Exception e) {
@@ -260,7 +262,7 @@ public class UsuarioController {
 					.httpOnly(true)
 					.secure(true)
 					.path("/")
-					.maxAge(15 * 24 * 60 * 60)
+					.maxAge(Duration.ofDays(15))
 					.sameSite("None")
 					.build();
 			return ResponseEntity.ok()
@@ -339,7 +341,7 @@ public class UsuarioController {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		} catch (Exception e) {
 			response = "Error en cambiar el plan del usuario: " + e.getMessage();
-			return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -422,9 +424,9 @@ public class UsuarioController {
 
 			// Genera un nombre único para cada archivo para evitar colisiones
 			String fileName = UUID.randomUUID().toString() + "_"
-					+ StringUtils.cleanPath(originalFilename).replaceAll(" ", "_");
+					+ StringUtils.cleanPath(originalFilename).replace(" ", "_");
 			Path filePath = Paths.get(uploadDir, fileName);
-			if (!fileName.substring(fileName.lastIndexOf(".")).toLowerCase().equals(".svg")) {
+			if (!fileName.substring(fileName.lastIndexOf(".")).equalsIgnoreCase(".svg")) {
 				try {
 					// Convertir la imagen a WebP
 					BufferedImage bufferedImage = ImageIO.read(file.getInputStream());

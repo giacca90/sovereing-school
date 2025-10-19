@@ -14,7 +14,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -39,17 +40,12 @@ import reactor.core.publisher.Mono;
 @Transactional
 public class CursoService implements ICursoService {
 
-    @Autowired
     private CursoRepository cursoRepo;
-
-    @Autowired
     private ClaseRepository claseRepo;
-
-    @Autowired
     private InitAppService initAppService;
-
-    @Autowired
     private WebClientConfig webClientConfig;
+
+    private Logger logger = LoggerFactory.getLogger(CursoService.class);
 
     @Value("${variable.BACK_STREAM_DOCKER}")
     private String backStreamURL;
@@ -60,8 +56,16 @@ public class CursoService implements ICursoService {
     private Path baseUploadDir;
 
     public CursoService(
-            @Value("${variable.VIDEOS_DIR}") String uploadDir) {
+            @Value("${variable.VIDEOS_DIR}") String uploadDir,
+            CursoRepository cursoRepo,
+            ClaseRepository claseRepo,
+            InitAppService initAppService,
+            WebClientConfig webClientConfig) {
         this.baseUploadDir = Paths.get(uploadDir);
+        this.cursoRepo = cursoRepo;
+        this.claseRepo = claseRepo;
+        this.initAppService = initAppService;
+        this.webClientConfig = webClientConfig;
     }
 
     @Override
@@ -82,7 +86,7 @@ public class CursoService implements ICursoService {
     @Override
     public Curso getCurso(Long id_curso) {
         return this.cursoRepo.findById(id_curso).orElseThrow(() -> {
-            System.err.println("CursoService: getCurso: Error en obtener el curso con ID " + id_curso + ": ");
+            logger.error("CursoService: getCurso: Error en obtener el curso con ID {}: ", id_curso);
             return new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
         });
     }
@@ -98,7 +102,7 @@ public class CursoService implements ICursoService {
     public String getNombreCurso(Long id_curso) {
         return this.cursoRepo.findNombreCursoById(id_curso)
                 .orElseThrow(() -> {
-                    System.err.println("Error en obtener el nombre del curso con ID " + id_curso);
+                    logger.error("Error en obtener el nombre del curso con ID {}", id_curso);
                     return new EntityNotFoundException("Error en obtener el nombre del curso con ID " + id_curso);
                 });
     }
@@ -114,7 +118,7 @@ public class CursoService implements ICursoService {
     public List<Usuario> getProfesoresCurso(Long id_curso) {
         List<Usuario> profesores = this.cursoRepo.findProfesoresCursoById(id_curso);
         if (profesores == null || profesores.isEmpty()) {
-            System.err.println("Error en obtener los profesores del curso con ID " + id_curso);
+            logger.error("Error en obtener los profesores del curso con ID {}", id_curso);
             throw new EntityNotFoundException("Error en obtener los profesores del curso con ID " + id_curso);
         }
         return this.cursoRepo.findProfesoresCursoById(id_curso);
@@ -130,7 +134,7 @@ public class CursoService implements ICursoService {
     @Override
     public Date getFechaCreacionCurso(Long id_curso) {
         return this.cursoRepo.findFechaCreacionCursoById(id_curso).orElseThrow(() -> {
-            System.err.println("Error en obtener la fecha de creación del curso con ID " + id_curso);
+            logger.error("Error en obtener la fecha de creación del curso con ID {}", id_curso);
             return new EntityNotFoundException("Error en obtener la fecha de creación del curso con ID " + id_curso);
         });
     }
@@ -155,7 +159,7 @@ public class CursoService implements ICursoService {
     @Override
     public BigDecimal getPrecioCurso(Long id_curso) {
         return this.cursoRepo.findPrecioCursoById(id_curso).orElseThrow(() -> {
-            System.err.println("Error en obtener el precio del curso con ID " + id_curso);
+            logger.error("Error en obtener el precio del curso con ID {}", id_curso);
             return new EntityNotFoundException("Error en obtener el precio del curso con ID " + id_curso);
         });
     }
@@ -187,7 +191,7 @@ public class CursoService implements ICursoService {
         File cursoFile = new File(cursoPath.toString());
         if (!cursoFile.exists() || !cursoFile.isDirectory()) {
             if (!cursoFile.mkdir()) {
-                System.err.println("Error en crear la carpeta del curso.");
+                logger.error("Error en crear la carpeta del curso.");
                 throw new RuntimeException("Error en crear la carpeta del curso.");
             }
         }
@@ -203,7 +207,7 @@ public class CursoService implements ICursoService {
                 try {
                     clase = this.claseRepo.save(clase);
                 } catch (Exception e) {
-                    System.err.println("Error en guardar la clase: " + e.getMessage());
+                    logger.error("Error en guardar la clase: {}", e.getMessage());
                     throw new RuntimeException("Error en guardar la clase: " + e.getMessage());
                 }
 
@@ -221,7 +225,7 @@ public class CursoService implements ICursoService {
             try {
                 curso = this.cursoRepo.save(curso);
             } catch (Exception e) {
-                System.err.println("Error en actualizar el curso: " + e.getMessage());
+                logger.error("Error en actualizar el curso: {}", e.getMessage());
                 throw new RuntimeException("Error en actualizar el curso: " + e.getMessage());
             }
         }
@@ -235,22 +239,22 @@ public class CursoService implements ICursoService {
                     .onStatus(
                             status -> status.isError(),
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                System.err.println("Error HTTP del microservicio de chat: " + errorBody);
+                                logger.error("Error HTTP del microservicio de chat: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)
                     .onErrorResume(e -> {
-                        System.err.println("Error al conectar con el microservicio de chat " + e.getMessage());
+                        logger.error("Error al conectar con el microservicio de chat {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     }).subscribe(res -> {
                         if (res == null || !res.equals("Curso chat actualizado con éxito!!!")) {
-                            System.err.println("Error en actualizar el curso en el chat");
-                            System.err.println(res);
+                            logger.error("Error en actualizar el curso en el chat");
+                            logger.error(res);
                             throw new RuntimeException("Error en actualizar el curso en el chat");
                         }
                     });
         } catch (Exception e) {
-            System.err.println("Error en actualizar el curso en el chat: " + e.getMessage());
+            logger.error("Error en actualizar el curso en el chat: {}", e.getMessage());
             throw new RuntimeException("Error en actualizar el curso en el chat: " + e.getMessage());
         }
 
@@ -263,22 +267,22 @@ public class CursoService implements ICursoService {
                     .onStatus(
                             status -> status.isError(),
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                System.err.println("Error HTTP del microservicio de streaming: " + errorBody);
+                                logger.error("Error HTTP del microservicio de streaming: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)
                     .onErrorResume(e -> {
-                        System.err.println("Error al conectar con el microservicio de streaming: " + e.getMessage());
+                        logger.error("Error al conectar con el microservicio de streaming: {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     }).subscribe(res -> {
                         if (res == null || !res.equals("Curso stream actualizado con éxito!!!")) {
-                            System.err.println("Error en actualizar el curso en el streaming:");
-                            System.err.println(res);
+                            logger.error("Error en actualizar el curso en el streaming:");
+                            logger.error(res);
                             throw new RuntimeException("Error en actualizar el curso en el streaming");
                         }
                     });
         } catch (Exception e) {
-            System.err.println("Error en actualizar el curso en el streaming: " + e.getMessage());
+            logger.error("Error en actualizar el curso en el streaming: {}", e.getMessage());
             throw new RuntimeException("Error en actualizar el curso en el streaming: " + e.getMessage());
         }
 
@@ -286,10 +290,9 @@ public class CursoService implements ICursoService {
         try {
             this.initAppService.refreshSSR();
         } catch (Exception e) {
-            System.err.println("Error en actualizar el SSR: " + e.getMessage());
+            logger.error("Error en actualizar el SSR: {}", e.getMessage());
             throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
         }
-        // Si todo ha ido bien, devuelve el curso
         return curso;
     }
 
@@ -305,7 +308,7 @@ public class CursoService implements ICursoService {
     @Override
     public Boolean deleteCurso(Long id_curso) {
         this.cursoRepo.findById(id_curso).orElseThrow(() -> {
-            System.err.println("CursoService: deleteCurso: Error en obtener el curso con ID " + id_curso);
+            logger.error("CursoService: deleteCurso: Error en obtener el curso con ID {}: ", id_curso);
             return new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
         });
         if (this.getCurso(id_curso).getClases_curso() != null) {
@@ -333,11 +336,11 @@ public class CursoService implements ICursoService {
                     }
                 });
             } catch (Exception e) {
-                System.err.println("Error al borrar la carpeta del curso: " + e.getMessage());
+                logger.error("Error al borrar la carpeta del curso: {}", e.getMessage());
                 throw new RuntimeException("Error al borrar la carpeta del curso: " + e.getMessage());
             }
         } else {
-            System.err.println("La carpeta del curso no existe.");
+            logger.error("La carpeta del curso no existe.");
         }
 
         // Eliminar el curso del microservicio de streaming
@@ -349,21 +352,21 @@ public class CursoService implements ICursoService {
                     .onStatus(
                             status -> status.isError(),
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                System.err.println("Error HTTP del microservicio de stream: " + errorBody);
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(Boolean.class)
                     .onErrorResume(e -> {
-                        System.err.println("Error al conectar con el microservicio de streaming: " + e.getMessage());
+                        logger.error("Error al conectar con el microservicio de streaming: {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     })
                     .subscribe(res -> {
                         if (res == null || !res) {
-                            System.err.println("Error en borrar el curso en el servicio de reproducción");
+                            logger.error("Error en borrar el curso en el servicio de reproducción");
                         }
                     });
         } catch (Exception e) {
-            System.err.println("Error al conectar con el microservicio de streaming: " + e.getMessage());
+            logger.error("Error al conectar con el microservicio de streaming: {}", e.getMessage());
             throw new RuntimeException("Error al conectar con el microservicio de streaming: " + e.getMessage());
         }
 
@@ -376,22 +379,22 @@ public class CursoService implements ICursoService {
                     .onStatus(
                             status -> status.isError(),
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                System.err.println("Error HTTP del microservicio de chat: " + errorBody);
+                                logger.error("Error HTTP del microservicio de chat: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)
                     .onErrorResume(e -> {
-                        System.err.println("Error al conectar con el microservicio de chat: " + e.getMessage());
+                        logger.error("Error al conectar con el microservicio de chat: {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     })
                     .subscribe(res -> {
                         if (res == null || !res.equals("Curso chat borrado con exito!!!")) {
-                            System.err.println("Error al eliminar el curso del microservicio de chat");
-                            System.err.println(res);
+                            logger.error("Error al eliminar el curso del microservicio de chat");
+                            logger.error(res);
                         }
                     });
         } catch (Exception e) {
-            System.err.println("Error al conectar con el microservicio de chat: " + e.getMessage());
+            logger.error("Error al conectar con el microservicio de chat: {}", e.getMessage());
             throw new RuntimeException("Error al conectar con el microservicio de chat: " + e.getMessage());
         }
 
@@ -399,7 +402,7 @@ public class CursoService implements ICursoService {
         try {
             this.initAppService.refreshSSR();
         } catch (Exception e) {
-            System.err.println("Error en actualizar el SSR: " + e.getMessage());
+            logger.error("Error en actualizar el SSR: {}", e.getMessage());
             throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
         }
 
@@ -434,10 +437,10 @@ public class CursoService implements ICursoService {
                             }
                         });
                     } else {
-                        System.err.println("La carpeta de la clase no existe.");
+                        logger.error("La carpeta de la clase no existe.");
                     }
                 } catch (Exception e) {
-                    System.err.println("Error en borrar el video: " + e.getMessage());
+                    logger.error("Error en borrar el video: {}", e.getMessage());
                 }
             }
 
@@ -452,25 +455,23 @@ public class CursoService implements ICursoService {
                         .onStatus(
                                 status -> status.isError(),
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                    System.err.println("Error HTTP del microservicio de stream: " + errorBody);
+                                    logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                                 }))
                         .bodyToMono(Boolean.class)
                         .onErrorResume(e -> {
                             // Manejo de errores
-                            System.err
-                                    .println("Error al conectar con el microservicio de streaming: " + e.getMessage());
+                            logger.error("Error al conectar con el microservicio de streaming: {}", e.getMessage());
                             return Mono.empty(); // Continuar sin interrumpir la aplicación
 
                         }).subscribe(res -> {
                             // Maneja el resultado cuando esté disponible
                             if (res == null || !res) {
-                                System.err.println("Error en actualizar el curso en el servicio de reproducción");
-                                System.err.println(res);
+                                logger.error("Error en actualizar el curso en el servicio de reproducción");
                             }
                         });
             } catch (Exception e) {
-                System.err.println("error en borrar la clase en el streaming: " + e.getMessage());
+                logger.error("Error en borrar la clase en el streaming: {}", e.getMessage());
             }
 
             // Elimina el chat de la clase
@@ -483,37 +484,36 @@ public class CursoService implements ICursoService {
                         .onStatus(
                                 status -> status.isError(),
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                    System.err.println("Error HTTP del microservicio de chat: " + errorBody);
+                                    logger.error("Error HTTP del microservicio de chat: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                                 }))
                         .bodyToMono(String.class)
                         .onErrorResume(e -> {
-                            System.err.println("Error al conectar con el microservicio de chat: " + e.getMessage());
+                            logger.error("Error al conectar con el microservicio de chat: {}", e.getMessage());
                             return Mono.empty(); // Continuar sin interrumpir la aplicación
                         }).subscribe(res -> {
                             if (res == null || !res.equals("Clase chat borrado con exito!!!")) {
-                                System.err.println("Error en borrar la clase en el chat");
-                                System.err.println(res);
+                                logger.error("Error en borrar la clase en el chat");
+                                logger.error(res);
                             }
                         });
             } catch (Exception e) {
-                System.err.println("Error en borrar la clase en el chat: " + e.getMessage());
+                logger.error("Error en borrar la clase en el chat: {}", e.getMessage());
             }
             // TODO: Mirar si se necesita eliminar algo en el microservicio de streaming
-            // en el microservicio de streaming hay que buscar todos los usuarios sel curso,
+            // en el microservicio de streaming hay que buscar todos los usuarios del curso,
             // y borrar la clase.
 
             // Actualizar el SSR
             try {
                 this.initAppService.refreshSSR();
             } catch (Exception e) {
-                System.err.println("Error en actualizar el SSR: " + e.getMessage());
+                logger.error("Error en actualizar el SSR: {}", e.getMessage());
                 throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
             }
         } else {
-            System.err.println("Clase no encontrada con ID: " + clase.getId_clase());
+            logger.error("Clase no encontrada con ID: {}", clase.getId_clase());
         }
-
     }
 
     /**
@@ -546,25 +546,25 @@ public class CursoService implements ICursoService {
             Files.write(filePath, file.getBytes());
             return filePath.normalize().toString();
         } catch (AccessDeniedException e) {
-            System.err.println("Error en subir el video: " + e.getMessage());
+            logger.error("Error en subir el video: {}", e.getMessage());
             throw new AccessDeniedException("Error en subir el video: " + e.getMessage());
         } catch (EntityNotFoundException e) {
-            System.err.println("Error en subir el video: " + e.getMessage());
+            logger.error("Error en subir el video: {}", e.getMessage());
             throw new IllegalArgumentException("Error en subir el video: " + e.getMessage());
         } catch (IllegalArgumentException e) {
-            System.err.println("Error en subir el video: " + e.getMessage());
+            logger.error("Error en subir el video: {}", e.getMessage());
             throw new RuntimeException("Error en subir el video: " + e.getMessage());
         } catch (IllegalStateException e) {
-            System.err.println("Error en subir el video: " + e.getMessage());
+            logger.error("Error en subir el video: {}", e.getMessage());
             throw new RuntimeException("Error en subir el video: " + e.getMessage());
         } catch (IOException e) {
-            System.err.println("Error en subir el video: " + e.getMessage());
+            logger.error("Error en subir el video: {}", e.getMessage());
             throw new RuntimeException("Error en subir el video: " + e.getMessage());
         } catch (RuntimeException e) {
-            System.err.println("Error en subir el video: " + e.getMessage());
+            logger.error("Error en subir el video: {}", e.getMessage());
             throw new EntityNotFoundException("Error en subir el video: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("Error en subir el video: " + e.getMessage());
+            logger.error("Error en subir el video: {}", e.getMessage());
             throw new RuntimeException("Error en subir el video: " + e.getMessage());
         }
     }

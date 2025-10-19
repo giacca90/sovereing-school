@@ -28,17 +28,17 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 	@ViewChild('modal') modalEl!: ElementRef<HTMLDivElement>;
 
 	constructor(
-		private modalService: LoginModalService,
-		private loginService: LoginService,
-		private router: Router,
-		@Inject(PLATFORM_ID) private platformId: Object,
+		private readonly modalService: LoginModalService,
+		private readonly loginService: LoginService,
+		private readonly router: Router,
+		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {}
 
 	ngAfterViewInit(): void {
 		this.login = document.getElementById('login') as HTMLButtonElement;
 		this.register = document.getElementById('register') as HTMLButtonElement;
 		if (isPlatformBrowser(this.platformId)) {
-			this.backBase = (window as any).__env?.BACK_BASE ?? '';
+			this.backBase = (globalThis.window as any).__env?.BACK_BASE ?? '';
 			// ✅ Aseguramos que el modal recibe foco para captar teclas
 			setTimeout(() => this.modalEl?.nativeElement?.focus(), 0);
 		}
@@ -60,7 +60,7 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 		if (this.register?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white')) {
 			this.register.classList.remove(isDarkMode ? 'dark:border-b-black' : 'bg-white');
 		}
-		if (this.login?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white') == false) {
+		if (this.login?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white') === false) {
 			this.login.classList.add(isDarkMode ? 'dark:border-b-black' : 'bg-white');
 		}
 	}
@@ -72,7 +72,7 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 		if (this.login?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white')) {
 			this.login.classList.remove(isDarkMode ? 'dark:border-b-black' : 'bg-white');
 		}
-		if (this.register?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white') == false) {
+		if (this.register?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white') === false) {
 			this.register.classList.add(isDarkMode ? 'dark:border-b-black' : 'bg-white');
 		}
 	}
@@ -104,7 +104,6 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 			localStorage.setItem('Token', authResponse.accessToken);
 			// Hacemos la llamada para que el backend setee la cookie en el browser
 			this.loginService.loginWithToken(localStorage.getItem('Token') ?? '');
-			//localStorage.setItem('Usuario', JSON.stringify(authResponse.usuario));
 			this.loginService.usuario = authResponse.usuario;
 
 			// Avisamos al SSR de que estamos logueados

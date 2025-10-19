@@ -2,7 +2,6 @@ package com.sovereingschool.back_chat.Configurations.Filters;
 
 import java.io.IOException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -22,8 +21,11 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtTokenValidator extends OncePerRequestFilter {
 
-    @Autowired
     private JwtUtil jwtUtil;
+
+    public JwtTokenValidator(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response,

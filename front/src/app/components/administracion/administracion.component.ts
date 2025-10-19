@@ -25,10 +25,10 @@ export class AdministracionComponent {
 	chatsSel: CursoChat[] = [];
 
 	constructor(
-		private usuariosService: UsuariosService,
+		private readonly usuariosService: UsuariosService,
 		public cursosService: CursosService,
-		private chatsService: ChatService,
-		private initService: InitService,
+		private readonly chatsService: ChatService,
+		private readonly initService: InitService,
 	) {}
 
 	cargaUsuarios() {

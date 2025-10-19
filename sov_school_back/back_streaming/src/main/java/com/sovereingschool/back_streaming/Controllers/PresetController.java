@@ -2,7 +2,8 @@ package com.sovereingschool.back_streaming.Controllers;
 
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,8 +25,13 @@ import com.sovereingschool.back_streaming.Services.UsuarioPresetsService;
 @RequestMapping("/presets")
 public class PresetController {
 
-    @Autowired
     private UsuarioPresetsService usuarioPresetsService;
+
+    private Logger logger = LoggerFactory.getLogger(PresetController.class);
+
+    public PresetController(UsuarioPresetsService usuarioPresetsService) {
+        this.usuarioPresetsService = usuarioPresetsService;
+    }
 
     @GetMapping("/start")
     public ResponseEntity<Boolean> getMethodName() {
@@ -33,7 +39,7 @@ public class PresetController {
             Boolean res = this.usuarioPresetsService.createPresetsForEligibleUsers();
             return new ResponseEntity<>(res, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Error en crear DDBB de presets: " + e.getMessage());
+            logger.error("Error en crear DDBB de presets: {}", e.getMessage());
             return new ResponseEntity<>(false, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -48,7 +54,7 @@ public class PresetController {
             Map<String, PresetValue> presetsMap = result.getPresets();
             return new ResponseEntity<>(presetsMap, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Error en obtener presets para usuario " + id_usuario + ": " + e.getMessage());
+            logger.error("Error en obtener presets para usuario {}: {}", id_usuario, e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -63,7 +69,7 @@ public class PresetController {
             this.usuarioPresetsService.savePresetsForUser(id_usuario, presetsMap);
             return new ResponseEntity<>(true, HttpStatus.OK);
         } catch (Exception e) {
-            System.err.println("Error en actualizar presets para usuario " + id_usuario + ": " + e.getMessage());
+            logger.error("Error en actualizar presets para usuario {}: {}", id_usuario, e.getMessage());
             return new ResponseEntity<>(false, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

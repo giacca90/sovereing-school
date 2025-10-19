@@ -3,9 +3,8 @@ package com.sovereingschool.back_base.Controllers;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -33,8 +32,11 @@ import jakarta.persistence.EntityNotFoundException;
 @RequestMapping("/cursos")
 @PreAuthorize("hasAnyRole('GUEST', 'USER', 'PROF', 'ADMIN')")
 public class CursoController {
-	@Autowired
 	private ICursoService cursoService;
+
+	public CursoController(ICursoService cursoService) {
+		this.cursoService = cursoService;
+	}
 
 	/* Parte de gestión de cursos */
 	@GetMapping("/getAll")
@@ -84,8 +86,10 @@ public class CursoController {
 		Object response = new Object();
 		try {
 			List<Usuario> profesores = this.cursoService.getProfesoresCurso(id);
-			List<String> nombres_profesores = profesores.stream().map(Usuario::getNombre_usuario)
-					.collect(Collectors.toList());
+			List<String> nombres_profesores = profesores.stream()
+					.map(Usuario::getNombre_usuario)
+					.toList();
+
 			response = nombres_profesores;
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException ex) {
@@ -169,9 +173,7 @@ public class CursoController {
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-		} catch (IllegalArgumentException e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-		} catch (IllegalStateException e) {
+		} catch (IllegalArgumentException | IllegalStateException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
 		} catch (AccessDeniedException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.FORBIDDEN);
@@ -202,23 +204,25 @@ public class CursoController {
 	@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 	@GetMapping("/{idCurso}/getClaseForId/{idClase}")
 	public ResponseEntity<?> getClaseForId(@PathVariable Long idCurso, @PathVariable Long idClase) {
-		Object response = new Object();
 		try {
 			Curso curso = this.cursoService.getCurso(idCurso);
 			List<Clase> clases = curso.getClases_curso();
-			for (Clase clase : clases) {
-				if (clase.getId_clase().equals(idClase)) {
-					response = clase;
-				}
-				return new ResponseEntity<>(response, HttpStatus.OK);
-			}
-			response = "Clase no encontrada";
-			return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+
+			// Buscar la clase usando stream
+			Optional<Clase> claseOpt = clases.stream()
+					.filter(c -> c.getId_clase().equals(idClase))
+					.findFirst();
+
+			return claseOpt
+					.<ResponseEntity<?>>map(ResponseEntity::ok)
+					.orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+							.body("Clase no encontrada"));
+
 		} catch (EntityNotFoundException ex) {
-			return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
 		} catch (Exception e) {
-			response = "Error en encontrar la clase: " + e.getMessage();
-			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			String mensaje = "Error al encontrar la clase: " + e.getMessage();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(mensaje);
 		}
 	}
 
@@ -234,7 +238,7 @@ public class CursoController {
 				if (eliminada != null) {
 					clases.get(i).setPosicion_clase(clases.get(i).getPosicion_clase() - 1);
 				} else {
-					if (clases.get(i).getId_clase() == idClase) {
+					if (clases.get(i).getId_clase().equals(idClase)) {
 						eliminada = clases.get(i);
 					}
 				}
@@ -268,15 +272,13 @@ public class CursoController {
 				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
 			}
 			String filePath = this.cursoService.subeVideo(file);
-			response = filePath.toString();
+			response = filePath;
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (AccessDeniedException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.FORBIDDEN);
 		} catch (EntityNotFoundException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-		} catch (IllegalArgumentException e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-		} catch (IllegalStateException e) {
+		} catch (IllegalArgumentException | IllegalStateException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
 		} catch (RuntimeException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

@@ -18,8 +18,8 @@ export class LoginComponent implements OnInit, OnDestroy {
 	private keySub?: Subscription;
 
 	constructor(
-		private modalService: LoginModalService,
-		private loginService: LoginService,
+		private readonly modalService: LoginModalService,
+		private readonly loginService: LoginService,
 	) {}
 
 	ngOnInit(): void {
@@ -101,13 +101,11 @@ export class LoginComponent implements OnInit, OnDestroy {
 		const message3: HTMLDivElement = document.getElementById('message3') as HTMLDivElement;
 		message3.innerHTML = '';
 		if (await this.loginService.compruebaPassword((document.getElementById('password') as HTMLInputElement).value)) {
-			//console.log('Correct password');
 			this.close();
 		} else {
 			const mex: HTMLParagraphElement = document.createElement('p');
 			mex.textContent = 'La contraseña no es correcta!!!';
 			message3.appendChild(mex);
-			return;
 		}
 	}
 

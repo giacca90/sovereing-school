@@ -14,7 +14,7 @@ export class CursosUsuarioComponent implements OnInit {
 	constructor(
 		public loginService: LoginService,
 		public cursoService: CursosService,
-		private cdr: ChangeDetectorRef,
+		private readonly cdr: ChangeDetectorRef,
 		public router: Router,
 	) {}
 

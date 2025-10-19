@@ -7,7 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRange;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Usuario;
+import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_streaming.Services.StreamingService;
 import com.sovereingschool.back_streaming.Services.UsuarioCursosService;
 
@@ -57,11 +59,18 @@ public class StreamingController {
         }
     }
 
-    @Autowired
     private UsuarioCursosService usuarioCursosService;
-
-    @Autowired
     private StreamingService streamingService;
+    private ClaseRepository claseRepo;
+
+    private Logger logger = LoggerFactory.getLogger(StreamingController.class);
+
+    public StreamingController(UsuarioCursosService usuarioCursosService, StreamingService streamingService,
+            ClaseRepository claseRepo) {
+        this.usuarioCursosService = usuarioCursosService;
+        this.streamingService = streamingService;
+        this.claseRepo = claseRepo;
+    }
 
     @GetMapping("/{id_curso}/{id_clase}/{lista}")
     public ResponseEntity<?> getListas(@PathVariable Long id_curso,
@@ -78,13 +87,13 @@ public class StreamingController {
 
         String direccion_carpeta = this.usuarioCursosService.getClase(id_usuario, id_curso, id_clase);
         if (direccion_carpeta == null) {
-            System.err.println("No se encuentra la carpeta del curso: " + direccion_carpeta);
+            logger.error("No se encuentra la carpeta del curso: {}", direccion_carpeta);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("No se encuentra la carpeta del curso: " + direccion_carpeta);
         }
         direccion_carpeta = direccion_carpeta.substring(0, direccion_carpeta.lastIndexOf("/"));
         if (direccion_carpeta == null) {
-            System.err.println("El video no tiene ruta");
+            logger.error("El video no tiene ruta");
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("El video no tiene ruta");
         }
@@ -94,7 +103,7 @@ public class StreamingController {
         Path videoPath = carpetaPath.resolve(lista);
 
         if (!Files.exists(videoPath)) {
-            System.err.println("No existe el archivo: " + videoPath);
+            logger.error("No existe el archivo: {}", videoPath);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("No existe el archivo: " + videoPath);
         }
@@ -134,7 +143,7 @@ public class StreamingController {
         String direccion_carpeta = this.usuarioCursosService.getClase(id_usuario, id_curso, id_clase);
         direccion_carpeta = direccion_carpeta.substring(0, direccion_carpeta.lastIndexOf("/"));
         if (direccion_carpeta == null) {
-            System.err.println("El video no tiene ruta");
+            logger.error("El video no tiene ruta");
             return ResponseEntity.notFound().build();
         }
 
@@ -145,7 +154,7 @@ public class StreamingController {
         videoPath = videoPath.resolve(video);
 
         if (!Files.exists(videoPath)) {
-            System.err.println("No existe el archivo: " + videoPath);
+            logger.error("No existe el archivo: {}", videoPath);
             return ResponseEntity.notFound().build();
         }
 
@@ -286,7 +295,7 @@ public class StreamingController {
     @PostMapping("/convertir_videos")
     public ResponseEntity<?> convertirVideos(@RequestBody Curso curso) {
         try {
-            StreamingService streamingService = new StreamingService();
+            StreamingService streamingService = new StreamingService(claseRepo);
             streamingService.convertVideos(curso);
             // ResponseEntity
             return new ResponseEntity<>("Videos convertidos con éxito!!!", HttpStatus.OK);

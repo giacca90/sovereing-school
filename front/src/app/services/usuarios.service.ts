@@ -11,13 +11,13 @@ import { LoginService } from './login.service';
 export class UsuariosService {
 	public profes: Usuario[] = [];
 	constructor(
-		private http: HttpClient,
-		private loginService: LoginService,
+		private readonly http: HttpClient,
+		private readonly loginService: LoginService,
 	) {}
 
 	get apiUrl(): string {
-		if (typeof window !== 'undefined' && (window as any).__env) {
-			const url = (window as any).__env.BACK_BASE ?? '';
+		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			const url = (globalThis.window as any).__env.BACK_BASE ?? '';
 			return url + '/usuario/';
 		}
 		return '';

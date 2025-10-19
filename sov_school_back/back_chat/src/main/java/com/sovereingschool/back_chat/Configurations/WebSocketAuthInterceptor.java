@@ -3,7 +3,9 @@ package com.sovereingschool.back_chat.Configurations;
 import java.util.Collection;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
@@ -24,11 +26,15 @@ import com.sovereingschool.back_common.Utils.JwtUtil;
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    private final ObjectProvider<SimpMessagingTemplate> messagingTemplateProvider;
+    private final Logger logger = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    // Inyectamos un proveedor en lugar del bean directo
+    public WebSocketAuthInterceptor(JwtUtil jwtUtil, ObjectProvider<SimpMessagingTemplate> messagingTemplateProvider) {
+        this.jwtUtil = jwtUtil;
+        this.messagingTemplateProvider = messagingTemplateProvider;
+    }
 
     @Override
     public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
@@ -36,19 +42,16 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
         if (accessor.getCommand() == StompCommand.CONNECT) {
             Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
-            String token = (sessionAttrs != null)
-                    ? (String) sessionAttrs.get("token")
-                    : null;
+            String token = (sessionAttrs != null) ? (String) sessionAttrs.get("token") : null;
 
             if (token == null || token.isEmpty()) {
                 SecurityContextHolder.clearContext();
-                System.err.println("Falta token en sessionAttributes");
+                logger.error("No hay token en sessionAttributes");
                 throw new MessagingException("Falta token en sessionAttributes");
             }
             Long idUsuario = jwtUtil.getIdUsuario(token);
             try {
                 Authentication auth = jwtUtil.createAuthenticationFromToken(token);
-                // Creamos un token donde el name() es el ID:
                 Authentication wsAuth = new Authentication() {
                     @Override
                     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -90,21 +93,25 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 return message;
             } catch (AuthenticationException ex) {
                 SecurityContextHolder.clearContext();
-                System.err.println("Token inválido: " + ex.getMessage());
+                logger.error("Error en el token de acceso: {}", ex.getMessage());
                 String destination = accessor.getDestination(); // Ej: "/app/init"
                 if (destination != null) {
-                    messagingTemplate.convertAndSendToUser(idUsuario.toString(), destination,
-                            "Token inválido: " + ex.getMessage());
-                    return null;
+                    // Obtén el SimpMessagingTemplate solo cuando lo necesites
+                    SimpMessagingTemplate messagingTemplate = messagingTemplateProvider.getIfAvailable();
+                    if (messagingTemplate != null) {
+                        messagingTemplate.convertAndSendToUser(idUsuario.toString(), destination,
+                                "Token inválido: " + ex.getMessage());
+                        return null;
+                    } else {
+                        logger.error("SimpMessagingTemplate no disponible en este momento");
+                        throw new MessagingException("Token inválido y no hay messagingTemplate");
+                    }
                 } else {
-                    System.err.println("No hay destino para el mensaje de refresh");
-                    // Cerrar la conexión
+                    logger.error("No hay destino para el mensaje de refresh");
                     throw new MessagingException("Token inválido y sin destino para enviar el mensaje");
                 }
             }
         } else {
-            // Para todos los mensajes posteriores, sacamos el user ya seteado en el
-            // accessor
             if (accessor.getUser() instanceof Authentication auth) {
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 return message;
@@ -117,9 +124,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     public void afterSendCompletion(@NonNull Message<?> message, @NonNull MessageChannel channel, boolean sent,
             @Nullable Exception ex) {
         if (ex != null) {
-            System.err.println("WebSocketAuthInterceptor: " + ex.getMessage());
+            logger.error("WebSocketAuthInterceptor: {}", ex.getMessage());
         }
-        // Limpia el contexto para evitar fugas de seguridad entre hilos
         SecurityContextHolder.clearContext();
     }
 }

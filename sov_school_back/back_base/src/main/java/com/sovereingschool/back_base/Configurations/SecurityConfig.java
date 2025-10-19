@@ -1,6 +1,5 @@
 package com.sovereingschool.back_base.Configurations;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,10 +25,12 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sovereingschool.back_base.Configurations.Filters.CustomOAuth2SuccessHandler;
 import com.sovereingschool.back_base.Configurations.Filters.JwtTokenCookieFilter;
 import com.sovereingschool.back_base.Configurations.Filters.JwtTokenValidator;
 import com.sovereingschool.back_base.Services.LoginService;
+import com.sovereingschool.back_base.Services.UsuarioService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -38,10 +39,10 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Autowired
     private JwtTokenValidator jwtTokenValidator;
-    @Autowired
     private JwtTokenCookieFilter jwtTokenCookieFilter;
+
+    private final ObjectMapper objectMapper;
 
     @Value("${variable.FRONT}")
     private String front;
@@ -49,8 +50,17 @@ public class SecurityConfig {
     @Value("${variable.FRONT_DOCKER}")
     private String frontDocker;
 
+    // Quitar LoginService y UsuarioService del constructor
+    public SecurityConfig(JwtTokenValidator jwtTokenValidator, JwtTokenCookieFilter jwtTokenCookieFilter,
+            ObjectMapper objectMapper) {
+        this.jwtTokenValidator = jwtTokenValidator;
+        this.jwtTokenCookieFilter = jwtTokenCookieFilter;
+        this.objectMapper = objectMapper;
+    }
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+            CustomOAuth2SuccessHandler customOAuth2SuccessHandler) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
                 // .redirectToHttps(Customizer.withDefaults())
@@ -62,7 +72,7 @@ public class SecurityConfig {
                 .addFilterBefore(corsFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(jwtTokenCookieFilter, ExceptionTranslationFilter.class)
                 .addFilterAfter(jwtTokenValidator, ExceptionTranslationFilter.class)
-                .oauth2Login(oauth2 -> oauth2.successHandler(customOAuth2SuccessHandler())
+                .oauth2Login(oauth2 -> oauth2.successHandler(customOAuth2SuccessHandler)
                         .failureHandler((request, response, exception) -> {
                             exception.printStackTrace();
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -122,9 +132,12 @@ public class SecurityConfig {
         return new CorsFilter(source);
     }
 
+    // Dejar la creación del CustomOAuth2SuccessHandler como bean que recibe los
+    // servicios necesarios
     @Bean
-    public CustomOAuth2SuccessHandler customOAuth2SuccessHandler() {
-        return new CustomOAuth2SuccessHandler();
+    public CustomOAuth2SuccessHandler customOAuth2SuccessHandler(LoginService loginService,
+            UsuarioService usuarioService) {
+        return new CustomOAuth2SuccessHandler(loginService, usuarioService, objectMapper);
     }
 
 }

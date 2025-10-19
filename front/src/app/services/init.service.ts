@@ -23,20 +23,20 @@ export class InitService {
 	});
 
 	constructor(
-		private http: HttpClient,
-		private cursoService: CursosService,
-		private usuarioService: UsuariosService,
-		private transferState: TransferState,
-		private loginService: LoginService,
-		@Inject(PLATFORM_ID) private platformId: Object,
+		private readonly http: HttpClient,
+		private readonly cursoService: CursosService,
+		private readonly usuarioService: UsuariosService,
+		private readonly transferState: TransferState,
+		private readonly loginService: LoginService,
+		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {}
 
 	get apiUrl(): string {
 		// Ruta al contenedor
 		if (isPlatformServer(this.platformId)) {
 			return process.env['BACK_BASE_DOCKER'] + '/init';
-		} else if (typeof window !== 'undefined' && (window as any).__env) {
-			return (window as any).__env.BACK_BASE + '/init';
+		} else if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+			return (globalThis.window as any).__env.BACK_BASE + '/init';
 		} else if (process.env['BACK_BASE']) {
 			return process.env['BACK_BASE'] + '/init';
 		}

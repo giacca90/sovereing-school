@@ -1,6 +1,5 @@
 package com.sovereingschool.back_chat.Configurations;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,14 +33,17 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Autowired
     private JwtTokenCookieFilter jwtTokenCookieFilter;
 
-    @Autowired
-    private JwtTokenValidator JwtTokenValidator;
+    private JwtTokenValidator jwtTokenValidator;
 
     @Value("${variable.FRONT}")
     private String front;
+
+    public SecurityConfig(JwtTokenCookieFilter jwtTokenCookieFilter, JwtTokenValidator jwtTokenValidator) {
+        this.jwtTokenCookieFilter = jwtTokenCookieFilter;
+        this.jwtTokenValidator = jwtTokenValidator;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -54,7 +56,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(corsFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(jwtTokenCookieFilter, ExceptionTranslationFilter.class)
-                .addFilterAfter(JwtTokenValidator, ExceptionTranslationFilter.class)
+                .addFilterAfter(jwtTokenValidator, ExceptionTranslationFilter.class)
                 .formLogin(form -> form.disable()) // Desactivar form login
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {

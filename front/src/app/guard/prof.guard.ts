@@ -9,10 +9,10 @@ import { LoginService } from '../services/login.service';
 })
 export class ProfGuard implements CanActivate {
 	constructor(
-		private cursoService: CursosService,
-		private router: Router,
-		private loginService: LoginService,
-		@Inject(PLATFORM_ID) private platformId: object,
+		private readonly cursoService: CursosService,
+		private readonly router: Router,
+		private readonly loginService: LoginService,
+		@Inject(PLATFORM_ID) private readonly platformId: object,
 	) {}
 
 	async canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Promise<boolean> {

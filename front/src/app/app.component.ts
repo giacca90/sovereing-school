@@ -19,19 +19,19 @@ export class AppComponent implements OnInit, OnDestroy {
 	isModalVisible: boolean = false;
 	vistaMenu: boolean = false;
 	currentYear: string = new Date().getFullYear().toString();
-	private subscription: Subscription = new Subscription();
+	private readonly subscription: Subscription = new Subscription();
 
 	constructor(
-		private modalService: LoginModalService,
+		private readonly modalService: LoginModalService,
 		public loginService: LoginService,
 		public router: Router,
-		private cdr: ChangeDetectorRef,
+		private readonly cdr: ChangeDetectorRef,
 	) {}
 
 	ngOnInit() {
 		// Detecta si está en el navegador
-		if (typeof window !== 'undefined') {
-			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+		if (typeof globalThis.window !== 'undefined') {
+			globalThis.window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
 				if (!('theme' in localStorage)) {
 					document.documentElement.classList.toggle('dark', e.matches);
 				}

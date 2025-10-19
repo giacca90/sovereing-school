@@ -13,7 +13,6 @@ interface JwtPayloadSSR {
 
 export function crearJwt(payload: JwtPayloadSSR): string {
 	const expiresInSeconds = 15 * 24 * 60 * 60; // 15 días
-	const now = Math.floor(Date.now() / 1000);
 
 	// payload siguiendo lo que hace el back en Java
 	const claims = {

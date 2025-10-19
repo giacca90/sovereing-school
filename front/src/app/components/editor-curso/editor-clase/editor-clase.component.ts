@@ -336,7 +336,9 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 						return;
 					}
 
-					this.curso = success;
+					//this.curso = success;
+					Object.assign(this.curso, success);
+
 					this.readyComponent = true;
 
 					this.streamingService.emitirWebOBS(mediaStream).catch((error) => {
@@ -398,7 +400,8 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 						console.error('Falló la actualización del curso en emitirOBS');
 						return;
 					}
-					this.curso = success;
+					//this.curso = success;
+					Object.assign(this.curso, success);
 					this.streamingService.emitirOBS();
 				},
 				error: (error) => {

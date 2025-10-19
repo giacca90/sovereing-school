@@ -5,7 +5,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
@@ -20,13 +19,16 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer, DisposableBean {
 
-    @Autowired
     private WebSocketAuthInterceptor authInterceptor;
-
-    @Autowired
     private WebSocketAuthHandshakeInterceptor handshakeInterceptor;
 
     private final ScheduledExecutorService pingScheduler = Executors.newScheduledThreadPool(1);
+
+    public WebsocketConfiguration(WebSocketAuthInterceptor authInterceptor,
+            WebSocketAuthHandshakeInterceptor handshakeInterceptor) {
+        this.authInterceptor = authInterceptor;
+        this.handshakeInterceptor = handshakeInterceptor;
+    }
 
     @Override
     public void configureMessageBroker(@NonNull MessageBrokerRegistry config) {

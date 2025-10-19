@@ -5,7 +5,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,11 +27,10 @@ import com.sovereingschool.back_streaming.Services.StreamingService;
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    @Autowired
     private StreamingService streamingService;
-
-    @Autowired
     private WebsocketAuthHandshakeInterceptor authHandshakeInterceptor;
+
+    private Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
     @Value("${variable.RTMP}")
     private String RTMP_URL;
@@ -43,6 +43,12 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     // Executor para tareas de ping-pong
     private final ScheduledExecutorService pingScheduler = Executors.newScheduledThreadPool(1);
+
+    public WebSocketConfig(StreamingService streamingService,
+            WebsocketAuthHandshakeInterceptor authHandshakeInterceptor) {
+        this.streamingService = streamingService;
+        this.authHandshakeInterceptor = authHandshakeInterceptor;
+    }
 
     @Override
     public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
@@ -106,11 +112,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
                     pingScheduler.shutdown();
                 }
             } catch (Exception e) {
-                System.err.println("Error enviando PING: " + e.getMessage());
+                logger.error("Error enviando PING: {}", e.getMessage());
                 try {
                     session.close();
                 } catch (Exception closeEx) {
-                    System.err.println("Error cerrando sesión: " + closeEx.getMessage());
+                    logger.error("Error cerrando sesión: {}", closeEx.getMessage());
                 }
             }
         }, 0, 10, TimeUnit.SECONDS); // Intervalo de 10 segundos

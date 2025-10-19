@@ -9,14 +9,12 @@ import com.sovereingschool.back_common.Models.Plan;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-/* @AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter */
-@Data
 @AllArgsConstructor
+@NoArgsConstructor
+@Data
 @ToString
 public class NewUsuario implements Serializable {
 	private String nombre_usuario;

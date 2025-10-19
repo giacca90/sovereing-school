@@ -1,6 +1,5 @@
 package com.sovereingschool.back_streaming.Configurations;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,14 +33,16 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Autowired
     private JwtTokenValidator jwtTokenValidator;
-
-    @Autowired
     private JwtTokenCookieFilter jwtTokenCookieFilter;
 
     @Value("${variable.FRONT}")
     private String front;
+
+    public SecurityConfig(JwtTokenValidator jwtTokenValidator, JwtTokenCookieFilter jwtTokenCookieFilter) {
+        this.jwtTokenValidator = jwtTokenValidator;
+        this.jwtTokenCookieFilter = jwtTokenCookieFilter;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
