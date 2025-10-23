@@ -52,7 +52,7 @@
 		"@angular-eslint/template-parser": "20.4.0",
 		"@angular/build": "20.3.6",
 		"@angular/cli": "20.3.6",
-		"@angular/compiler-cli": "20.3.6",
+		"@angular/compiler-cli": "20.3.7",
 		"@tailwindcss/postcss": "4.1.14",
 		"@types/compression": "1.8.1",
 		"@types/cookie-parser": "1.4.9",
