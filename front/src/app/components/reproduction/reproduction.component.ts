@@ -251,7 +251,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 								for (let j = 0; j < qualityLevels.length; j++) {
 									qualityLevels[j].enabled = qualityLevels[j].height === height;
 								}
-								if (vhs && typeof vhs.autoLevelEnabled !== 'undefined') {
+								if (vhs && vhs.autoLevelEnabled !== undefined) {
 									vhs.autoLevelEnabled = false;
 								}
 								const player = this.player;
@@ -389,7 +389,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		pregunta.addEventListener('click', () => {
 			this.cambiaVista(1);
 			this.chatComponent.creaPregunta(this.id_clase, timeInSeconds);
-			document.body.removeChild(curtain);
+			curtain.remove();
 		});
 
 		curtain.appendChild(pregunta);
@@ -400,7 +400,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 			'click',
 			(event) => {
 				if (!curtain.contains(event.target as Node)) {
-					document.body.removeChild(curtain);
+					curtain.remove();
 				}
 			},
 			{ once: true },
@@ -416,84 +416,86 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		// Ejecutar el código después de verificar que `chat` está definido
 		const claseChat: ClaseChat | undefined = this.chatComponent.chat?.clases.find((clase) => clase.id_clase == this.id_clase);
 		if (claseChat) {
-			claseChat.mensajes
-				.filter((mex) => mex.pregunta)
-				.forEach((preg) => {
-					if (preg.pregunta) {
-						const duration = player.duration(); // Duración total del video en segundos
-						const preguntaTime = preg.pregunta; // Tiempo de la pregunta en segundos
-						if (duration && preguntaTime <= duration) {
-							const clickRatio = preguntaTime / duration; // Ratio del tiempo de la pregunta respecto a la duración
-							const seekBar = player.getChild('ControlBar')?.getChild('ProgressControl')?.getChild('SeekBar');
-							if (seekBar) {
-								const rect = seekBar.el().getBoundingClientRect();
-								const preguntaPosX = rect.width * clickRatio; // Posición en píxeles en la barra de progreso
+			for (const preg of claseChat.mensajes) {
+				if (!preg.pregunta) continue; // saltar mensajes sin tiempo de pregunta
 
-								// Crear el marcador como un div
-								const marcador = document.createElement('div');
-								marcador.style.position = 'absolute';
-								marcador.style.left = `${preguntaPosX}px`; // Posición en la barra
-								marcador.style.top = '0';
-								marcador.style.width = '4px';
-								marcador.style.height = '100%';
-								marcador.style.zIndex = '10';
-								marcador.style.backgroundColor = '#eab308';
-								// Evento para mostrar la cortina al pasar el ratón
-								let overCortina: boolean = false;
-								marcador.addEventListener('mouseover', (event: MouseEvent) => {
-									const cortina = document.createElement('div');
-									cortina.className = 'cortina-info';
-									cortina.innerText = preg.mensaje ? preg.mensaje : '';
-									cortina.style.position = 'absolute';
-									cortina.style.left = `${event.clientX}px`; // Posición en X según el ratón
-									cortina.style.top = `${event.clientY + 20}px`; // Posición en Y ajustada ligeramente para aparecer debajo del ratón
-									cortina.style.padding = '5px';
-									cortina.style.zIndex = '10';
-									cortina.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-									cortina.style.color = 'white';
-									cortina.style.borderRadius = '3px';
-									cortina.style.zIndex = '1000';
-									cortina.style.cursor = 'pointer';
-									cortina.addEventListener('mouseout', () => {
-										document.body.removeChild(cortina);
-										overCortina = false;
-									});
-									cortina.addEventListener('mouseover', () => (overCortina = true));
+				const duration = player.duration();
+				const preguntaTime = preg.pregunta;
 
-									cortina.addEventListener('click', () => {
-										this.cambiaVista(1);
-										this.chatComponent.abreChatClase(this.id_clase);
-										document.body.removeChild(cortina);
-										const mensajeElement = document.getElementById('mex-' + preg.id_mensaje);
-										if (mensajeElement) {
-											mensajeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-										} else {
-											console.error('No se encontró el mensaje');
-										}
-									});
+				if (!duration || preguntaTime > duration) continue;
 
-									// Agregar la cortina al documento
-									document.body.appendChild(cortina);
+				const clickRatio = preguntaTime / duration;
+				const seekBar = player.getChild('ControlBar')?.getChild('ProgressControl')?.getChild('SeekBar');
+				if (!seekBar) continue;
 
-									// Evento para ocultar la cortina cuando el ratón sale del marcador
-									marcador.addEventListener(
-										'mouseout',
-										() => {
-											setTimeout(() => {
-												if (!overCortina) {
-													document.body.removeChild(cortina);
-												}
-											}, 1000);
-										},
-										{ once: true },
-									);
-								});
-								// Añadir el marcador al SeekBar
-								seekBar.el().appendChild(marcador);
-							}
-						}
-					}
+				const rect = seekBar.el().getBoundingClientRect();
+				const preguntaPosX = rect.width * clickRatio;
+
+				// Crear marcador
+				const marcador = document.createElement('div');
+				Object.assign(marcador.style, {
+					position: 'absolute',
+					left: `${preguntaPosX}px`,
+					top: '0',
+					width: '4px',
+					height: '100%',
+					zIndex: '10',
+					backgroundColor: '#eab308',
 				});
+
+				let overCortina = false;
+
+				marcador.addEventListener('mouseover', (event: MouseEvent) => {
+					const cortina = document.createElement('div');
+					cortina.className = 'cortina-info';
+					cortina.innerText = preg.mensaje ?? '';
+					Object.assign(cortina.style, {
+						position: 'absolute',
+						left: `${event.clientX}px`,
+						top: `${event.clientY + 20}px`,
+						padding: '5px',
+						backgroundColor: 'rgba(0,0,0,0.8)',
+						color: 'white',
+						borderRadius: '3px',
+						zIndex: '1000',
+						cursor: 'pointer',
+					});
+
+					cortina.addEventListener('mouseout', () => {
+						cortina.remove();
+						overCortina = false;
+					});
+
+					cortina.addEventListener('mouseover', () => (overCortina = true));
+
+					cortina.addEventListener('click', () => {
+						this.cambiaVista(1);
+						this.chatComponent.abreChatClase(this.id_clase);
+						cortina.remove();
+						const mensajeElement = document.getElementById('mex-' + preg.id_mensaje);
+						if (mensajeElement) {
+							mensajeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						} else {
+							console.error('No se encontró el mensaje');
+						}
+					});
+
+					document.body.appendChild(cortina);
+
+					marcador.addEventListener(
+						'mouseout',
+						() => {
+							setTimeout(() => {
+								if (!overCortina) cortina.remove();
+							}, 1000);
+						},
+						{ once: true },
+					);
+				});
+
+				// Añadir marcador al SeekBar
+				seekBar.el().appendChild(marcador);
+			}
 		}
 		this.cdr.detectChanges();
 	}

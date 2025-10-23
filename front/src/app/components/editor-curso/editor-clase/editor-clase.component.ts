@@ -1,5 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, OnInit, Output, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationStart, Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -26,7 +25,6 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	private readonly subscriptions: Subscription[] = new Array<Subscription>();
 	private readonly navControl: Subscription = new Subscription();
 	private claseOriginal!: Clase;
-	isBrowser: boolean;
 	backBase = '';
 	// Presets guardados para WebOBS
 	savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
@@ -35,18 +33,13 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 
 	readyService: boolean = false;
 	readyComponent: boolean = false;
-	emitiendo: boolean = false;
-	status: string = '';
 	constructor(
 		private readonly cursoService: CursosService,
-		private readonly streamingService: StreamingService,
+		public readonly streamingService: StreamingService,
 		private readonly loginService: LoginService,
 		private readonly initService: InitService,
 		private readonly router: Router,
-		@Inject(PLATFORM_ID) private readonly platformId: Object,
-	) {
-		this.isBrowser = isPlatformBrowser(platformId);
-	}
+	) {}
 
 	/**
 	 * Inicializa el componente
@@ -64,16 +57,6 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 						}
 					}
 				}
-			}),
-		);
-		const { ready$, emision$, status$ } = this.streamingService;
-
-		this.subscriptions.push(
-			ready$.subscribe((ready) => (this.readyService = ready)),
-			emision$.subscribe((emitiendo) => (this.emitiendo = emitiendo)),
-			status$.subscribe((status) => {
-				console.log('Estado recibido desde el servicio:', status);
-				this.status = status;
 			}),
 		);
 	}
@@ -152,7 +135,6 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 		this.streamingService.stopMediaStreaming();
 		this.readyComponent = false;
 		this.readyService = false;
-		this.status = '';
 		setTimeout(() => {
 			if (!this.clase) return;
 			const videoButton: HTMLButtonElement = document.getElementById('claseVideo') as HTMLButtonElement;
@@ -231,12 +213,23 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 		document.body.style.overflow = 'auto';
 	}
 
-	/**
-	 * Evento que se emite cuando el componente está listo
-	 * @param $event {boolean} Estado del componente
-	 */
-	readyEvent($event: boolean) {
-		this.readyComponent = $event;
+	subeVideo(file: File) {
+		this.streamingService.subeVideo(file, this.clase.curso_clase, this.clase.id_clase).subscribe((result) => {
+			if (result) {
+				this.clase.direccion_clase = result;
+
+				// Actualizar botones
+				const button = document.getElementById('video-upload-button') as HTMLSpanElement;
+				const buttonGuardar = document.getElementById('button-guardar-clase') as HTMLButtonElement;
+				button.classList.remove('border-gray-500', 'text-gray-500');
+				button.classList.add('border-black');
+				buttonGuardar.classList.remove('border-gray-500', 'text-gray-500');
+				buttonGuardar.classList.add('border-black');
+				buttonGuardar.disabled = false;
+
+				this.readyComponent = true;
+			}
+		});
 	}
 
 	// Recuperar imagenes del curso y del usuario para el componente WebOBS
@@ -299,7 +292,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	emiteWebOBS(mediaStream: MediaStream | null) {
 		// Puede ser la señal de que se acaba de emitir, o que no se ha seleccionado ninguna cámara
 		if (mediaStream === null) {
-			if (this.streamingService.ready$) {
+			if (this.streamingService.emitiendo) {
 				this.streamingService.detenerWebOBS();
 				this.readyComponent = false;
 				return;
@@ -335,9 +328,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 						console.error('Falló la actualización del curso en emitirOBS');
 						return;
 					}
-
-					//this.curso = success;
-					//Object.assign(this.curso, success);
+					Object.assign(this.curso, success);
 
 					this.readyComponent = true;
 
@@ -352,19 +343,41 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 		}
 	}
 
+	obsEvent($event: { type: string; message: string }) {
+		console.log('obsEvent: ', $event);
+		const { type, message } = $event;
+
+		try {
+			switch (type) {
+				case 'startOBS':
+					this.streamingService.startOBS();
+					break;
+
+				case 'emiteOBS':
+					this.emiteOBS(message);
+					break;
+
+				case 'stopOBS':
+					this.streamingService.stopMediaStreaming();
+					this.readyComponent = false;
+					break;
+
+				default:
+					console.warn('Acción desconocida desde Editor-OBS:', $event);
+			}
+		} catch (err) {
+			console.error('Error manejando evento obsEvent:', err);
+		}
+	}
+
 	/**
 	 * Emite un video a través de OBS
 	 *
-	 * @param streamUrl {string | null} URL del stream de la webcam. Si es null indica que el stream a terminado
+	 * @param streamUrl {string | null} URL del stream de la webcam.
 	 */
 	async emiteOBS(streamUrl: string | null) {
 		// Puede ser la señal de que se acaba de emitir, o que no se ha recibido ninguna URL
 		if (streamUrl === null) {
-			if (this.streamingService.ready$) {
-				this.streamingService.detenerOBS();
-				this.readyComponent = false;
-				return;
-			}
 			console.error('No se pudo obtener la URL del servidor');
 			this.readyComponent = false;
 			return;
@@ -388,7 +401,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 			this.curso.clases_curso ??= [];
 
 			this.clase.posicion_clase = this.curso.clases_curso.length + 1;
-			const url = await firstValueFrom(this.streamingService.rtmpUrl$);
+			const url = this.streamingService.rtmpUrl;
 			if (url) {
 				this.clase.direccion_clase = url.substring(url.lastIndexOf('/') + 1);
 			}
@@ -400,7 +413,6 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 						console.error('Falló la actualización del curso en emitirOBS');
 						return;
 					}
-					//this.curso = success;
 					Object.assign(this.curso, success);
 					this.streamingService.emitirOBS();
 				},
@@ -481,6 +493,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 				if (!success) {
 					console.error('Falló la actualización del curso en editor-clase');
 				}
+				Object.assign(this.curso, success);
 				this.close();
 			} catch (error) {
 				console.error('Error al actualizar el curso:', error);
@@ -490,6 +503,8 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 
 		// Clase de tipo distinto a 0
 		if (!this.readyService) {
+			const actual = await this.cursoService.getCurso(this.curso.id_curso, true);
+			Object.assign(this.curso, actual);
 			this.close();
 		}
 	}

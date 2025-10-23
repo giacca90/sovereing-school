@@ -19,7 +19,7 @@ import { EditorClaseComponent } from './editor-clase/editor-clase.component';
 	styleUrl: './editor-curso.component.css',
 })
 export class EditorCursoComponent implements OnInit, OnDestroy {
-	private subscription: Subscription = new Subscription();
+	private readonly subscription: Subscription = new Subscription();
 	idCurso!: number;
 	curso!: Curso;
 	backBase!: string;
@@ -45,38 +45,54 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
 
-	async ngOnInit() {
+	ngOnInit(): void {
 		if (this.idCurso === 0) {
 			if (this.loginService.usuario) {
 				this.curso = new Curso(0, '', [this.loginService.usuario], '', '', new Date(), [], [], '', 0);
 			} else {
 				console.error('No hay usuario logueado');
 				this.router.navigate(['/']);
+				return;
 			}
 		} else {
-			await this.cursoService.getCurso(this.idCurso).then((curso) => {
-				this.curso = JSON.parse(JSON.stringify(curso));
-				if (!this.curso) {
-					console.error('Curso no encontrado: ' + this.idCurso);
+			this.cursoService
+				.getCurso(this.idCurso)
+				.then((curso) => {
+					if (!curso) {
+						console.error('Curso no encontrado: ' + this.idCurso);
+						this.router.navigate(['/']);
+						return;
+					}
+
+					this.curso = structuredClone(curso);
+					if (this.curso.clases_curso) {
+						for (const clase of this.curso.clases_curso) {
+							clase.curso_clase = this.curso.id_curso;
+						}
+					}
+				})
+				.catch((err) => {
+					console.error('Error al obtener el curso:', err);
 					this.router.navigate(['/']);
-				}
-				this.curso.clases_curso?.forEach((clase) => {
-					clase.curso_clase = this.curso.id_curso;
 				});
-			});
 		}
 
 		this.subscription.add(
 			this.router.events.subscribe((event) => {
 				if (event instanceof NavigationStart && this.editado) {
-					this.cursoService.getCurso(this.curso.id_curso).then((curso) => {
-						if (curso) {
-							this.curso = curso;
-						}
-					});
+					this.cursoService
+						.getCurso(this.curso.id_curso)
+						.then((curso) => {
+							if (curso) {
+								this.curso = curso;
+							}
+						})
+						.catch((err) => console.error('Error al recargar el curso:', err));
+
 					const userConfirmed = globalThis.window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
+
 					if (!userConfirmed) {
-						this.router.navigateByUrl(this.router.url); // Mantén al usuario en la misma página
+						this.router.navigateByUrl(this.router.url);
 					}
 				}
 			}),
@@ -108,7 +124,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		event2.dataTransfer?.setData('text/plain', id.toString());
 		event2.dataTransfer?.setDragImage(img, 0, 0);
 		setTimeout(() => {
-			document.body.removeChild(img);
+			img.remove();
 		}, 0);
 		div.classList.add('opacity-0');
 	}
@@ -164,7 +180,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 			},
 			{ offset: Number.NEGATIVE_INFINITY, element: null } as { offset: number; element: Element | null },
 		).element;
-		return closestElement ? parseInt(closestElement.id.split('-')[1], 10) : null;
+		return closestElement ? Number.parseInt(closestElement.id.split('-')[1], 10) : null;
 	}
 
 	onDragEnd(event: Event): void {
@@ -203,8 +219,19 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 		);
 	}
 
-	editarClase(clase: Clase) {
-		this.claseEditar = { ...clase };
+	async editarClase(clase: Clase) {
+		const curso: Curso | null = await this.cursoService.getCurso(clase.curso_clase, true);
+		Object.assign(this.curso, curso);
+		if (!curso) {
+			console.error('No se pudo obtener el curso');
+			return;
+		}
+		const actual = curso.clases_curso?.find((c) => c.id_clase === clase.id_clase);
+		if (!actual) {
+			console.error('No se pudo obtener la clase');
+			return;
+		}
+		this.claseEditar = { ...actual };
 	}
 
 	nuevaClase() {
@@ -250,7 +277,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 				this.cursoService.deleteCurso(this.curso).subscribe({
 					next: (result: boolean) => {
 						if (result) {
-							//this.initService.carga();
 							this.router.navigate(['/cursosUsuario']);
 						}
 					},
@@ -282,7 +308,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 
 	async claseGuardada(event: boolean) {
 		if (event) {
-			//console.log('Guardando cambios en curso: ' + this.idCurso);
 			if (this.idCurso === 0) {
 				this.compruebaCambios();
 				this.claseEditar = null;
@@ -292,7 +317,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 			this.cursoService
 				.getCurso(this.curso.id_curso, true)
 				.then((curso) => {
-					//console.log('Curso actualizado:', curso);
 					if (curso) {
 						this.curso = curso;
 						this.compruebaCambios();

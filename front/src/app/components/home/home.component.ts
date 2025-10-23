@@ -17,7 +17,7 @@ import { UsuariosService } from '../../services/usuarios.service';
 export class HomeComponent {
 	swiperInstance?: Swiper;
 
-	isBrowser = typeof globalThis.window !== 'undefined';
+	isBrowser = globalThis.window !== undefined;
 
 	constructor(
 		public cursoService: CursosService,

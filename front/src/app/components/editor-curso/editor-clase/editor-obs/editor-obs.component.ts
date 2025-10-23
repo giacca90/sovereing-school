@@ -1,7 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, Output, PLATFORM_ID } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { StreamingService } from '../../../../services/streaming.service';
 
 @Component({
 	selector: 'app-editor-obs',
@@ -10,23 +8,22 @@ import { StreamingService } from '../../../../services/streaming.service';
 	styleUrl: './editor-obs.component.css',
 })
 export class EditorObsComponent implements AfterViewInit, OnDestroy {
-	@Input() ready?: boolean; // Avisa cuando está listo para emitir (opcional)
+	@Input() emitiendo?: boolean; // Avisa cuando está listo para emitir (opcional)
 	@Input() status?: string; // Estado del servicio de streaming (opcional)
-	@Output() emision: EventEmitter<string | null> = new EventEmitter();
-	emitiendo: boolean = false;
+	@Input() urlPreview?: string;
+	@Input() rtmpUrl?: string;
+	@Output() obsEvent: EventEmitter<{ type: string; message: string }> = new EventEmitter();
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
 	player: any;
 	rutaOBS: string = '';
+	tiempoGrabacion: string = '00:00:00';
 
 	constructor(
-		public streamingService: StreamingService,
+		//		public streamingService: StreamingService,
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
-		this.streamingService.emision$.subscribe((v) => {
-			this.emitiendo = v;
-		});
 	}
 
 	ngAfterViewInit(): void {
@@ -42,7 +39,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	async startOBS() {
 		if (!this.isBrowser) return; // Evita ejecutar en SSR
 
-		this.streamingService.startOBS();
+		this.obsEvent.emit({ type: 'startOBS', message: '' });
 
 		// Esperar a que el DOM esté listo
 		setTimeout(async () => {
@@ -74,7 +71,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		});
 
 		this.player.src({
-			src: this.streamingService.UrlPreview,
+			src: this.urlPreview,
 			type: 'application/x-mpegURL',
 			withCredentials: true,
 		});
@@ -100,15 +97,12 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	/** Renderiza dinámicamente los enlaces RTMP y sus tooltips */
 	private async renderRTMPLinks(): Promise<void> {
 		const enlaces = document.getElementById('enlaces') as HTMLDivElement;
-		if (!enlaces) return;
-
-		const url = await firstValueFrom(this.streamingService.rtmpUrl$);
-		if (!url) return console.error('No se pudo obtener la URL del servidor');
+		if (!enlaces || !this.rtmpUrl) return;
 
 		const server = this.createParagraph('URL del servidor');
-		const lServer = this.createLinkParagraph(url.substring(0, url.lastIndexOf('/')), enlaces);
+		const lServer = this.createLinkParagraph(this.rtmpUrl.substring(0, this.rtmpUrl.lastIndexOf('/')), enlaces);
 		const key = this.createParagraph('Clave del stream');
-		const lKey = this.createLinkParagraph(url.substring(url.lastIndexOf('/') + 1), enlaces);
+		const lKey = this.createLinkParagraph(this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1), enlaces);
 
 		enlaces.append(server, lServer, key, lKey);
 	}
@@ -154,15 +148,15 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 			return;
 		}
 
-		const url = await firstValueFrom(this.streamingService.rtmpUrl$);
-		this.emision.emit(url);
+		if (!this.rtmpUrl) return;
+
+		this.obsEvent.emit({ type: 'emiteOBS', message: this.rtmpUrl });
 	}
 
 	detenerEmision() {
-		this.streamingService.stopMediaStreaming();
+		this.obsEvent.emit({ type: 'stopOBS', message: '' });
 		this.player.src = '';
 		this.player.srcObject = null;
-		this.emision.emit(null);
 	}
 
 	visualizeAudio(stream: MediaStream, audioLevel: HTMLDivElement) {
@@ -185,5 +179,36 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		}
 
 		updateAudioLevel(); // Iniciar la visualización
+	}
+
+	/**
+	 * Método para calcular el tiempo de grabación
+	 */
+	async calculaTiempoGrabacion() {
+		let tiempo = -1;
+		const updateTimer = () => {
+			if (this.emitiendo) {
+				tiempo += 1;
+				this.tiempoGrabacion = this.formatTime(tiempo);
+				setTimeout(updateTimer, 1000);
+			}
+		};
+		updateTimer();
+	}
+
+	/**
+	 * Función para formatear el tiempo de grabación
+	 * @param seconds segundos transcurridos (number)
+	 * @returns el tiempo en formato hh:mm:ss (string)
+	 */
+	private formatTime(seconds: number): string {
+		if (Number.isNaN(seconds) || !Number.isFinite(seconds)) {
+			return '00:00:00';
+		}
+		const hrs = Math.floor(seconds / 3600);
+		const mins = Math.floor((seconds % 3600) / 60);
+		const secs = Math.floor(seconds % 60);
+
+		return `${hrs.toString().padStart(2, '0')}:` + `${mins.toString().padStart(2, '0')}:` + `${secs.toString().padStart(2, '0')}`;
 	}
 }

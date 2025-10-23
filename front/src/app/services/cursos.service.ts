@@ -16,14 +16,14 @@ export class CursosService {
 	) {}
 
 	get backURL(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			return (globalThis.window as any).__env.BACK_BASE ?? '';
 		}
 		return '';
 	}
 
 	get backURLStreaming(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			return (globalThis.window as any).__env.BACK_STREAM ?? '';
 		}
 		return '';
@@ -39,7 +39,7 @@ export class CursosService {
 		if (curso.clases_curso && !fromServer) return curso;
 
 		try {
-			const response = await firstValueFrom(this.http.get<Curso>(`${this.backURL}/cursos/getCurso/${id_curso}`));
+			const response: Curso = await firstValueFrom(this.http.get<Curso>(`${this.backURL}/cursos/getCurso/${id_curso}`));
 
 			if (!response) {
 				console.error('Respuesta vacía al cargar curso');
@@ -55,7 +55,11 @@ export class CursosService {
 				precio_curso: response.precio_curso,
 			});
 
-			curso.clases_curso?.forEach((clase) => (clase.curso_clase = curso.id_curso));
+			if (curso.clases_curso) {
+				for (const clase of curso.clases_curso) {
+					clase.curso_clase = curso.id_curso;
+				}
+			}
 
 			return curso;
 		} catch (error) {
@@ -106,13 +110,13 @@ export class CursosService {
 
 	getCursosProfe(profe: Usuario) {
 		const cursosProfe: Curso[] = [];
-		this.cursos.forEach((curso) => {
-			curso.profesores_curso.forEach((profe2) => {
+		for (const curso of this.cursos) {
+			for (const profe2 of curso.profesores_curso) {
 				if (profe2.id_usuario === profe.id_usuario) {
 					cursosProfe.push(curso);
 				}
-			});
-		});
+			}
+		}
 		return cursosProfe;
 	}
 
@@ -152,9 +156,9 @@ export class CursosService {
 			map((response: HttpResponse<Curso[]>) => {
 				if (response.ok && response.body) {
 					this.cursos = response.body;
-					this.cursos.forEach((curso) => {
+					for (const curso of this.cursos) {
 						curso.clases_curso = curso.clases_curso?.sort((a, b) => a.posicion_clase - b.posicion_clase);
-					});
+					}
 					return this.cursos;
 				}
 				return [];

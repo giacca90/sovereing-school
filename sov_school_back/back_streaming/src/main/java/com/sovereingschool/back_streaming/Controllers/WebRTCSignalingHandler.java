@@ -346,7 +346,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
             String line;
             try {
                 while ((line = pionErrorReader.readLine()) != null) {
-                    logger.error("PION Log: {}", line);
+                    System.out.println("PION Log: " + line);
                 }
             } catch (IOException e) {
                 logger.error("Error leyendo stderr de Pion: {}", e.getMessage());

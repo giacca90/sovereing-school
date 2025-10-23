@@ -14,11 +14,11 @@
 					<div class="m-2 flex w-11/12 flex-col md:w-3/5">
 						<!-- Si es una clase de video o una edición-->
 						@if (this.clase.tipo_clase === 0 || this.clase.id_clase !== 0) {
-							<app-editor-video [clase]="clase" (readyEvent)="this.readyEvent($event)"></app-editor-video>
+							<app-editor-video [clase]="clase" (videoSeleccionado)="this.subeVideo($event)"></app-editor-video>
 						}
 						<!-- Si es una clase OBS -->
 						@if (this.clase.tipo_clase === 1) {
-							<app-editor-obs (emision)="emiteOBS($event)" [ready]="this.readyComponent" [status]="this.status"></app-editor-obs>
+							<app-editor-obs (obsEvent)="obsEvent($event)" [emitiendo]="this.streamingService.emitiendo" [status]="streamingService.status" [urlPreview]="this.streamingService.UrlPreview" [rtmpUrl]="this.streamingService.rtmpUrl"></app-editor-obs>
 						}
 					</div>
 				}
@@ -29,13 +29,13 @@
 			</div>
 			<!-- Si es una clase WebOBS -->
 			@if (this.clase.tipo_clase === 2) {
-				<web-obs class="m-2" (emision)="emiteWebOBS($event)" (savePresets)="savePresets($event)" [ready]="readyService" [status]="status" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></web-obs>
+				<web-obs class="m-2" (emision)="emiteWebOBS($event)" (savePresets)="savePresets($event)" [isInLive]="this.streamingService.emitiendo" [status]="streamingService.status" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></web-obs>
 			}
 		} @else {
 			<div class="flex grow flex-col items-center md:flex-row md:items-start">
 				<div class="m-2 flex w-11/12 flex-col md:w-3/5">
 					<!-- Si es una clase de video o una edición-->
-					<app-editor-video [clase]="clase" (readyEvent)="this.readyEvent($event)"></app-editor-video>
+					<app-editor-video [clase]="clase" (videoSeleccionado)="this.subeVideo($event)"></app-editor-video>
 				</div>
 				<div class="m-2 flex w-full grow flex-col">
 					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccion_clase" />

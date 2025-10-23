@@ -16,7 +16,7 @@ export class UsuariosService {
 	) {}
 
 	get apiUrl(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_BASE ?? '';
 			return url + '/usuario/';
 		}
@@ -106,15 +106,13 @@ export class UsuariosService {
 	}
 
 	cursoComprado(curso: Curso): Observable<boolean> {
-		const usuario = JSON.parse(JSON.stringify(this.loginService.usuario));
+		const usuario = structuredClone(this.loginService.usuario);
 		if (!usuario) {
 			console.error('Usuario no inicializado');
 			return of(false);
 		}
 
-		if (!usuario.cursos_usuario) {
-			usuario.cursos_usuario = [];
-		}
+		usuario.cursos_usuario ??= [];
 
 		// Si el curso ya está comprado
 		if (usuario.cursos_usuario.some((cur: Curso) => cur.id_curso === curso.id_curso)) {

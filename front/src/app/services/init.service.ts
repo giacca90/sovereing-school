@@ -35,7 +35,7 @@ export class InitService {
 		// Ruta al contenedor
 		if (isPlatformServer(this.platformId)) {
 			return process.env['BACK_BASE_DOCKER'] + '/init';
-		} else if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		} else if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			return (globalThis.window as any).__env.BACK_BASE + '/init';
 		} else if (process.env['BACK_BASE']) {
 			return process.env['BACK_BASE'] + '/init';
@@ -51,19 +51,12 @@ export class InitService {
 	async carga(): Promise<boolean> {
 		// 1. Cache en memoria del cliente (SPA)
 		if (this.initDataCache) {
-			//console.log('>>> Usando initCache en memoria en ' + this.platform);
-			//console.log(this.initDataCache.cursosInit);
-			//console.log(this.initDataCache.estadistica);
 			this.cargarEnServicios(this.initDataCache);
 			return true;
 		}
 
 		// 2️⃣ TransferState (SSR → cliente)
 		if (this.transferState.hasKey(INIT_KEY)) {
-			//console.log('>>> Usando TransferState en ' + this.platform + ' con INIT_KEY: ' + INIT_KEY);
-			//console.log(this.transferState.get(INIT_KEY, null as any).cursosInit);
-			//console.log(this.transferState.get(INIT_KEY, null as any).estadistica);
-
 			const data: Init = this.transferState.get(INIT_KEY, null as any);
 
 			this.cargarEnServicios(data);
@@ -75,9 +68,6 @@ export class InitService {
 		if (isPlatformServer(this.platformId)) {
 			const cached = getGlobalInitCache();
 			if (cached) {
-				//console.log('>>> Usando cache global SSR en ' + this.platform);
-				//console.log(cached.cursosInit);
-				//console.log(cached.estadistica);
 				this.cargarEnServicios(cached);
 				this.transferState.set(INIT_KEY, cached);
 				return true;
@@ -86,17 +76,12 @@ export class InitService {
 
 		// 4️⃣ Fetch real al backend
 		try {
-			//console.log('>>> Pidiendo /init al backend en ' + this.platform);
 			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 
 			if (isPlatformServer(this.platformId)) {
 				// Guardamos en cache global SSR
-				//console.log('>>> Guardando en cache global SSR');
-				//console.log(response.cursosInit);
-				//console.log(response.estadistica);
 				setGlobalInitCache(response);
 				// Pasamos datos al browser
-				//console.log('>>> Pasando datos al transferState con INIT_KEY: ' + INIT_KEY);
 				this.transferState.set(INIT_KEY, response);
 			} else {
 				this.initDataCache = response;
@@ -116,7 +101,6 @@ export class InitService {
 	 */
 	public async cargarUsuario() {
 		try {
-			//console.log('[InitService] Cargando usuario desde /auth');
 			const usuario = await firstValueFrom(this.http.get<Usuario | null>(this.apiUrl + '/auth', { headers: this.headers, withCredentials: true }));
 			this.loginService.usuario = usuario;
 		} catch (err) {
@@ -143,9 +127,6 @@ export class InitService {
 	preloadFromGlobalCache() {
 		const cached = getGlobalInitCache();
 		if (cached) {
-			//console.log('[InitService] Refrescando TransferState desde cache global SSR');
-			//console.log(cached.cursosInit);
-			//console.log(cached.estadistica);
 			this.transferState.set(INIT_KEY, cached);
 		}
 	}

@@ -86,7 +86,7 @@ export class ChatService {
 	}
 
 	get urlWss(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_CHAT_WSS ?? '';
 			return url + '/chat-socket';
 		}
@@ -94,7 +94,7 @@ export class ChatService {
 	}
 
 	get url(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_CHAT ?? '';
 			return url;
 		}

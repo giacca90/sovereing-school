@@ -20,7 +20,7 @@ export class ConfirmEmailComponent implements OnInit {
 	) {}
 
 	get backURL(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			return (globalThis.window as any).__env.BACK_BASE ?? '';
 		}
 		return '';

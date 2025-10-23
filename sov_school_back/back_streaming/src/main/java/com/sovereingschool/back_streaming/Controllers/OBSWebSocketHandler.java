@@ -111,7 +111,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                 os.close();
                 // Esperar a que el proceso termine de forma controlada
                 // Esperar un segundo para que termine de manera controlada
-                boolean finished = preProcess.waitFor(1, TimeUnit.SECONDS);
+                boolean finished = preProcess.waitFor(3, TimeUnit.SECONDS);
 
                 if (finished) {
                     // El proceso terminó correctamente
@@ -258,7 +258,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                 case "request_rtmp_url" -> handleRequestRtmpUrl(session);
                 case "emitirOBS" -> handleEmitirOBS(session, payload);
                 case "detenerStreamOBS" -> handleDetenerStreamOBS(session, payload);
-                default -> sendMessage(session, "error", "Tipo de mensaje no reconocido");
+                default -> sendMessage(session, "error", "Tipo de mensaje no reconocido: " + payload);
             }
 
         } catch (RuntimeException e) {

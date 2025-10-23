@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, catchError, map, Observable, of } from 'rxjs';
+import { catchError, map, Observable, of } from 'rxjs';
 import { VideoElement } from 'web-obs';
 import { LoginService } from './login.service';
 
@@ -10,22 +10,27 @@ import { LoginService } from './login.service';
 export class StreamingService {
 	private ws: WebSocket | null = null;
 
-	// URL del flujo RTMP
+	/* // URL del flujo RTMP
 	private readonly rtmpUrlSubject = new BehaviorSubject<string | null>(null);
 	rtmpUrl$ = this.rtmpUrlSubject.asObservable(); // lo que expones
-
-	// Mensaje de estado para los componentes
+ */
+	/* // Mensaje de estado para los componentes
 	private readonly statusSubject = new BehaviorSubject<string>('');
 	status$ = this.statusSubject.asObservable(); // lo que expones
-
-	// Avisa si está listo para emitir a los componentes
+ */
+	/* // Avisa si está listo para emitir a los componentes
 	private readonly readySubject = new BehaviorSubject<boolean>(false);
 	ready$ = this.readySubject.asObservable(); // lo que expones
-
-	// Señal que indica si se está emitiendoOBS
+ */
+	/* // Señal que indica si se está emitiendoOBS
 	private readonly emisionSubject = new BehaviorSubject<boolean>(false);
-	emision$ = this.emisionSubject.asObservable(); // lo que expones
+	emision$ = this.emisionSubject.asObservable(); // lo que expones */
+	public emitiendo: boolean = false;
 
+	// URL del flujo RTMP
+	public rtmpUrl: string = '';
+	// URL de la previsualización de OBS
+	public status: string = '';
 	public UrlPreview: string = '';
 	public streamId: string | null = null;
 	private pc!: RTCPeerConnection;
@@ -34,11 +39,7 @@ export class StreamingService {
 	constructor(
 		private readonly http: HttpClient,
 		private readonly loginService: LoginService,
-	) {
-		this.ready$.subscribe(() => {
-			console.log('Estado de emisión:', this.emisionSubject.getValue());
-		});
-	}
+	) {}
 
 	get URL(): string {
 		const win = globalThis?.window as any;
@@ -105,7 +106,7 @@ export class StreamingService {
 
 			if (!win?.WebSocket) {
 				const msg = '❌ WebSocket no soportado en este navegador.';
-				this.statusSubject.next(msg);
+				this.status = msg;
 				return reject(new Error(msg));
 			}
 
@@ -116,7 +117,7 @@ export class StreamingService {
 
 			this.ws.onopen = () => {
 				console.log('🔗 Conexión WebSocket abierta');
-				this.statusSubject.next('Conexión establecida. Enviando ID de usuario...');
+				this.status = 'Conexión establecida. Enviando ID de usuario...';
 				this.ws?.send(JSON.stringify({ type: 'userId' }));
 			};
 
@@ -149,7 +150,7 @@ export class StreamingService {
 					streamId: this.streamId,
 				}),
 			);
-			this.emisionSubject.next(true);
+			this.emitiendo = true;
 
 			this.pc = new RTCPeerConnection({
 				iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -187,9 +188,8 @@ export class StreamingService {
 			this.ws.send(JSON.stringify({ type: 'offer', streamId: this.streamId, sdp: offer.sdp }));
 		} catch (err) {
 			console.error('🚨 Error en emitirWebOBS:', err);
-			this.statusSubject.next(`❌ Error: ${(err as Error).message}`);
-			this.readySubject.next(false);
-			this.emisionSubject.next(false);
+			this.status = `❌ Error: ${(err as Error).message}`;
+			this.emitiendo = false;
 			throw err;
 		}
 	}
@@ -200,13 +200,12 @@ export class StreamingService {
 	detenerWebOBS() {
 		if (this.ws) {
 			this.ws.send(JSON.stringify({ 'type': 'detenerStreamWebRTC', 'streamId': this.streamId }));
-			this.statusSubject.next('Deteniendo la emisión...');
+			this.status = 'Deteniendo la emisión...';
 		} else {
 			console.error('No se pudo detener WebRTC');
-			this.statusSubject.next('<span style="color: red; font-weight: bold;">No se pudo detener WebRTC</span>');
+			this.status = '<span style="color: red; font-weight: bold;">No se pudo detener WebRTC</span>';
 		}
-		this.readySubject.next(false);
-		this.emisionSubject.next(false);
+		this.emitiendo = false;
 	}
 
 	/**
@@ -217,7 +216,7 @@ export class StreamingService {
 
 		if (!win?.WebSocket) {
 			const msg = '❌ WebSocket no soportado en este navegador.';
-			this.statusSubject.next(msg);
+			this.status = msg;
 			return;
 		}
 
@@ -235,7 +234,7 @@ export class StreamingService {
 
 		this.ws.onopen = () => {
 			console.log('✅ Conexión WebSocket establecida con OBS');
-			this.statusSubject.next('Conexión WebSocket establecida. Pidiendo URL del servidor...');
+			this.status = 'Conexión WebSocket establecida. Pidiendo URL del servidor...';
 
 			// Pedir la URL RTMP al backend
 			const message = { type: 'request_rtmp_url' };
@@ -251,21 +250,18 @@ export class StreamingService {
 	 */
 	async emitirOBS() {
 		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-			this.readySubject.next(false);
-			this.emisionSubject.next(false);
+			this.emitiendo = false;
 			throw new Error('No se puede conectar con WebSocket');
 		}
 
-		const rtmpUrl = this.rtmpUrlSubject.getValue();
-		if (!rtmpUrl) {
-			this.readySubject.next(false);
-			this.emisionSubject.next(false);
+		if (!this.rtmpUrl) {
+			this.emitiendo = false;
 			throw new Error('No se puede emitir OBS sin una ruta RTMP válida');
 		}
 
-		console.log('📡 Iniciando emisión OBS con RTMP:', rtmpUrl);
+		console.log('📡 Iniciando emisión OBS con RTMP:', this.rtmpUrl);
 
-		this.ws.send(JSON.stringify({ type: 'emitirOBS', rtmpUrl }));
+		this.ws.send(JSON.stringify({ type: 'emitirOBS', rtmpUrl: this.rtmpUrl }));
 	}
 
 	/**
@@ -273,11 +269,11 @@ export class StreamingService {
 	 */
 	detenerOBS() {
 		if (this.ws) {
-			this.ws.send(JSON.stringify({ 'type': 'detenerStreamOBS', 'rtmpUrl': this.rtmpUrl$ }));
-			this.statusSubject.next('Deteniendo la emisión...');
+			this.ws.send(JSON.stringify({ 'type': 'detenerStreamOBS', 'rtmpUrl': this.rtmpUrl }));
+			this.status = 'Deteniendo la emisión...';
 		} else {
 			console.error('No se pudo detener OBS');
-			this.statusSubject.next('<span style="color: red; font-weight: bold;">No se pudo detener OBS</span>');
+			this.status = '<span style="color: red; font-weight: bold;">No se pudo detener OBS</span>';
 		}
 	}
 
@@ -293,8 +289,8 @@ export class StreamingService {
 			console.log('WebSocket cerrado.');
 		}
 
-		this.statusSubject.next('Transmisión detenida.');
-		this.readySubject.next(false);
+		this.status = 'Transmisión detenida.';
+		this.emitiendo = false;
 	}
 
 	/**
@@ -329,9 +325,8 @@ export class StreamingService {
 					// 🔹 Backend envía RTMP URL
 					case 'rtmp_url':
 						console.log('✅ URL RTMP recibida:', data.message);
-						this.rtmpUrlSubject.next(data.message);
-						this.readySubject.next(true);
-						this.statusSubject.next('Esperando conexión con OBS...');
+						this.rtmpUrl = data.message;
+						this.status = 'Esperando conexión con OBS...';
 
 						// Prepara la URL para preview
 						this.UrlPreview = `${this.URL}/getPreview/${data.message.split('/').pop()}`;
@@ -341,22 +336,21 @@ export class StreamingService {
 					// 🔹 Error genérico del servidor
 					case 'error':
 						console.error('Error recibido del servidor:', data.message);
-						this.readySubject.next(false);
-						this.emisionSubject.next(false);
-						this.statusSubject.next(`<span style="color: red; font-weight: bold;">Error: ${data.message}</span>`);
+						this.emitiendo = false;
+						this.status = `<span style="color: red; font-weight: bold;">Error: ${data.message}</span>`;
 						break;
 
 					// 🔹 Inicio de emisión OBS
 					case 'start':
 						console.log('🎥 Emisión de OBS iniciada.');
-						this.emisionSubject.next(true);
-						this.statusSubject.next('Emisión de OBS iniciada.');
+						this.emitiendo = true;
+						this.status = 'Emisión de OBS iniciada.';
 						break;
 
 					// 🔹 Información general
 					case 'info':
 						console.log('ℹ️ Info recibida del servidor:', data.message);
-						this.statusSubject.next(`Info: ${data.message}`);
+						this.status = `Info: ${data.message}`;
 						break;
 
 					// 🔹 Mensaje desconocido
@@ -367,27 +361,25 @@ export class StreamingService {
 			} catch (err) {
 				console.error('❌ Error procesando mensaje OBS:', err);
 				this.ws?.close();
-				this.readySubject.next(false);
+				this.emitiendo = false;
 			}
 		};
 
 		this.ws.onerror = (event: Event) => {
 			console.error('⚠️ Error en la conexión WebSocket OBS:', event);
 
-			this.readySubject.next(false);
-			this.emisionSubject.next(false);
+			this.emitiendo = false;
 
 			let message = 'Error en la conexión WebSocket';
 			if (event instanceof ErrorEvent) message += ': ' + event.message;
 
-			this.statusSubject.next(`<span style="color: red; font-weight: bold;">${message}</span>`);
+			this.status = `<span style="color: red; font-weight: bold;">${message}</span>`;
 		};
 
 		this.ws.onclose = () => {
 			console.log('🔌 Conexión WebSocket OBS cerrada.');
-			this.readySubject.next(false);
-			this.emisionSubject.next(false);
-			this.statusSubject.next('Conexión WebSocket cerrada.');
+			this.emitiendo = false;
+			this.status = 'Conexión WebSocket cerrada.';
 		};
 	}
 
@@ -422,8 +414,7 @@ export class StreamingService {
 					case 'streamId':
 						console.log('✅ StreamId recibido:', data.streamId);
 						this.streamId = data.streamId;
-						this.statusSubject.next('Todo listo!!');
-						this.readySubject.next(true);
+						this.status = 'Todo listo!!';
 						resolve(data.streamId as string);
 						break;
 
@@ -439,7 +430,7 @@ export class StreamingService {
 						}
 						this.pendingCandidates.length = 0;
 						console.log('✅ WebRTC completado con éxito');
-						this.statusSubject.next('Conexión WebRTC completada con éxito');
+						this.status = 'Conexión WebRTC completada con éxito';
 						break;
 
 					// 🔹 ICE candidate
@@ -456,31 +447,31 @@ export class StreamingService {
 							console.log('🕓 Candidate en espera');
 						}
 						break;
-
+					case 'info':
+						console.log('ℹ️ Info recibida del servidor:', data.message);
+						break;
 					default:
 						console.warn('⚠️ Tipo de mensaje desconocido:', data);
 				}
 			} catch (err) {
 				console.error('❌ Error procesando mensaje:', err);
 				this.ws?.close();
-				this.readySubject.next(false);
+				this.emitiendo = false;
 			}
 		};
 
 		this.ws.onerror = (event: Event) => {
 			const error = event as ErrorEvent;
 			console.error('⚠️ Error WebSocket:', error.message);
-			this.statusSubject.next(`❌ Error en WebSocket: ${error.message}`);
-			this.readySubject.next(false);
-			this.emisionSubject.next(false);
+			this.status = `❌ Error en WebSocket: ${error.message}`;
+			this.emitiendo = false;
 			reject(new Error(error.message));
 		};
 
 		this.ws.onclose = () => {
 			console.log('🔌 WebSocket cerrado');
-			this.statusSubject.next('Conexión cerrada.');
-			this.readySubject.next(false);
-			this.emisionSubject.next(false);
+			this.status = 'Conexión cerrada.';
+			this.emitiendo = false;
 		};
 	}
 

@@ -30,7 +30,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
 	ngOnInit() {
 		// Detecta si está en el navegador
-		if (typeof globalThis.window !== 'undefined') {
+		if (globalThis.window !== undefined) {
 			globalThis.window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
 				if (!('theme' in localStorage)) {
 					document.documentElement.classList.toggle('dark', e.matches);

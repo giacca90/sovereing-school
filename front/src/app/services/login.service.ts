@@ -20,13 +20,11 @@ export class LoginService {
 
 	async cargarUsuarioDesdeTransferState(): Promise<void> {
 		if (isPlatformBrowser(this.platformId)) {
-			const rawState = (window as any)['TRANSFER_STATE'] || {};
+			const rawState = (globalThis.window as any)['TRANSFER_STATE'] || {};
 			if (rawState['usuario']) {
 				this.usuario = rawState['usuario'];
 				delete rawState['usuario'];
-				//console.log('[LoginService] Usuario cargado desde TransferState', this.usuario);
 			} else {
-				//console.log('[LoginService] Usuario no encontrado en TransferState');
 				this.usuario = null;
 			}
 		}
@@ -37,7 +35,7 @@ export class LoginService {
 	}
 
 	get apiUrl(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_BASE ?? '';
 			return url + '/login/';
 		}
@@ -45,7 +43,7 @@ export class LoginService {
 	}
 
 	get loginSSRUrl(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.FRONT_URL ?? '';
 			return url + '/ssr-login';
 		}
@@ -53,7 +51,7 @@ export class LoginService {
 	}
 
 	get logoutSSRUrl(): string {
-		if (typeof globalThis.window !== 'undefined' && (globalThis.window as any).__env) {
+		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.FRONT_URL ?? '';
 			return url + '/ssr-logout';
 		}
@@ -61,7 +59,7 @@ export class LoginService {
 	}
 
 	async compruebaCorreo(correo: string): Promise<boolean> {
-		return new Promise(async (resolve, reject) => {
+		return new Promise((resolve, reject) => {
 			const sub = this.http.get<number>(`${this.apiUrl}${correo}`, { observe: 'response' }).subscribe({
 				next: (response: HttpResponse<number>) => {
 					if (response.ok) {
@@ -75,12 +73,12 @@ export class LoginService {
 						}
 					} else {
 						console.error('Error en comprobar el correo: ' + response.status);
-						reject(false);
+						resolve(false);
 					}
 				},
 				error: (error: HttpErrorResponse) => {
 					console.error('HTTP request failed:', error);
-					reject(false);
+					resolve(false);
 					sub.unsubscribe();
 				},
 			});
@@ -88,7 +86,7 @@ export class LoginService {
 	}
 
 	async compruebaPassword(password: string): Promise<boolean> {
-		return new Promise(async (resolve) => {
+		return new Promise((resolve) => {
 			const sub = this.http.get<Auth>(this.apiUrl + this.id_usuario + '/' + password, { observe: 'response', withCredentials: true }).subscribe({
 				next: (response: HttpResponse<Auth>) => {
 					if (response.ok && response.body) {
