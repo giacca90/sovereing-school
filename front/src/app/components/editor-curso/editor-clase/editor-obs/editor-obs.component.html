@@ -2,6 +2,9 @@
 <div id="audio-bar">
 	<div id="audio-level"></div>
 </div>
+@if (emitiendo) {
+	<p>Tiempo de grabación: {{ tiempoGrabacion }}</p>
+}
 <p id="statusOBS">{{ status }}</p>
 <div id="enlaces"></div>
 @if (this.emitiendo) {

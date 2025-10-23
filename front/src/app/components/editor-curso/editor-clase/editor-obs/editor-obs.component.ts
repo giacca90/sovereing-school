@@ -151,6 +151,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		if (!this.rtmpUrl) return;
 
 		this.obsEvent.emit({ type: 'emiteOBS', message: this.rtmpUrl });
+		this.calculaTiempoGrabacion();
 	}
 
 	detenerEmision() {
@@ -187,11 +188,12 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	async calculaTiempoGrabacion() {
 		let tiempo = -1;
 		const updateTimer = () => {
+			console.log('tiempo: ' + tiempo);
 			if (this.emitiendo) {
 				tiempo += 1;
 				this.tiempoGrabacion = this.formatTime(tiempo);
-				setTimeout(updateTimer, 1000);
 			}
+			setTimeout(updateTimer, 1000);
 		};
 		updateTimer();
 	}

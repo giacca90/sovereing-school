@@ -1,8 +1,9 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { CanComponentDeactivate } from '../../interfaces/can-component-deactivate';
 import { Clase } from '../../models/Clase';
 import { Curso } from '../../models/Curso';
 import { CursosService } from '../../services/cursos.service';
@@ -18,7 +19,7 @@ import { EditorClaseComponent } from './editor-clase/editor-clase.component';
 	templateUrl: './editor-curso.component.html',
 	styleUrl: './editor-curso.component.css',
 })
-export class EditorCursoComponent implements OnInit, OnDestroy {
+export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeactivate {
 	private readonly subscription: Subscription = new Subscription();
 	idCurso!: number;
 	curso!: Curso;
@@ -43,6 +44,22 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 			}),
 		);
 		this.isBrowser = isPlatformBrowser(platformId);
+	}
+	canDeactivate(): boolean {
+		if (this.streamingService.emitiendo) {
+			return confirm('Estás emitiendo. ¿Seguro que quieres salir?');
+		}
+		if (this.editado) {
+			return confirm('Tienes cambios sin guardar. ¿Seguro que quieres salir?');
+		}
+		return true;
+	}
+
+	@HostListener('window:beforeunload', ['$event'])
+	unloadNotification($event: BeforeUnloadEvent) {
+		if (this.streamingService.emitiendo || this.editado) {
+			$event.preventDefault();
+		}
 	}
 
 	ngOnInit(): void {
@@ -76,27 +93,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy {
 					this.router.navigate(['/']);
 				});
 		}
-
-		this.subscription.add(
-			this.router.events.subscribe((event) => {
-				if (event instanceof NavigationStart && this.editado) {
-					this.cursoService
-						.getCurso(this.curso.id_curso)
-						.then((curso) => {
-							if (curso) {
-								this.curso = curso;
-							}
-						})
-						.catch((err) => console.error('Error al recargar el curso:', err));
-
-					const userConfirmed = globalThis.window.confirm('Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?');
-
-					if (!userConfirmed) {
-						this.router.navigateByUrl(this.router.url);
-					}
-				}
-			}),
-		);
 
 		if (isPlatformBrowser(this.platformId)) {
 			this.backBase = (globalThis.window as any).__env?.BACK_BASE ?? '';

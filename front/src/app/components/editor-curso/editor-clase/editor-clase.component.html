@@ -43,6 +43,13 @@
 				</div>
 			</div>
 		}
-		<button id="button-guardar-clase" type="button" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="guardarCambiosClase()">Guardar Cambios</button>
+		<button id="button-guardar-clase" type="button" class="group relative m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="guardarCambiosClase()" [disabled]="streamingService.emitiendo">
+			Guardar Cambios
+
+			<!-- Tooltip -->
+			@if (streamingService.emitiendo) {
+				<span class="absolute bottom-full left-1/2 mb-2 w-max -translate-x-1/2 rounded bg-black px-2 py-1 text-sm text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100"> Deja de emitir primero </span>
+			}
+		</button>
 	</div>
 </div>

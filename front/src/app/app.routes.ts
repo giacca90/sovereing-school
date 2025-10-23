@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { GuestGuard } from './guard/guest.guard';
+import { PendingChangesGuard } from './guard/pending-changes.guard';
 import { ProfGuard } from './guard/prof.guard';
 import { UserGuard } from './guard/user.guard';
 
@@ -41,6 +42,7 @@ export const routes: Routes = [
 		path: 'editorCurso/:id_curso',
 		loadComponent: () => import('./components/editor-curso/editor-curso.component').then((m) => m.EditorCursoComponent),
 		canActivate: [GuestGuard, ProfGuard],
+		canDeactivate: [PendingChangesGuard],
 	},
 	{
 		path: 'perfil',

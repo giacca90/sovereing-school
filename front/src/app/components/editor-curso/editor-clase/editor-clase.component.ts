@@ -2,7 +2,7 @@ import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Outpu
 import { FormsModule } from '@angular/forms';
 import { NavigationStart, Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
-import { VideoElement, WebOBS } from 'web-obs';
+import { Preset, WebOBS } from 'web-obs';
 import { Clase } from '../../../models/Clase';
 import { Curso } from '../../../models/Curso';
 import { CursosService } from '../../../services/cursos.service';
@@ -27,7 +27,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	private claseOriginal!: Clase;
 	backBase = '';
 	// Presets guardados para WebOBS
-	savedPresets: Map<string, { elements: VideoElement[]; shortcut: string }> | null = null;
+	savedPresets: Map<string, Preset> | null = null;
 	// Archivos guardados para WebOBS
 	savedFiles: File[] = [];
 
@@ -426,7 +426,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	/** Guarda los presets de WebOBS */
-	savePresets(data: Map<string, { elements: VideoElement[]; shortcut: string }>) {
+	savePresets(data: Map<string, Preset>) {
 		this.streamingService.savePresets(data);
 	}
 

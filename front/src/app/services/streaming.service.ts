@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
-import { VideoElement } from 'web-obs';
+import { Preset } from 'web-obs';
 import { LoginService } from './login.service';
 
 @Injectable({
@@ -477,7 +477,7 @@ export class StreamingService {
 
 	/**
 	 * Función para obtener los presets de WebOBS
-	 * @returns Observable<Map<string, { elements: VideoElement[]; shortcut: string }>>: Presets obtenidos
+	 * @returns Observable<Map<string, Preset>>: Presets obtenidos
 	 */
 	getPresets() {
 		return this.http.get(`${this.URL}/presets/get/${this.loginService.usuario?.id_usuario}`, { responseType: 'json', withCredentials: true });
@@ -485,9 +485,9 @@ export class StreamingService {
 
 	/**
 	 * Función para guardar los presets de WebOBS
-	 * @param presets Map<string, { elements: VideoElement[]; shortcut: string }>: Presets a guardar
+	 * @param presets Map<string, Preset>: Presets a guardar
 	 */
-	savePresets(presets: Map<string, { elements: VideoElement[]; shortcut: string }>) {
+	savePresets(presets: Map<string, Preset>) {
 		const presetsObj = Object.fromEntries(presets);
 		console.log('Presets:', presets);
 		console.log('Presets JSON:', JSON.stringify(presetsObj));

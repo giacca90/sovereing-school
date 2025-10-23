@@ -53,7 +53,7 @@
 		"@angular/build": "20.3.7",
 		"@angular/cli": "20.3.7",
 		"@angular/compiler-cli": "20.3.7",
-		"@tailwindcss/postcss": "4.1.15",
+		"@tailwindcss/postcss": "4.1.16",
 		"@types/compression": "1.8.1",
 		"@types/cookie-parser": "1.4.9",
 		"@types/express": "5.0.3",
@@ -78,13 +78,13 @@
 		"prettier": "3.6.2",
 		"prettier-plugin-tailwindcss": "0.7.1",
 		"tailwind-scrollbar": "4.0.2",
-		"tailwindcss": "4.1.15",
+		"tailwindcss": "4.1.16",
 		"ts-node": "10.9.2",
 		"typescript": "5.9.3"
 	},
 	"overrides": {
 		"@angular-devkit/build-angular": {
-			"tailwindcss": "4.1.15"
+			"tailwindcss": "4.1.16"
 		}
 	}
 }
