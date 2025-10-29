@@ -14,25 +14,25 @@ import com.sovereingschool.back_common.Models.Usuario;
 public interface ICursoService {
     public List<Curso> getAll();
 
-    public Long createCurso(Curso new_curso);
+    public Long createCurso(Curso newCurso);
 
-    public Curso getCurso(Long id_curso);
+    public Curso getCurso(Long idCurso);
 
-    public String getNombreCurso(Long id_curso);
+    public String getNombreCurso(Long idCurso);
 
-    public List<Usuario> getProfesoresCurso(Long id_curso);
+    public List<Usuario> getProfesoresCurso(Long idCurso);
 
-    public Date getFechaCreacionCurso(Long id_curso);
+    public Date getFechaCreacionCurso(Long idCurso);
 
-    public List<Clase> getClasesDelCurso(Long id_curso);
+    public List<Clase> getClasesDelCurso(Long idCurso);
 
-    public List<Plan> getPlanesDelCurso(Long id_curso);
+    public List<Plan> getPlanesDelCurso(Long idCurso);
 
-    public BigDecimal getPrecioCurso(Long id_curso);
+    public BigDecimal getPrecioCurso(Long idCurso);
 
     public Curso updateCurso(Curso curso);
 
-    public Boolean deleteCurso(Long id_curso);
+    public Boolean deleteCurso(Long idCurso);
 
     public void deleteClase(Clase clase);
 

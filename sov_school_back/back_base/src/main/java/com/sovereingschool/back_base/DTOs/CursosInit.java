@@ -15,14 +15,14 @@ import lombok.ToString;
 @ToString
 public class CursosInit {
 
-    private Long id_curso;
+    private Long idCurso;
 
-    private String nombre_curso;
+    private String nombreCurso;
 
-    private List<Long> profesores_curso;
+    private List<Long> profesoresCurso;
 
-    private String descriccion_corta;
+    private String descriccionCorta;
 
-    private String imagen_curso;
+    private String imagenCurso;
 
 }

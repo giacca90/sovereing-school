@@ -14,11 +14,11 @@ import lombok.ToString;
 @Setter
 @ToString
 public class ProfesInit {
-    private Long id_usuario;
+    private Long idUsuario;
 
-    private String nombre_usuario;
+    private String nombreUsuario;
 
-    private List<String> foto_usuario;
+    private List<String> fotoUsuario;
 
     private String presentacion;
 

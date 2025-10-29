@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
@@ -126,31 +127,31 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public AuthResponse createUsuario(NewUsuario new_usuario) {
+    public AuthResponse createUsuario(NewUsuario newUsuario) {
         Usuario usuario = new Usuario(
                 null, // Long id_usuario
-                new_usuario.getNombre_usuario(), // String nombre_usuario
-                new_usuario.getFoto_usuario() == null || new_usuario.getFoto_usuario().isEmpty()
+                newUsuario.getNombreUsuario(), // String nombre_usuario
+                newUsuario.getFotoUsuario() == null || newUsuario.getFotoUsuario().isEmpty()
                         ? new ArrayList<>(Arrays.asList(generarColorHex()))
-                        : new_usuario.getFoto_usuario(), // List<String> foto_usuario
+                        : newUsuario.getFotoUsuario(), // List<String> foto_usuario
                 null, // Strting presentación
                 RoleEnum.USER, // Integer rol_usuario
-                new_usuario.getPlan_usuario(), // Plan plan_usuario
-                new_usuario.getCursos_usuario(), // List<String> cursos_usuario
-                new_usuario.getFecha_registro_usuario(), // Date fecha_registro_usuario
+                newUsuario.getPlanUsuario(), // Plan plan_usuario
+                newUsuario.getCursosUsuario(), // List<String> cursos_usuario
+                newUsuario.getFechaRegistroUsuario(), // Date fecha_registro_usuario
                 true,
                 true,
                 true,
                 true);
         try {
             Usuario usuarioInsertado = this.usuarioRepo.save(usuario);
-            if (usuarioInsertado.getId_usuario() == null) {
+            if (usuarioInsertado.getIdUsuario() == null) {
                 throw new RuntimeException("Error al crear el usuario");
             }
             Login login = new Login();
             login.setUsuario(usuarioInsertado);
-            login.setCorreo_electronico(new_usuario.getCorreo_electronico());
-            login.setPassword(passwordEncoder.encode(new_usuario.getPassword()));
+            login.setCorreoElectronico(newUsuario.getCorreoElectronico());
+            login.setPassword(passwordEncoder.encode(newUsuario.getPassword()));
             this.loginRepo.save(login);
 
             // Crear el usuario en el microservicio de chat
@@ -160,7 +161,7 @@ public class UsuarioService implements IUsuarioService {
                         .body(Mono.just(usuarioInsertado), Usuario.class)
                         .retrieve()
                         .onStatus(
-                                status -> status.isError(),
+                                HttpStatusCode::isError,
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                     logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -188,7 +189,7 @@ public class UsuarioService implements IUsuarioService {
                         .body(Mono.just(usuarioInsertado), Usuario.class)
                         .retrieve()
                         .onStatus(
-                                status -> status.isError(), // compatible con HttpStatusCode
+                                HttpStatusCode::isError, // compatible con HttpStatusCode
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                     logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -211,8 +212,8 @@ public class UsuarioService implements IUsuarioService {
 
             // Creamos la respuesta con JWT
             List<SimpleGrantedAuthority> roles = new ArrayList<>();
-            roles.add(new SimpleGrantedAuthority("ROLE_" + usuarioInsertado.getRoll_usuario().name()));
-            UserDetails userDetails = new User(usuarioInsertado.getNombre_usuario(),
+            roles.add(new SimpleGrantedAuthority("ROLE_" + usuarioInsertado.getRollUsuario().name()));
+            UserDetails userDetails = new User(usuarioInsertado.getNombreUsuario(),
                     login.getPassword(),
                     usuarioInsertado.getIsEnabled(),
                     usuarioInsertado.getAccountNoExpired(),
@@ -220,13 +221,13 @@ public class UsuarioService implements IUsuarioService {
                     usuarioInsertado.getAccountNoLocked(),
                     roles);
 
-            Authentication auth = new UsernamePasswordAuthenticationToken(new_usuario.getCorreo_electronico(),
+            Authentication auth = new UsernamePasswordAuthenticationToken(newUsuario.getCorreoElectronico(),
                     userDetails.getPassword(),
                     userDetails.getAuthorities());
 
             SecurityContextHolder.getContext().setAuthentication(auth);
-            String accessToken = jwtUtil.generateToken(auth, "access", usuarioInsertado.getId_usuario());
-            String refreshToken = jwtUtil.generateToken(auth, "refresh", usuarioInsertado.getId_usuario());
+            String accessToken = jwtUtil.generateToken(auth, "access", usuarioInsertado.getIdUsuario());
+            String refreshToken = jwtUtil.generateToken(auth, "refresh", usuarioInsertado.getIdUsuario());
 
             // Actualizar el SSR
             try {
@@ -253,10 +254,10 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public Usuario getUsuario(Long id_usuario) {
-        return this.usuarioRepo.findUsuarioForId(id_usuario).orElseThrow(() -> {
-            logger.error("Error en obtener el usuario con ID {}", id_usuario);
-            return new EntityNotFoundException("Error en obtener el usuario con ID " + id_usuario);
+    public Usuario getUsuario(Long idUsuario) {
+        return this.usuarioRepo.findUsuarioForId(idUsuario).orElseThrow(() -> {
+            logger.error("Error en obtener el usuario con ID {}", idUsuario);
+            return new EntityNotFoundException("Error en obtener el usuario con ID " + idUsuario);
         });
     }
 
@@ -271,10 +272,10 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public String getNombreUsuario(Long id_usuario) {
-        return this.usuarioRepo.findNombreUsuarioForId(id_usuario).orElseThrow(() -> {
-            logger.error("Error en obtener el nombre del usuario con ID {}", id_usuario);
-            return new EntityNotFoundException("Error en obtener el nombre del usuario con ID " + id_usuario);
+    public String getNombreUsuario(Long idUsuario) {
+        return this.usuarioRepo.findNombreUsuarioForId(idUsuario).orElseThrow(() -> {
+            logger.error("Error en obtener el nombre del usuario con ID {}", idUsuario);
+            return new EntityNotFoundException("Error en obtener el nombre del usuario con ID " + idUsuario);
         });
     }
 
@@ -289,9 +290,9 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public List<String> getFotosUsuario(Long id_usuario) {
-        return this.usuarioRepo.findUsuarioForId(id_usuario)
-                .map(Usuario::getFoto_usuario)
+    public List<String> getFotosUsuario(Long idUsuario) {
+        return this.usuarioRepo.findUsuarioForId(idUsuario)
+                .map(Usuario::getFotoUsuario)
                 .orElse(null);
     }
 
@@ -306,10 +307,10 @@ public class UsuarioService implements IUsuarioService {
      *
      */
     @Override
-    public RoleEnum getRollUsuario(Long id_usuario) {
-        return this.usuarioRepo.findRollUsuarioForId(id_usuario).orElseThrow(() -> {
-            logger.error("Error en obtener el rol del usuario con ID {}", id_usuario);
-            return new EntityNotFoundException("Error en obtener el rol del usuario con ID " + id_usuario);
+    public RoleEnum getRollUsuario(Long idUsuario) {
+        return this.usuarioRepo.findRollUsuarioForId(idUsuario).orElseThrow(() -> {
+            logger.error("Error en obtener el rol del usuario con ID {}", idUsuario);
+            return new EntityNotFoundException("Error en obtener el rol del usuario con ID " + idUsuario);
         });
     }
 
@@ -324,10 +325,10 @@ public class UsuarioService implements IUsuarioService {
      *
      */
     @Override
-    public Plan getPlanUsuario(Long id_usuario) {
-        return this.usuarioRepo.findPlanUsuarioForId(id_usuario).orElseThrow(() -> {
-            logger.error("Error en obtener el plan del usuario con ID {}", id_usuario);
-            return new EntityNotFoundException("Error en obtener el plan del usuario con ID " + id_usuario);
+    public Plan getPlanUsuario(Long idUsuario) {
+        return this.usuarioRepo.findPlanUsuarioForId(idUsuario).orElseThrow(() -> {
+            logger.error("Error en obtener el plan del usuario con ID {}", idUsuario);
+            return new EntityNotFoundException("Error en obtener el plan del usuario con ID " + idUsuario);
         });
     }
 
@@ -345,9 +346,9 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public List<Curso> getCursosUsuario(Long id_usuario) {
-        return this.usuarioRepo.findUsuarioForId(id_usuario)
-                .map(Usuario::getCursos_usuario)
+    public List<Curso> getCursosUsuario(Long idUsuario) {
+        return this.usuarioRepo.findUsuarioForId(idUsuario)
+                .map(Usuario::getCursosUsuario)
                 .orElse(null);
     }
 
@@ -366,10 +367,10 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Usuario updateUsuario(Usuario usuario) {
-        Usuario usuario_old = this.getUsuario(usuario.getId_usuario());
+        Usuario usuarioOld = this.getUsuario(usuario.getIdUsuario());
 
-        for (String foto : usuario_old.getFoto_usuario()) {
-            if (!usuario.getFoto_usuario().contains(foto)) {
+        for (String foto : usuarioOld.getFotoUsuario()) {
+            if (!usuario.getFotoUsuario().contains(foto)) {
                 Path photoPath = null;
                 if (foto.contains("/")) {
                     photoPath = Paths.get(uploadDir, foto.substring(foto.lastIndexOf("/") + 1));
@@ -408,7 +409,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Integer changePlanUsuario(Usuario usuario) {
-        return this.usuarioRepo.changePlanUsuarioForId(usuario.getId_usuario(), usuario.getPlan_usuario())
+        return this.usuarioRepo.changePlanUsuarioForId(usuario.getIdUsuario(), usuario.getPlanUsuario())
                 .orElseThrow(() -> {
                     logger.error("Error en cambiar el plan del usuario");
                     return new EntityNotFoundException("Error en cambiar el plan del usuario");
@@ -430,21 +431,21 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Integer changeCursosUsuario(CursosUsuario cursosUsuario) {
-        Optional<Usuario> old_usuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.getId_usuario());
-        if (old_usuario.isEmpty()) {
+        Optional<Usuario> oldUsuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.getIdUsuario());
+        if (oldUsuario.isEmpty()) {
             throw new IllegalArgumentException("El usuario no existe");
         }
-        List<Curso> cursos = this.cursoRepo.findAllById(cursosUsuario.getIds_cursos());
-        old_usuario.get().setCursos_usuario(cursos);
+        List<Curso> cursos = this.cursoRepo.findAllById(cursosUsuario.getIdsCursos());
+        oldUsuario.get().setCursosUsuario(cursos);
 
         // Añadir el usuario al microservicio de stream
         try {
             WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
             webClientStream.put().uri("/nuevoCursoUsuario")
-                    .body(Mono.just(old_usuario), Usuario.class)
+                    .body(Mono.just(oldUsuario), Usuario.class)
                     .retrieve()
                     .onStatus(
-                            status -> status.isError(),
+                            HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                 logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -468,7 +469,7 @@ public class UsuarioService implements IUsuarioService {
         // Añadir el usuario al microservicio de chat
         // TODO: Implementar la lógica para añadir el usuario al microservicio de chat
 
-        return this.usuarioRepo.changeUsuarioForId(cursosUsuario.getId_usuario(), old_usuario.get()).orElseThrow(() -> {
+        return this.usuarioRepo.changeUsuarioForId(cursosUsuario.getIdUsuario(), oldUsuario.get()).orElseThrow(() -> {
             logger.error("Error en cambiar los cursos del usuario");
             return new RuntimeException("Error en cambiar los cursos del usuario");
         });
@@ -533,7 +534,7 @@ public class UsuarioService implements IUsuarioService {
     public boolean sendConfirmationEmail(NewUsuario newUsuario) {
         Context context = new Context();
         String token = jwtUtil.generateRegistrationToken(newUsuario);
-        context.setVariable("nombre", newUsuario.getNombre_usuario());
+        context.setVariable("nombre", newUsuario.getNombreUsuario());
         context.setVariable("link", frontURL + "/confirm-email?token=" + token);
         context.setVariable("currentYear", Year.now().getValue());
 
@@ -543,7 +544,7 @@ public class UsuarioService implements IUsuarioService {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setTo(newUsuario.getCorreo_electronico());
+            helper.setTo(newUsuario.getCorreoElectronico());
             helper.setSubject("Confirmación de Correo Electrónico");
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);

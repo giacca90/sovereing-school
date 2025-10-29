@@ -11,15 +11,15 @@ public interface ILoginService {
 
     public String createNuevoLogin(Login login);
 
-    public String getCorreoLogin(Long id_usuario);
+    public String getCorreoLogin(Long idUsuario);
 
-    public String getPasswordLogin(Long id_usuario);
+    public String getPasswordLogin(Long idUsuario);
 
     public String changeCorreoLogin(Login login);
 
     public Integer changePasswordLogin(ChangePassword changepassword);
 
-    public String deleteLogin(Long id_usuario);
+    public String deleteLogin(Long idUsuario);
 
     public AuthResponse loginUser(Long id, String password);
 

@@ -21,24 +21,24 @@ public interface CursoRepository extends JpaRepository<Curso, Long> {
     @Query("SELECT c FROM Curso c")
     List<Curso> getAllCursos();
 
-    @Query("SELECT c.nombre_curso FROM Curso c WHERE c.id_curso = :id")
+    @Query("SELECT c.nombreCurso FROM Curso c WHERE c.idCurso = :id")
     Optional<String> findNombreCursoById(@Param("id") Long id);
 
-    @Query("SELECT u FROM Usuario u WHERE u IN (SELECT c.profesores_curso FROM Curso c WHERE c.id_curso = :id)")
+    @Query("SELECT u FROM Usuario u WHERE u IN (SELECT c.profesoresCurso FROM Curso c WHERE c.idCurso = :id)")
     List<Usuario> findProfesoresCursoById(@Param("id") Long id);
 
-    @Query("SELECT c.fecha_publicacion_curso FROM Curso c WHERE c.id_curso = :id")
+    @Query("SELECT c.fechaPublicacionCurso FROM Curso c WHERE c.idCurso = :id")
     Optional<Date> findFechaCreacionCursoById(@Param("id") Long id);
 
-    @Query("SELECT cl FROM Clase cl WHERE cl.curso_clase.id_curso = :id")
+    @Query("SELECT cl FROM Clase cl WHERE cl.cursoClase.idCurso = :id")
     List<Clase> findClasesCursoById(@Param("id") Long id);
 
-    @Query("SELECT p FROM Plan p WHERE p IN (SELECT c.planes_curso FROM Curso c WHERE c.id_curso = :id)")
+    @Query("SELECT p FROM Plan p WHERE p IN (SELECT c.planesCurso FROM Curso c WHERE c.idCurso = :id)")
     List<Plan> findPlanesCursoById(@Param("id") Long id);
 
-    @Query("SELECT c.precio_curso FROM Curso c WHERE c.id_curso = :id")
+    @Query("SELECT c.precioCurso FROM Curso c WHERE c.idCurso = :id")
     Optional<BigDecimal> findPrecioCursoById(@Param("id") Long id);
 
-    @Query("SELECT c.imagen_curso FROM Curso c WHERE c.id_curso = :id")
+    @Query("SELECT c.imagenCurso FROM Curso c WHERE c.idCurso = :id")
     Optional<String> findImagenCursoById(@Param("id") Long id);
 }

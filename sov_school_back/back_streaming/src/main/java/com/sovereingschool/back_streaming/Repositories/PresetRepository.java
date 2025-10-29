@@ -11,8 +11,8 @@ import com.sovereingschool.back_streaming.Models.Preset;
 @Repository
 public interface PresetRepository extends MongoRepository<Preset, String> {
     @Query(value = "{ 'id_usuario' : ?0 }")
-    Optional<Preset> findByIdUsuario(Long id_usuario);
+    Optional<Preset> findByIdUsuario(Long idUsuario);
 
     @Query(value = "{ 'id_usuario' : ?0 }", delete = true)
-    void deleteByIdUsuario(Long id_usuario);
+    void deleteByIdUsuario(Long idUsuario);
 }

@@ -17,6 +17,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -69,10 +70,10 @@ public class CursoService implements ICursoService {
     }
 
     @Override
-    public Long createCurso(Curso new_curso) {
-        new_curso.setId_curso(null);
-        Curso res = this.cursoRepo.save(new_curso);
-        return res.getId_curso();
+    public Long createCurso(Curso newCurso) {
+        newCurso.setIdCurso(null);
+        Curso res = this.cursoRepo.save(newCurso);
+        return res.getIdCurso();
     }
 
     /**
@@ -84,10 +85,10 @@ public class CursoService implements ICursoService {
      * 
      */
     @Override
-    public Curso getCurso(Long id_curso) {
-        return this.cursoRepo.findById(id_curso).orElseThrow(() -> {
-            logger.error("CursoService: getCurso: Error en obtener el curso con ID {}: ", id_curso);
-            return new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
+    public Curso getCurso(Long idCurso) {
+        return this.cursoRepo.findById(idCurso).orElseThrow(() -> {
+            logger.error("CursoService: getCurso: Error en obtener el curso con ID {}: ", idCurso);
+            return new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
         });
     }
 
@@ -99,11 +100,11 @@ public class CursoService implements ICursoService {
      * @throws EntityNotFoundException si el curso no existe
      */
     @Override
-    public String getNombreCurso(Long id_curso) {
-        return this.cursoRepo.findNombreCursoById(id_curso)
+    public String getNombreCurso(Long idCurso) {
+        return this.cursoRepo.findNombreCursoById(idCurso)
                 .orElseThrow(() -> {
-                    logger.error("Error en obtener el nombre del curso con ID {}", id_curso);
-                    return new EntityNotFoundException("Error en obtener el nombre del curso con ID " + id_curso);
+                    logger.error("Error en obtener el nombre del curso con ID {}", idCurso);
+                    return new EntityNotFoundException("Error en obtener el nombre del curso con ID " + idCurso);
                 });
     }
 
@@ -115,13 +116,13 @@ public class CursoService implements ICursoService {
      * @throws EntityNotFoundException si el curso no existe
      */
     @Override
-    public List<Usuario> getProfesoresCurso(Long id_curso) {
-        List<Usuario> profesores = this.cursoRepo.findProfesoresCursoById(id_curso);
+    public List<Usuario> getProfesoresCurso(Long idCurso) {
+        List<Usuario> profesores = this.cursoRepo.findProfesoresCursoById(idCurso);
         if (profesores == null || profesores.isEmpty()) {
-            logger.error("Error en obtener los profesores del curso con ID {}", id_curso);
-            throw new EntityNotFoundException("Error en obtener los profesores del curso con ID " + id_curso);
+            logger.error("Error en obtener los profesores del curso con ID {}", idCurso);
+            throw new EntityNotFoundException("Error en obtener los profesores del curso con ID " + idCurso);
         }
-        return this.cursoRepo.findProfesoresCursoById(id_curso);
+        return this.cursoRepo.findProfesoresCursoById(idCurso);
     }
 
     /**
@@ -132,21 +133,21 @@ public class CursoService implements ICursoService {
      * @throws EntityNotFoundException si el curso no existe
      */
     @Override
-    public Date getFechaCreacionCurso(Long id_curso) {
-        return this.cursoRepo.findFechaCreacionCursoById(id_curso).orElseThrow(() -> {
-            logger.error("Error en obtener la fecha de creación del curso con ID {}", id_curso);
-            return new EntityNotFoundException("Error en obtener la fecha de creación del curso con ID " + id_curso);
+    public Date getFechaCreacionCurso(Long idCurso) {
+        return this.cursoRepo.findFechaCreacionCursoById(idCurso).orElseThrow(() -> {
+            logger.error("Error en obtener la fecha de creación del curso con ID {}", idCurso);
+            return new EntityNotFoundException("Error en obtener la fecha de creación del curso con ID " + idCurso);
         });
     }
 
     @Override
-    public List<Clase> getClasesDelCurso(Long id_curso) {
-        return this.cursoRepo.findClasesCursoById(id_curso);
+    public List<Clase> getClasesDelCurso(Long idCurso) {
+        return this.cursoRepo.findClasesCursoById(idCurso);
     }
 
     @Override
-    public List<Plan> getPlanesDelCurso(Long id_curso) {
-        return this.cursoRepo.findPlanesCursoById(id_curso);
+    public List<Plan> getPlanesDelCurso(Long idCurso) {
+        return this.cursoRepo.findPlanesCursoById(idCurso);
     }
 
     /**
@@ -157,10 +158,10 @@ public class CursoService implements ICursoService {
      * @throws EntityNotFoundException si el curso no existe
      */
     @Override
-    public BigDecimal getPrecioCurso(Long id_curso) {
-        return this.cursoRepo.findPrecioCursoById(id_curso).orElseThrow(() -> {
-            logger.error("Error en obtener el precio del curso con ID {}", id_curso);
-            return new EntityNotFoundException("Error en obtener el precio del curso con ID " + id_curso);
+    public BigDecimal getPrecioCurso(Long idCurso) {
+        return this.cursoRepo.findPrecioCursoById(idCurso).orElseThrow(() -> {
+            logger.error("Error en obtener el precio del curso con ID {}", idCurso);
+            return new EntityNotFoundException("Error en obtener el precio del curso con ID " + idCurso);
         });
     }
 
@@ -179,15 +180,15 @@ public class CursoService implements ICursoService {
      */
     @Override
     public Curso updateCurso(Curso curso) {
-        List<Clase> clases = curso.getClases_curso();
-        curso.setClases_curso(null);
+        List<Clase> clases = curso.getClasesCurso();
+        curso.setClasesCurso(null);
         // Si el curso no existe, crear un nuevo
-        if (curso.getId_curso().equals(0L)) {
-            curso.setId_curso(null);
+        if (curso.getIdCurso().equals(0L)) {
+            curso.setIdCurso(null);
             curso = this.cursoRepo.save(curso);
         }
         // Crear la carpeta del curso si no existe
-        Path cursoPath = baseUploadDir.resolve(curso.getId_curso().toString());
+        Path cursoPath = baseUploadDir.resolve(curso.getIdCurso().toString());
         File cursoFile = new File(cursoPath.toString());
         if (!cursoFile.exists() || !cursoFile.isDirectory()) {
             if (!cursoFile.mkdir()) {
@@ -197,11 +198,11 @@ public class CursoService implements ICursoService {
         }
 
         // Crear las clases del curso si no existen
-        if (clases.size() > 0) {
+        if (clases.isEmpty()) {
             for (Clase clase : clases) {
-                clase.setCurso_clase(curso);
-                if (clase.getId_clase().equals(0L)) {
-                    clase.setId_clase(null);
+                clase.setCursoClase(curso);
+                if (clase.getIdClase().equals(0L)) {
+                    clase.setIdClase(null);
                 }
 
                 try {
@@ -212,8 +213,8 @@ public class CursoService implements ICursoService {
                 }
 
                 // Crea la carpeta de la clase si no existe
-                Path clasePath = baseUploadDir.resolve(curso.getId_curso().toString())
-                        .resolve(clase.getId_clase().toString());
+                Path clasePath = baseUploadDir.resolve(curso.getIdCurso().toString())
+                        .resolve(clase.getIdClase().toString());
                 File claseFile = new File(clasePath.toString());
                 if (!claseFile.exists() || !claseFile.isDirectory()) {
                     if (!claseFile.mkdir()) {
@@ -221,7 +222,7 @@ public class CursoService implements ICursoService {
                     }
                 }
             }
-            curso.setClases_curso(clases);
+            curso.setClasesCurso(clases);
             try {
                 curso = this.cursoRepo.save(curso);
             } catch (Exception e) {
@@ -237,7 +238,7 @@ public class CursoService implements ICursoService {
                     .body(Mono.just(curso), Curso.class)
                     .retrieve()
                     .onStatus(
-                            status -> status.isError(),
+                            HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                 logger.error("Error HTTP del microservicio de chat: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -265,7 +266,7 @@ public class CursoService implements ICursoService {
                     .body(Mono.just(curso), Curso.class)
                     .retrieve()
                     .onStatus(
-                            status -> status.isError(),
+                            HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                 logger.error("Error HTTP del microservicio de streaming: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -306,19 +307,19 @@ public class CursoService implements ICursoService {
      * 
      */
     @Override
-    public Boolean deleteCurso(Long id_curso) {
-        this.cursoRepo.findById(id_curso).orElseThrow(() -> {
-            logger.error("CursoService: deleteCurso: Error en obtener el curso con ID {}: ", id_curso);
-            return new EntityNotFoundException("Error en obtener el curso con ID " + id_curso);
+    public Boolean deleteCurso(Long idCurso) {
+        this.cursoRepo.findById(idCurso).orElseThrow(() -> {
+            logger.error("CursoService: deleteCurso: Error en obtener el curso con ID {}: ", idCurso);
+            return new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
         });
-        if (this.getCurso(id_curso).getClases_curso() != null) {
-            for (Clase clase : this.getCurso(id_curso).getClases_curso()) {
+        if (this.getCurso(idCurso).getClasesCurso() != null) {
+            for (Clase clase : this.getCurso(idCurso).getClasesCurso()) {
                 this.deleteClase(clase);
             }
         }
-        this.cursoRepo.deleteById(id_curso);
+        this.cursoRepo.deleteById(idCurso);
 
-        Path cursoPath = Paths.get(this.baseUploadDir.toString(), id_curso.toString());
+        Path cursoPath = Paths.get(this.baseUploadDir.toString(), idCurso.toString());
         File cursoFile = new File(cursoPath.toString());
         if (cursoFile.exists()) {
             try {
@@ -347,10 +348,10 @@ public class CursoService implements ICursoService {
         try {
             WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
             webClient.delete()
-                    .uri("/deleteCurso/" + id_curso)
+                    .uri("/deleteCurso/" + idCurso)
                     .retrieve()
                     .onStatus(
-                            status -> status.isError(),
+                            HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                 logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -374,10 +375,10 @@ public class CursoService implements ICursoService {
         try {
             WebClient webClientChat = webClientConfig.createSecureWebClient(backChatURL);
             webClientChat.delete()
-                    .uri("/delete_curso_chat/" + id_curso)
+                    .uri("/delete_curso_chat/" + idCurso)
                     .retrieve()
                     .onStatus(
-                            status -> status.isError(),
+                            HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                 logger.error("Error HTTP del microservicio de chat: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -416,12 +417,12 @@ public class CursoService implements ICursoService {
 
     @Override
     public void deleteClase(Clase clase) {
-        Optional<Clase> optionalClase = this.claseRepo.findById(clase.getId_clase());
+        Optional<Clase> optionalClase = this.claseRepo.findById(clase.getIdClase());
         if (optionalClase.isPresent()) {
             this.claseRepo.delete(clase);
-            if (clase.getDireccion_clase().length() > 0) {
+            if (clase.getDireccionClase().isEmpty()) {
                 try {
-                    Path path = Paths.get(clase.getDireccion_clase()).getParent();
+                    Path path = Paths.get(clase.getDireccionClase()).getParent();
                     if (Files.exists(path) && !path.equals(baseUploadDir)) {
                         Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                             @Override
@@ -449,11 +450,11 @@ public class CursoService implements ICursoService {
                 // Obtener token
                 WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
                 webClient.delete()
-                        .uri("/deleteClase/" + clase.getCurso_clase().getId_curso().toString() + "/"
-                                + clase.getId_clase().toString())
+                        .uri("/deleteClase/" + clase.getCursoClase().getIdCurso().toString() + "/"
+                                + clase.getIdClase().toString())
                         .retrieve()
                         .onStatus(
-                                status -> status.isError(),
+                                HttpStatusCode::isError,
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                     logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -478,11 +479,11 @@ public class CursoService implements ICursoService {
             try {
                 WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
                 webClient.delete()
-                        .uri("/delete_clase_chat/" + clase.getCurso_clase().getId_curso().toString() + "/"
-                                + clase.getId_clase().toString())
+                        .uri("/delete_clase_chat/" + clase.getCursoClase().getIdCurso().toString() + "/"
+                                + clase.getIdClase().toString())
                         .retrieve()
                         .onStatus(
-                                status -> status.isError(),
+                                HttpStatusCode::isError,
                                 response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                     logger.error("Error HTTP del microservicio de chat: {}", errorBody);
                                     return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
@@ -512,7 +513,7 @@ public class CursoService implements ICursoService {
                 throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
             }
         } else {
-            logger.error("Clase no encontrada con ID: {}", clase.getId_clase());
+            logger.error("Clase no encontrada con ID: {}", clase.getIdClase());
         }
     }
 

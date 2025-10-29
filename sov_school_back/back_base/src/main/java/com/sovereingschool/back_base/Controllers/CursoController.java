@@ -70,8 +70,8 @@ public class CursoController {
 	public ResponseEntity<?> getNombreCurso(@PathVariable Long id) {
 		Object response = new Object();
 		try {
-			String nombre_curso = this.cursoService.getNombreCurso(id);
-			response = nombre_curso;
+			String nombreCurso = this.cursoService.getNombreCurso(id);
+			response = nombreCurso;
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException ex) {
 			return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
@@ -86,11 +86,11 @@ public class CursoController {
 		Object response = new Object();
 		try {
 			List<Usuario> profesores = this.cursoService.getProfesoresCurso(id);
-			List<String> nombres_profesores = profesores.stream()
-					.map(Usuario::getNombre_usuario)
+			List<String> nombresProfesores = profesores.stream()
+					.map(Usuario::getNombreUsuario)
 					.toList();
 
-			response = nombres_profesores;
+			response = nombresProfesores;
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException ex) {
 			return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
@@ -206,11 +206,11 @@ public class CursoController {
 	public ResponseEntity<?> getClaseForId(@PathVariable Long idCurso, @PathVariable Long idClase) {
 		try {
 			Curso curso = this.cursoService.getCurso(idCurso);
-			List<Clase> clases = curso.getClases_curso();
+			List<Clase> clases = curso.getClasesCurso();
 
 			// Buscar la clase usando stream
 			Optional<Clase> claseOpt = clases.stream()
-					.filter(c -> c.getId_clase().equals(idClase))
+					.filter(c -> c.getIdClase().equals(idClase))
 					.findFirst();
 
 			return claseOpt
@@ -232,20 +232,20 @@ public class CursoController {
 		Object response = new Object();
 		try {
 			Curso curso = this.cursoService.getCurso(idCurso);
-			List<Clase> clases = curso.getClases_curso();
+			List<Clase> clases = curso.getClasesCurso();
 			Clase eliminada = null;
 			for (int i = 0; i < clases.size(); i++) {
 				if (eliminada != null) {
-					clases.get(i).setPosicion_clase(clases.get(i).getPosicion_clase() - 1);
+					clases.get(i).setPosicionClase(clases.get(i).getPosicionClase() - 1);
 				} else {
-					if (clases.get(i).getId_clase().equals(idClase)) {
+					if (clases.get(i).getIdClase().equals(idClase)) {
 						eliminada = clases.get(i);
 					}
 				}
 			}
 			if (eliminada != null) {
 				clases.remove(eliminada);
-				curso.setClases_curso(clases);
+				curso.setClasesCurso(clases);
 				this.cursoService.updateCurso(curso);
 				this.cursoService.deleteClase(eliminada);
 				response = "Clase eliminada con exito!!!";

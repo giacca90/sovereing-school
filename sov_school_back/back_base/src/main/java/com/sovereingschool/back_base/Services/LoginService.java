@@ -67,12 +67,12 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @return String con el correo electrónico del usuario
      * @throws EntityNotFoundException si el usuario no existe
      */
-    public String getCorreoLogin(Long id_usuario) {
-        return this.loginRepository.findCorreoLoginForId(id_usuario).orElseThrow(
+    public String getCorreoLogin(Long idUsuario) {
+        return this.loginRepository.findCorreoLoginForId(idUsuario).orElseThrow(
                 () -> {
-                    logger.error("getCorreoLogin: Error en obtener el correo del usuario con ID {}", id_usuario);
+                    logger.error("getCorreoLogin: Error en obtener el correo del usuario con ID {}", idUsuario);
                     return new EntityNotFoundException(
-                            "getCorreoLogin: Error en obtener el correo del usuario con ID " + id_usuario);
+                            "getCorreoLogin: Error en obtener el correo del usuario con ID " + idUsuario);
                 });
     }
 
@@ -84,12 +84,12 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @throws EntityNotFoundException si el usuario no existe
      */
 
-    public String getPasswordLogin(Long id_usuario) {
-        return this.loginRepository.findPasswordLoginForId(id_usuario).orElseThrow(
+    public String getPasswordLogin(Long idUsuario) {
+        return this.loginRepository.findPasswordLoginForId(idUsuario).orElseThrow(
                 () -> {
-                    logger.error("Error en obtener la contraseña del usuario con ID {}", id_usuario);
+                    logger.error("Error en obtener la contraseña del usuario con ID {}", idUsuario);
                     return new EntityNotFoundException(
-                            "Error en obtener la contraseña del usuario con ID " + id_usuario);
+                            "Error en obtener la contraseña del usuario con ID " + idUsuario);
                 });
     }
 
@@ -101,24 +101,24 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @throws EntityNotFoundException si el usuario no existe
      */
     public String changeCorreoLogin(Login login) {
-        this.loginRepository.changeCorreoLoginForId(login.getId_usuario(), login.getCorreo_electronico());
+        this.loginRepository.changeCorreoLoginForId(login.getIdUsuario(), login.getCorreoElectronico());
         return "Correo cambiado con éxito!!!";
     }
 
     public Integer changePasswordLogin(ChangePassword changepassword) {
-        if (changepassword.getNew_password().length() < 1 || changepassword.getOld_password().length() < 1)
+        if (changepassword.getNewPassword().length() < 1 || changepassword.getOldPassword().length() < 1)
             return null;
-        if (this.loginRepository.findPasswordLoginForId(changepassword.getId_usuario())
-                .equals(changepassword.getOld_password())) {
-            this.loginRepository.changePasswordLoginForId(changepassword.getId_usuario(),
-                    changepassword.getNew_password());
+        if (this.loginRepository.findPasswordLoginForId(changepassword.getIdUsuario())
+                .equals(changepassword.getOldPassword())) {
+            this.loginRepository.changePasswordLoginForId(changepassword.getIdUsuario(),
+                    changepassword.getNewPassword());
             return 1;
         }
         return 0;
     }
 
-    public String deleteLogin(Long id_usuario) {
-        this.loginRepository.deleteById(id_usuario);
+    public String deleteLogin(Long idUsuario) {
+        this.loginRepository.deleteById(idUsuario);
         return "Login eliminado con éxito!!!";
     }
 
@@ -148,16 +148,16 @@ public class LoginService implements UserDetailsService, ILoginService {
             throw new UsernameNotFoundException("Correo electronico " + correo + " no encontrado");
         }
 
-        Optional<Usuario> usuario = this.usuarioRepository.findById(login.get().getId_usuario());
+        Optional<Usuario> usuario = this.usuarioRepository.findById(login.get().getIdUsuario());
         if (usuario.isEmpty()) {
             logger.error("Usuario no encontrado en loadUserByUsername");
             throw new UsernameNotFoundException("Usuario no encontrado");
         }
 
         List<SimpleGrantedAuthority> roles = new ArrayList<>();
-        roles.add(new SimpleGrantedAuthority("ROLE_" + usuario.get().getRoll_usuario().name()));
+        roles.add(new SimpleGrantedAuthority("ROLE_" + usuario.get().getRollUsuario().name()));
 
-        return new User(usuario.get().getNombre_usuario(),
+        return new User(usuario.get().getNombreUsuario(),
                 login.get().getPassword(),
                 usuario.get().getIsEnabled(),
                 usuario.get().getAccountNoExpired(),
@@ -206,16 +206,16 @@ public class LoginService implements UserDetailsService, ILoginService {
                             return new EntityNotFoundException(
                                     "Error en obtener el login con el correo " + auth.getName());
                         })
-                        .getId_usuario());
+                        .getIdUsuario());
         if (usuarioOpt.isEmpty()) {
             logger.error("Usuario no encontrado en loginUser");
             throw new UsernameNotFoundException("Usuario no encontrado");
         }
         Usuario usuario = usuarioOpt.get();
-        Hibernate.initialize(usuario.getCursos_usuario());
+        Hibernate.initialize(usuario.getCursosUsuario());
 
-        String accessToken = jwtUtil.generateToken(auth, "access", usuario.getId_usuario());
-        String refreshToken = jwtUtil.generateToken(auth, "refresh", usuario.getId_usuario());
+        String accessToken = jwtUtil.generateToken(auth, "access", usuario.getIdUsuario());
+        String refreshToken = jwtUtil.generateToken(auth, "refresh", usuario.getIdUsuario());
 
         return new AuthResponse(true, "Login exitoso", usuario, accessToken, refreshToken);
     }
@@ -262,10 +262,10 @@ public class LoginService implements UserDetailsService, ILoginService {
     @Transactional
     public Usuario loginWithToken(String token) {
         try {
-            Long id_usuario = jwtUtil.getIdUsuario(token);
-            Optional<Usuario> opUsuario = this.usuarioRepository.findById(id_usuario);
+            Long idUsuario = jwtUtil.getIdUsuario(token);
+            Optional<Usuario> opUsuario = this.usuarioRepository.findById(idUsuario);
             if (opUsuario.isEmpty()) {
-                logger.error("Usuario no encontrado en loginWithToken: id_usuario: {}", id_usuario);
+                logger.error("Usuario no encontrado en loginWithToken: id_usuario: {}", idUsuario);
                 throw new BadCredentialsException("Usuario no encontrado");
             }
             Usuario usuario = opUsuario.get();

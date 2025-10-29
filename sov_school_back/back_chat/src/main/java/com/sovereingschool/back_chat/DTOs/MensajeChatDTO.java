@@ -17,17 +17,17 @@ import lombok.ToString;
 @Setter
 @ToString
 public class MensajeChatDTO implements Serializable {
-    private String id_mensaje;
-    private Long id_curso;
-    private Long id_clase;
-    private Long id_usuario;
+    private String idMensaje;
+    private Long idCurso;
+    private Long idClase;
+    private Long idUsuario;
 
-    private String nombre_curso;
-    private String nombre_clase;
-    private String nombre_usuario;
+    private String nombreCurso;
+    private String nombreClase;
+    private String nombreUsuario;
 
-    private String foto_curso;
-    private String foto_usuario;
+    private String fotoCurso;
+    private String fotoUsuario;
 
     private MensajeChatDTO respuesta;
     private Integer pregunta;

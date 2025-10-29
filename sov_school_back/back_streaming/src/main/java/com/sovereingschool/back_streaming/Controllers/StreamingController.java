@@ -72,9 +72,9 @@ public class StreamingController {
         this.claseRepo = claseRepo;
     }
 
-    @GetMapping("/{id_curso}/{id_clase}/{lista}")
-    public ResponseEntity<?> getListas(@PathVariable Long id_curso,
-            @PathVariable Long id_clase,
+    @GetMapping("/{idCurso}/{idClase}/{lista}")
+    public ResponseEntity<?> getListas(@PathVariable Long idCurso,
+            @PathVariable Long idClase,
             @PathVariable String lista,
             @RequestHeader HttpHeaders headers) throws IOException {
 
@@ -83,22 +83,22 @@ public class StreamingController {
         if (authentication == null || !authentication.isAuthenticated()) {
             return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
         }
-        Long id_usuario = (Long) authentication.getDetails();
+        Long idUsuario = (Long) authentication.getDetails();
 
-        String direccion_carpeta = this.usuarioCursosService.getClase(id_usuario, id_curso, id_clase);
-        if (direccion_carpeta == null) {
-            logger.error("No se encuentra la carpeta del curso: {}", direccion_carpeta);
+        String direccionCarpeta = this.usuarioCursosService.getClase(idUsuario, idCurso, idClase);
+        if (direccionCarpeta == null) {
+            logger.error("No se encuentra la carpeta del curso: {}", direccionCarpeta);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No se encuentra la carpeta del curso: " + direccion_carpeta);
+                    .body("No se encuentra la carpeta del curso: " + direccionCarpeta);
         }
-        direccion_carpeta = direccion_carpeta.substring(0, direccion_carpeta.lastIndexOf("/"));
-        if (direccion_carpeta == null) {
+        direccionCarpeta = direccionCarpeta.substring(0, direccionCarpeta.lastIndexOf("/"));
+        if (direccionCarpeta == null) {
             logger.error("El video no tiene ruta");
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("El video no tiene ruta");
         }
 
-        Path carpetaPath = Paths.get(direccion_carpeta);
+        Path carpetaPath = Paths.get(direccionCarpeta);
 
         Path videoPath = carpetaPath.resolve(lista);
 
@@ -127,9 +127,9 @@ public class StreamingController {
 
     }
 
-    @GetMapping("/{id_curso}/{id_clase}/{lista}/{video}")
-    public ResponseEntity<InputStreamResource> streamVideo(@PathVariable Long id_curso,
-            @PathVariable Long id_clase,
+    @GetMapping("/{idCurso}/{idClase}/{lista}/{video}")
+    public ResponseEntity<InputStreamResource> streamVideo(@PathVariable Long idCurso,
+            @PathVariable Long idClase,
             @PathVariable String lista,
             @PathVariable String video,
             @RequestHeader HttpHeaders headers) throws IOException {
@@ -139,15 +139,15 @@ public class StreamingController {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new AccessDeniedException("No autenticado");
         }
-        Long id_usuario = (Long) authentication.getDetails();
-        String direccion_carpeta = this.usuarioCursosService.getClase(id_usuario, id_curso, id_clase);
-        direccion_carpeta = direccion_carpeta.substring(0, direccion_carpeta.lastIndexOf("/"));
-        if (direccion_carpeta == null) {
+        Long idUsuario = (Long) authentication.getDetails();
+        String direccionCarpeta = this.usuarioCursosService.getClase(idUsuario, idCurso, idClase);
+        direccionCarpeta = direccionCarpeta.substring(0, direccionCarpeta.lastIndexOf("/"));
+        if (direccionCarpeta == null) {
             logger.error("El video no tiene ruta");
             return ResponseEntity.notFound().build();
         }
 
-        Path carpetaPath = Paths.get(direccion_carpeta);
+        Path carpetaPath = Paths.get(direccionCarpeta);
 
         Path videoPath = carpetaPath.resolve(lista);
 
@@ -206,31 +206,31 @@ public class StreamingController {
     public ResponseEntity<?> get() {
         try {
             this.usuarioCursosService.syncUserCourses();
-            return new ResponseEntity<String>("Iniciado stream con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Iniciado stream con exito!!!", HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @GetMapping("/status/{id_curso}")
-    public ResponseEntity<?> getStatus(@PathVariable Long id_curso) {
+    @GetMapping("/status/{idCurso}")
+    public ResponseEntity<?> getStatus(@PathVariable Long idCurso) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()) {
                 return new ResponseEntity<>("Error en el token: no autenticado", HttpStatus.UNAUTHORIZED);
             }
-            Long id_usuario = (Long) authentication.getDetails();
-            return new ResponseEntity<Long>(this.usuarioCursosService.getStatus(id_usuario, id_curso), HttpStatus.OK);
+            Long idUsuario = (Long) authentication.getDetails();
+            return new ResponseEntity<>(this.usuarioCursosService.getStatus(idUsuario, idCurso), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error en obtener la clase: " + e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     // Obtener lista para la previsualización
-    @GetMapping("/getPreview/{id_preview}")
-    public ResponseEntity<?> getPreviewList(@PathVariable String id_preview) {
+    @GetMapping("/getPreview/{idPreview}")
+    public ResponseEntity<?> getPreviewList(@PathVariable String idPreview) {
         try {
-            Path previewPath = this.streamingService.getPreview(id_preview);
+            Path previewPath = this.streamingService.getPreview(idPreview);
             if (previewPath == null || !Files.exists(previewPath)) {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
@@ -255,15 +255,15 @@ public class StreamingController {
     }
 
     // Obtener partes de la previsualización
-    @GetMapping("/getPreview/{id_preview}/{part}")
-    public ResponseEntity<?> getPreviewParts(@PathVariable String id_preview, @PathVariable String part) {
+    @GetMapping("/getPreview/{idPreview}/{part}")
+    public ResponseEntity<?> getPreviewParts(@PathVariable String idPreview, @PathVariable String part) {
         try {
-            Path previewPath = this.streamingService.getPreview(id_preview);
+            Path previewPath = this.streamingService.getPreview(idPreview);
             if (previewPath == null || !Files.exists(previewPath)) {
                 return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
 
-            Path partPath = previewPath.getParent().resolve(id_preview).resolve(part);
+            Path partPath = previewPath.getParent().resolve(idPreview).resolve(part);
             // Obtener el tipo MIME del video
             String contentType = Files.probeContentType(partPath);
 
@@ -309,12 +309,12 @@ public class StreamingController {
     public ResponseEntity<?> add(@PathVariable Long idCurso, @RequestBody Clase clase) {
         try {
             if (this.usuarioCursosService.addClase(idCurso, clase)) {
-                return new ResponseEntity<Boolean>(true, HttpStatus.OK);
+                return new ResponseEntity<>(true, HttpStatus.OK);
             } else {
-                return new ResponseEntity<Boolean>(false, HttpStatus.OK);
+                return new ResponseEntity<>(false, HttpStatus.OK);
             }
         } catch (Exception e) {
-            return new ResponseEntity<String>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -322,12 +322,12 @@ public class StreamingController {
     public ResponseEntity<?> update(@PathVariable Long idCurso, @PathVariable Long idClase) {
         try {
             if (this.usuarioCursosService.deleteClase(idCurso, idClase)) {
-                return new ResponseEntity<Boolean>(true, HttpStatus.OK);
+                return new ResponseEntity<>(true, HttpStatus.OK);
             } else {
-                return new ResponseEntity<Boolean>(false, HttpStatus.OK);
+                return new ResponseEntity<>(false, HttpStatus.OK);
             }
         } catch (Exception e) {
-            return new ResponseEntity<String>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -345,7 +345,7 @@ public class StreamingController {
     public ResponseEntity<?> actualizarCursoStream(@RequestBody Curso curso) {
         try {
             this.usuarioCursosService.actualizarCursoStream(curso);
-            return new ResponseEntity<String>("Curso stream actualizado con éxito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Curso stream actualizado con éxito!!!", HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {

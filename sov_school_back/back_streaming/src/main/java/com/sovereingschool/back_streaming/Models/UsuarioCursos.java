@@ -23,7 +23,7 @@ import lombok.ToString;
 public class UsuarioCursos implements Serializable {
     @Id
     private String id;
-    private Long id_usuario;
-    private RoleEnum rol_usuario;
+    private Long idUsuario;
+    private RoleEnum rolUsuario;
     private List<StatusCurso> cursos;
 }

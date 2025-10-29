@@ -32,36 +32,37 @@ import lombok.NoArgsConstructor;
 public class Curso implements Serializable {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id_curso;
+	@Column(name = "id_curso")
+	private Long idCurso;
 
-	@Column(unique = true, nullable = false)
-	private String nombre_curso;
+	@Column(name = "nombre_curso", unique = true, nullable = false)
+	private String nombreCurso;
 
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "curso_profesor", joinColumns = @JoinColumn(name = "id_curso"), inverseJoinColumns = @JoinColumn(name = "id_usuario"))
 	@JsonIgnoreProperties({ "roll_usuario", "plan_usuario", "cursos_usuario",
 			"fecha_registro_usuario" })
-	private List<Usuario> profesores_curso;
+	private List<Usuario> profesoresCurso;
 
-	private Date fecha_publicacion_curso;
+	private Date fechaPublicacionCurso;
 
-	@OneToMany(mappedBy = "curso_clase", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonIgnoreProperties({ "curso_clase" })
+	@OneToMany(mappedBy = "cursoClase", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+	@JsonIgnoreProperties({ "cursoClase" })
 	@JsonManagedReference
-	private List<Clase> clases_curso;
+	private List<Clase> clasesCurso;
 
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "cursos_plan", joinColumns = @JoinColumn(name = "id_curso"), inverseJoinColumns = @JoinColumn(name = "id_plan"))
 	@JsonIgnoreProperties({ "precio_plan", "cursos_plan" })
-	private List<Plan> planes_curso;
+	private List<Plan> planesCurso;
 
-	private String descriccion_corta;
+	private String descriccionCorta;
 
 	@Column(length = 1500)
-	private String descriccion_larga;
+	private String descriccionLarga;
 
-	private String imagen_curso;
+	private String imagenCurso;
 
-	private BigDecimal precio_curso;
+	private BigDecimal precioCurso;
 
 }

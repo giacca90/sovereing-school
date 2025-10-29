@@ -86,13 +86,13 @@ public class CursoChatService {
                 List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
                 if (mensajesId != null && !mensajesId.isEmpty()) {
                     List<MensajeChat> mensajesChat = mensajeChatRepo.findAllById(mensajesId);
-                    if (mensajesChat != null && mensajesChat.size() > 0) {
+                    if (mensajesChat != null && !mensajesChat.isEmpty()) {
                         mensajesDTO = initChatService.getMensajesDTO(mensajesChat);
                     }
                 }
-                String nombreClase = curso.getClases_curso().stream()
-                        .filter(clase -> clase.getId_clase().equals(claseChat.getIdClase()))
-                        .map(clase -> clase.getNombre_clase())
+                String nombreClase = curso.getClasesCurso().stream()
+                        .filter(clase -> clase.getIdClase().equals(claseChat.getIdClase()))
+                        .map(Clase::getNombreClase)
                         .findFirst() // Esto devuelve Optional<String>
                         .orElseThrow(() -> new EntityNotFoundException(
                                 "Error en obtener el nombre de la clase con ID " + claseChat.getIdClase()));
@@ -114,8 +114,8 @@ public class CursoChatService {
             }
         }
 
-        String nombreCurso = curso.getNombre_curso();
-        String imagenCurso = curso.getImagen_curso();
+        String nombreCurso = curso.getNombreCurso();
+        String imagenCurso = curso.getImagenCurso();
 
         cursoChatDTO = new CursoChatDTO(
                 idCurso,
@@ -143,7 +143,7 @@ public class CursoChatService {
             // Obtener ID de respuesta si existe
             String respId = null;
             if (mensajeChatDTO.getRespuesta() != null) {
-                respId = mensajeChatDTO.getRespuesta().getId_mensaje();
+                respId = mensajeChatDTO.getRespuesta().getIdMensaje();
                 if (respId == null) {
                     throw new IllegalArgumentException("ID de respuesta nulo en MensajeChatDTO");
                 }
@@ -152,9 +152,9 @@ public class CursoChatService {
             // Crear y guardar el mensaje principal
             MensajeChat mensajeChat = new MensajeChat(
                     null,
-                    mensajeChatDTO.getId_curso(),
-                    mensajeChatDTO.getId_clase(),
-                    mensajeChatDTO.getId_usuario(),
+                    mensajeChatDTO.getIdClase(),
+                    mensajeChatDTO.getIdCurso(),
+                    mensajeChatDTO.getIdUsuario(),
                     respId,
                     mensajeChatDTO.getPregunta(),
                     mensajeChatDTO.getMensaje(),
@@ -163,25 +163,25 @@ public class CursoChatService {
             String savedId = savedMessage.getId();
 
             // Actualizar CursoChat
-            CursoChat cursoChat = cursoChatRepo.findByIdCurso(mensajeChatDTO.getId_curso()).orElseThrow(() -> {
+            CursoChat cursoChat = cursoChatRepo.findByIdCurso(mensajeChatDTO.getIdCurso()).orElseThrow(() -> {
                 logger.error("Error en obtener el curso del chat");
                 throw new EntityNotFoundException("Error en obtener el curso del chat");
             });
-            if (mensajeChatDTO.getId_clase() == null || mensajeChatDTO.getId_clase() == 0) {
+            if (mensajeChatDTO.getIdClase() == null || mensajeChatDTO.getIdClase() == 0) {
                 cursoChat.getMensajes().add(savedId);
             } else {
                 cursoChat.getClases().stream()
-                        .filter(c -> Objects.equals(c.getIdClase(), mensajeChatDTO.getId_clase()))
+                        .filter(c -> Objects.equals(c.getIdClase(), mensajeChatDTO.getIdClase()))
                         .findFirst()
                         .orElseThrow(() -> new NoSuchElementException(
-                                "ClaseChat no encontrada para idClase: " + mensajeChatDTO.getId_clase()))
+                                "ClaseChat no encontrada para idClase: " + mensajeChatDTO.getIdClase()))
                         .getMensajes().add(savedId);
             }
             cursoChat.setUltimo(savedId);
             cursoChatRepo.save(cursoChat);
 
             // Actualizar UsuarioChat
-            UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(mensajeChatDTO.getId_usuario())
+            UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(mensajeChatDTO.getIdUsuario())
                     .orElseThrow(() -> {
                         logger.error("Error en obtener el usuario del chat");
                         throw new EntityNotFoundException("Error en obtener el usuario del chat");
@@ -194,11 +194,11 @@ public class CursoChatService {
 
             // Notificar profesores si es pregunta
             if (mensajeChatDTO.getPregunta() != null) {
-                Curso curso = cursoRepo.findById(mensajeChatDTO.getId_curso())
+                Curso curso = cursoRepo.findById(mensajeChatDTO.getIdCurso())
                         .orElseThrow(() -> new NoSuchElementException(
-                                "Curso no encontrado con id: " + mensajeChatDTO.getId_curso()));
-                for (Usuario prof : curso.getProfesores_curso()) {
-                    UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(prof.getId_usuario()).orElseThrow(() -> {
+                                "Curso no encontrado con id: " + mensajeChatDTO.getIdCurso()));
+                for (Usuario prof : curso.getProfesoresCurso()) {
+                    UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(prof.getIdUsuario()).orElseThrow(() -> {
                         logger.error("Error en obtener el profesor del curso");
                         throw new EntityNotFoundException("Error en obtener el profesor del curso");
                     });
@@ -237,14 +237,14 @@ public class CursoChatService {
         Usuario usuario;
         try {
             usuario = objectMapper.readValue(message, Usuario.class);
-            if (usuarioChatRepo.findByIdUsuario(usuario.getId_usuario()).isPresent()) {
-                throw new RuntimeException("Ya existe un usuario con el ID " + usuario.getId_usuario());
+            if (usuarioChatRepo.findByIdUsuario(usuario.getIdUsuario()).isPresent()) {
+                throw new RuntimeException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
             }
             UsuarioChat usuarioChat = new UsuarioChat(
                     null, // String id
-                    usuario.getId_usuario(), // Long id_usuario
-                    new ArrayList<String>(), // List<CursoChat> cursos
-                    new ArrayList<String>()); // List<String> mensajes
+                    usuario.getIdUsuario(), // Long id_usuario
+                    new ArrayList<>(), // List<CursoChat> cursos
+                    new ArrayList<>()); // List<String> mensajes
             usuarioChatRepo.save(usuarioChat);
         } catch (JsonProcessingException e) {
             logger.error("Error al parsear JSON del usuario: {}", e.getMessage());
@@ -265,23 +265,23 @@ public class CursoChatService {
         try {
             curso = objectMapper.readValue(message, Curso.class);
 
-            List<Clase> clases = curso.getClases_curso();
+            List<Clase> clases = curso.getClasesCurso();
             List<ClaseChat> clasesChat = new ArrayList<>();
-            if (clases != null && clases.size() > 0) {
+            if (clases != null && !clases.isEmpty()) {
                 for (Clase clase : clases) {
                     ClaseChat claseChat = new ClaseChat(
-                            clase.getId_clase(), // Long id_clase
-                            curso.getId_curso(), // Long id_curso
-                            new ArrayList<String>()); // List<String> mensajes
+                            clase.getIdClase(), // Long id_clase
+                            curso.getIdCurso(), // Long id_curso
+                            new ArrayList<>()); // List<String> mensajes
                     clasesChat.add(claseChat);
                 }
             }
 
             CursoChat cursoChat = new CursoChat(
                     null, // String id
-                    curso.getId_curso(), // Long id_curso
+                    curso.getIdCurso(), // Long id_curso
                     clasesChat, // List<ClaseChat> clases
-                    new ArrayList<String>(),
+                    new ArrayList<>(),
                     null); // List<String> mensajes
             cursoChatRepo.save(cursoChat);
         } catch (JsonProcessingException e) {
@@ -306,17 +306,17 @@ public class CursoChatService {
         try {
             clase = objectMapper.readValue(message, Clase.class);
             ClaseChat claseChat = new ClaseChat(
-                    clase.getId_clase(),
-                    clase.getCurso_clase().getId_curso(),
-                    new ArrayList<String>());
+                    clase.getIdClase(),
+                    clase.getCursoClase().getIdCurso(),
+                    new ArrayList<>());
 
-            CursoChat cursoChat = cursoChatRepo.findByIdCurso(clase.getCurso_clase().getId_curso()).orElseThrow(() -> {
+            CursoChat cursoChat = cursoChatRepo.findByIdCurso(clase.getCursoClase().getIdCurso()).orElseThrow(() -> {
                 logger.error("Error en obtener el curso del chat");
                 throw new EntityNotFoundException("Error en obtener el curso del chat");
             });
             List<ClaseChat> clasesChat = cursoChat.getClases();
             // Comprueba si clasesChat ya contiene una clase con el mismo id
-            boolean exists = clasesChat.stream().anyMatch(c -> c.getIdClase() == clase.getId_clase());
+            boolean exists = clasesChat.stream().anyMatch(c -> c.getIdClase().equals(clase.getIdClase()));
             if (!exists) {
                 clasesChat.add(claseChat);
                 cursoChat.setClases(clasesChat);
@@ -416,28 +416,28 @@ public class CursoChatService {
             // Inicializar usuarios
             List<Usuario> usuarios = usuarioRepo.findAll();
             for (Usuario usuario : usuarios) {
-                if (usuarioChatRepo.findByIdUsuario(usuario.getId_usuario()).isPresent())
+                if (usuarioChatRepo.findByIdUsuario(usuario.getIdUsuario()).isPresent())
                     continue;
-                UsuarioChat usuarioChat = new UsuarioChat(null, usuario.getId_usuario(), new ArrayList<>(),
+                UsuarioChat usuarioChat = new UsuarioChat(null, usuario.getIdUsuario(), new ArrayList<>(),
                         new ArrayList<>());
                 usuarioChatRepo.save(usuarioChat);
             }
             // Inicializar cursos
             List<Curso> cursos = cursoRepo.findAll();
             for (Curso curso : cursos) {
-                if (cursoChatRepo.findByIdCurso(curso.getId_curso()).isPresent())
+                if (cursoChatRepo.findByIdCurso(curso.getIdCurso()).isPresent())
                     continue;
-                List<Clase> clases = curso.getClases_curso();
+                List<Clase> clases = curso.getClasesCurso();
                 List<ClaseChat> clasesChat = new ArrayList<>();
                 for (Clase clase : clases) {
-                    ClaseChat claseChat = new ClaseChat(clase.getId_clase(), curso.getId_curso(), new ArrayList<>());
+                    ClaseChat claseChat = new ClaseChat(clase.getIdClase(), curso.getIdCurso(), new ArrayList<>());
                     clasesChat.add(claseChat);
                 }
-                CursoChat cursoChat = new CursoChat(null, curso.getId_curso(), clasesChat, new ArrayList<>(), null);
+                CursoChat cursoChat = new CursoChat(null, curso.getIdCurso(), clasesChat, new ArrayList<>(), null);
                 cursoChatRepo.save(cursoChat);
-                List<Usuario> profesores = curso.getProfesores_curso();
+                List<Usuario> profesores = curso.getProfesoresCurso();
                 for (Usuario profesor : profesores) {
-                    UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getId_usuario()).orElseThrow(() -> {
+                    UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getIdUsuario()).orElseThrow(() -> {
                         logger.error("Error en obtener el profesor del curso");
                         throw new EntityNotFoundException("Error en obtener el profesor del curso");
                     });
@@ -460,14 +460,14 @@ public class CursoChatService {
     public void actualizarCursoChat(Curso curso) {
         try {
 
-            CursoChat cursoChat = cursoChatRepo.findByIdCurso(curso.getId_curso()).orElse(null);
+            CursoChat cursoChat = cursoChatRepo.findByIdCurso(curso.getIdCurso()).orElse(null);
             if (cursoChat == null) {
-                cursoChat = new CursoChat(null, curso.getId_curso(), new ArrayList<>(), new ArrayList<>(), null);
+                cursoChat = new CursoChat(null, curso.getIdCurso(), new ArrayList<>(), new ArrayList<>(), null);
                 cursoChat = cursoChatRepo.save(cursoChat);
                 // Añade el curso al chat de los profesores
-                List<Usuario> profesores = curso.getProfesores_curso();
+                List<Usuario> profesores = curso.getProfesoresCurso();
                 for (Usuario profesor : profesores) {
-                    UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getId_usuario()).orElseThrow(() -> {
+                    UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getIdUsuario()).orElseThrow(() -> {
                         logger.error("Error en obtener el profesor del curso");
                         throw new EntityNotFoundException("Error en obtener el profesor del curso");
                     });
@@ -475,17 +475,17 @@ public class CursoChatService {
                     usuarioChatRepo.save(profChat);
                 }
             }
-            List<Clase> clases = curso.getClases_curso();
+            List<Clase> clases = curso.getClasesCurso();
             List<ClaseChat> clasesChat = cursoChat.getClases();
             // Comprueba si las clases del curso es nueva
-            if (clases != null && clases.size() > 0) {
+            if (clases != null && !clases.isEmpty()) {
                 for (Clase clase : clases) {
                     ClaseChat claseChat = clasesChat.stream()
-                            .filter(c -> c.getIdClase() == clase.getId_clase())
+                            .filter(c -> c.getIdClase().equals(clase.getIdClase()))
                             .findFirst()
                             .orElse(null);
                     if (claseChat == null) {
-                        claseChat = new ClaseChat(clase.getId_clase(), curso.getId_curso(), new ArrayList<>());
+                        claseChat = new ClaseChat(clase.getIdClase(), curso.getIdCurso(), new ArrayList<>());
                         clasesChat.add(claseChat);
                     }
                 }
@@ -505,28 +505,26 @@ public class CursoChatService {
             if (cursosChat != null && !cursosChat.isEmpty()) {
                 for (CursoChat cursoChat : cursosChat) {
                     List<ClaseChatDTO> clasesChatDTO = new ArrayList<>();
-                    cursoChat.getClases().forEach(clase -> {
-                        clasesChatDTO.add(new ClaseChatDTO(
-                                clase.getIdClase(),
-                                cursoChat.getIdCurso(),
-                                this.claseRepo.findNombreClaseById(clase.getIdClase()).get(),
-                                new ArrayList<>()));
-                    });
+                    cursoChat.getClases().forEach(clase -> clasesChatDTO.add(new ClaseChatDTO(
+                            clase.getIdClase(),
+                            cursoChat.getIdCurso(),
+                            this.claseRepo.findNombreClaseById(clase.getIdClase()).get(),
+                            new ArrayList<>())));
                     List<String> mensajesId = cursoChat.getMensajes();
                     List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
                     if (mensajesId != null && !mensajesId.isEmpty()) {
                         List<MensajeChat> mensajesChat = mensajeChatRepo.findAllById(mensajesId);
-                        if (mensajesChat != null && mensajesChat.size() > 0) {
+                        if (mensajesChat != null && !mensajesChat.isEmpty()) {
                             mensajesDTO = initChatService.getMensajesDTO(mensajesChat);
                         }
                     }
                     Curso curso = this.cursoRepo.findById(cursoChat.getIdCurso()).get();
                     cursosChatDTO.add(new CursoChatDTO(
-                            curso.getId_curso(),
+                            curso.getIdCurso(),
                             clasesChatDTO,
                             mensajesDTO,
-                            curso.getNombre_curso(),
-                            curso.getImagen_curso()));
+                            curso.getNombreCurso(),
+                            curso.getImagenCurso()));
                 }
                 return cursosChatDTO;
             }

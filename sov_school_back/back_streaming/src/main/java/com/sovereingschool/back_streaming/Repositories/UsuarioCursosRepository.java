@@ -13,7 +13,7 @@ import com.sovereingschool.back_streaming.Models.UsuarioCursos;
 public interface UsuarioCursosRepository extends MongoRepository<UsuarioCursos, String> {
 
     @Query(value = "{ 'id_usuario' : ?0 }")
-    Optional<UsuarioCursos> findByIdUsuario(Long id_usuario);
+    Optional<UsuarioCursos> findByIdUsuario(Long idUsuario);
 
     @Query("{ 'cursos': { $elemMatch: { 'id_curso': ?0 } } }")
     List<UsuarioCursos> findAllByIdCurso(Long idCurso);

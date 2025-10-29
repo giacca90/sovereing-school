@@ -80,7 +80,7 @@ public class UsuarioController {
 	private String uploadDir;
 
 	@Value("${variable.BACK_BASE}")
-	private String back_base;
+	private String backBase;
 
 	public UsuarioController(IUsuarioService usuarioService, JwtUtil jwtUtil) {
 		this.usuarioService = usuarioService;
@@ -294,13 +294,13 @@ public class UsuarioController {
 		}
 		Long idUsuario = (Long) authentication.getDetails();
 
-		if (idUsuario == null || !idUsuario.equals(usuario.getId_usuario())) {
+		if (idUsuario == null || !idUsuario.equals(usuario.getIdUsuario())) {
 			return new ResponseEntity<>("Error en el token de acceso: idUsuario no coincide\nidUsuario: "
-					+ usuario.getId_usuario() + "\nidUsuario del token: " + idUsuario, HttpStatus.UNAUTHORIZED);
+					+ usuario.getIdUsuario() + "\nidUsuario del token: " + idUsuario, HttpStatus.UNAUTHORIZED);
 		}
 		Object response = new Object();
 		try {
-			this.usuarioService.updateUsuario(usuario).getId_usuario();
+			this.usuarioService.updateUsuario(usuario).getIdUsuario();
 			response = "Usuario editado con éxito!!!";
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException e) {
@@ -324,7 +324,7 @@ public class UsuarioController {
 			return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
 		}
 		Long idUsuario = (Long) authentication.getDetails();
-		if (idUsuario == null || !idUsuario.equals(usuario.getId_usuario())) {
+		if (idUsuario == null || !idUsuario.equals(usuario.getIdUsuario())) {
 			return new ResponseEntity<>("Error en el token de acceso: no hay un id_usuario en el token",
 					HttpStatus.UNAUTHORIZED);
 		}
@@ -354,7 +354,7 @@ public class UsuarioController {
 			return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
 		}
 		Long idUsuario = (Long) authentication.getDetails();
-		if (idUsuario == null || !idUsuario.equals(cursosUsuario.getId_usuario())) {
+		if (idUsuario == null || !idUsuario.equals(cursosUsuario.getIdUsuario())) {
 			return new ResponseEntity<>("Error en el token de acceso: no hay id_usuario en el token",
 					HttpStatus.UNAUTHORIZED);
 		}
@@ -442,7 +442,7 @@ public class UsuarioController {
 						ImageWriteParam param = writer.getDefaultWriteParam();
 						writer.write(null, new IIOImage(webpImage, null, null), param);
 					}
-					fileNames.add(back_base + "/usuario/fotos/" + webpFileName);
+					fileNames.add(backBase + "/usuario/fotos/" + webpFileName);
 				} catch (IllegalArgumentException e) {
 					return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
 				} catch (EntityNotFoundException e) {
@@ -456,7 +456,7 @@ public class UsuarioController {
 			} else {
 				try {
 					Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-					fileNames.add(back_base + "/usuario/fotos/" + fileName);
+					fileNames.add(backBase + "/usuario/fotos/" + fileName);
 				} catch (IllegalArgumentException e) {
 					return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
 				} catch (EntityNotFoundException e) {

@@ -40,15 +40,15 @@ public class Preset {
 
     @Id
     private String id;
-    private Long id_usuario;
+    private Long idUsuario;
     private Map<String, PresetValue> presets;
 
-    public Preset(Long id_usuario) {
-        this.id_usuario = id_usuario;
+    public Preset(Long idUsuario) {
+        this.idUsuario = idUsuario;
     }
 
-    public Preset(Long id_usuario, Map<String, PresetValue> presets) {
-        this.id_usuario = id_usuario;
+    public Preset(Long idUsuario, Map<String, PresetValue> presets) {
+        this.idUsuario = idUsuario;
         this.presets = presets;
     }
 }

@@ -17,13 +17,13 @@ import lombok.ToString;
 @ToString
 public class CursoChatDTO {
 
-    private Long id_curso;
+    private Long idCurso;
 
     private List<ClaseChatDTO> clases;
 
     private List<MensajeChatDTO> mensajes;
 
-    private String nombre_curso;
+    private String nombreCurso;
 
-    private String foto_curso;
+    private String fotoCurso;
 }

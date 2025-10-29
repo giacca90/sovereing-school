@@ -19,7 +19,7 @@ import lombok.ToString;
 @Entity
 public class StatusCurso {
     @Id
-    private Long id_curso;
+    private Long idCurso;
     @ElementCollection
     private List<StatusClase> clases;
 }

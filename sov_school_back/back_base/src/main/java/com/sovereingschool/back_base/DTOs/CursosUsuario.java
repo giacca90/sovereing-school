@@ -14,7 +14,7 @@ import lombok.ToString;
 @Setter
 @ToString
 public class CursosUsuario {
-    private Long id_usuario;
+    private Long idUsuario;
 
-    private List<Long> ids_cursos;
+    private List<Long> idsCursos;
 }

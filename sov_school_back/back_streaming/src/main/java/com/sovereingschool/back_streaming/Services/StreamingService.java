@@ -58,24 +58,24 @@ public class StreamingService {
     @Async
     // TODO: Modificar para trabajar solo con clases concretas
     public void convertVideos(Curso curso) throws IOException, InterruptedException {
-        if (curso.getClases_curso() == null || curso.getClases_curso().isEmpty()) {
+        if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
             throw new RuntimeException("Curso sin clases");
         }
         Path baseUploadDir = Paths.get(uploadDir);
-        for (Clase clase : curso.getClases_curso()) {
-            Path destinationPath = Paths.get(baseUploadDir.toString(), curso.getId_curso().toString(),
-                    clase.getId_clase().toString());
+        for (Clase clase : curso.getClasesCurso()) {
+            Path destinationPath = Paths.get(baseUploadDir.toString(), curso.getIdCurso().toString(),
+                    clase.getIdClase().toString());
 
             // Verificar que la dirección de la clase no esté vacía y que sea diferente de
             // la
             // base
-            if (!clase.getDireccion_clase().isEmpty()
-                    && !clase.getDireccion_clase().contains(destinationPath.toString())
-                    && !clase.getDireccion_clase().endsWith(".m3u8")
-                    && clase.getDireccion_clase().contains(".")) {
+            if (!clase.getDireccionClase().isEmpty()
+                    && !clase.getDireccionClase().contains(destinationPath.toString())
+                    && !clase.getDireccionClase().endsWith(".m3u8")
+                    && clase.getDireccionClase().contains(".")) {
 
                 // Extraer el directorio y el nombre del archivo de entrada
-                Path inputPath = Paths.get(clase.getDireccion_clase());
+                Path inputPath = Paths.get(clase.getDireccionClase());
                 File destinationFile = destinationPath.toFile();
                 File inputFile = inputPath.toFile();
                 File destino = new File(destinationFile, inputPath.getFileName().toString());
@@ -115,7 +115,7 @@ public class StreamingService {
                         throw new IOException("El proceso de FFmpeg falló con el código de salida " + exitCode);
                     }
 
-                    clase.setDireccion_clase(destinationPath.toString() + "/master.m3u8");
+                    clase.setDireccionClase(destinationPath.toString() + "/master.m3u8");
                     this.claseRepo.save(clase);
                 }
             }
@@ -139,13 +139,13 @@ public class StreamingService {
         if (!claseOpt.isPresent())
             throw new RuntimeException("No se encuentra la clase con la dirección " + streamId);
         Clase clase = claseOpt.get();
-        Long idCurso = clase.getCurso_clase().getId_curso();
-        Long idClase = clase.getId_clase();
+        Long idCurso = clase.getCursoClase().getIdCurso();
+        Long idClase = clase.getIdClase();
         Path baseUploadDir = Paths.get(uploadDir);
         Path outputDir = baseUploadDir.resolve(idCurso.toString()).resolve(idClase.toString());
-        claseRepo.updateClase(idClase, clase.getNombre_clase(), clase.getTipo_clase(),
+        claseRepo.updateClase(idClase, clase.getNombreClase(), clase.getTipoClase(),
                 outputDir.toString() + "/master.m3u8",
-                clase.getPosicion_clase());
+                clase.getPosicionClase());
         // Crear el directorio de salida si no existe
         if (!Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
@@ -275,8 +275,8 @@ public class StreamingService {
      */
     private List<String> creaComandoFFmpeg(String inputFilePath, Boolean live, String streamId, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException {
-        String hls_playlist_type = live ? "event" : "vod";
-        String hls_flags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
+        String hlsPlaylistType = live ? "event" : "vod";
+        String hlsFlags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
         // String preset = live ? "veryfast" : "fast"; // No se usa en VAAPI
         String width = null;
         String height = null;
@@ -313,11 +313,10 @@ public class StreamingService {
                     fps = String.valueOf((int) Math.round(Double.parseDouble(frameRateParts[0]) /
                             Double.parseDouble(frameRateParts[1])));
                 }
-                break;
             }
 
             process.waitFor();
-            if (width == "0" || height == "0" || fps == "0") {
+            if (width.equals("0") || height.equals("0") || fps.equals("0")) {
                 logger.error("La resolución es 0");
                 throw new RuntimeException("No se pudo obtener la resolución del streaming");
             }
@@ -441,8 +440,8 @@ public class StreamingService {
         ffmpegCommand.addAll(List.of("-master_pl_name", "master.m3u8",
                 "-f", "hls",
                 "-hls_time", "2",
-                "-hls_playlist_type", hls_playlist_type,
-                "-hls_flags", hls_flags,
+                "-hls_playlist_type", hlsPlaylistType,
+                "-hls_flags", hlsFlags,
                 "-hls_segment_type", "mpegts",
                 "-hls_segment_filename", "%v/data%05d.ts",
                 "%v/stream.m3u8"));

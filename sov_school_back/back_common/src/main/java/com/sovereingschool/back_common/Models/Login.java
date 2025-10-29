@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "login")
 public class Login implements Serializable {
     @Id
-    private Long id_usuario;
+    private Long idUsuario;
 
     @MapsId
     @OneToOne
@@ -28,7 +28,7 @@ public class Login implements Serializable {
     private Usuario usuario;
 
     @Column(unique = true, nullable = false)
-    private String correo_electronico;
+    private String correoElectronico;
 
     @Column(unique = true, nullable = false)
     private String password;

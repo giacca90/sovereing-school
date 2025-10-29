@@ -96,8 +96,8 @@ public class JwtUtil {
                 .withClaim("rol", roles)
                 .withClaim("id_usuario", id_usuario)
                 .withIssuedAt(new Date())
-                .withExpiresAt(tokenType == "access" ? getExpiredForAccessToken()
-                        : tokenType == "server" ? getExpiredForServer() : getExpiredForRefreshToken()) // 1 hour
+                .withExpiresAt(tokenType.equals("access") ? getExpiredForAccessToken()
+                        : tokenType.equals("server") ? getExpiredForServer() : getExpiredForRefreshToken()) // 1 hour
                 .withJWTId(UUID.randomUUID().toString())
                 .withNotBefore(new Date(System.currentTimeMillis())) //
                 .sign(algorithm);
@@ -127,7 +127,7 @@ public class JwtUtil {
             Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
             return JWT.create()
                     .withIssuer(this.userGenerator)
-                    .withSubject(newUsuario.getCorreo_electronico())
+                    .withSubject(newUsuario.getCorreoElectronico())
                     .withClaim("rol", "ROLE_USER")
                     .withClaim("new_usuario", convertirObjetoABase64(newUsuario))
                     .withIssuedAt(new Date())

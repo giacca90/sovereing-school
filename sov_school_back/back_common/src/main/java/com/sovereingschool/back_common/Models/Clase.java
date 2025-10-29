@@ -27,43 +27,45 @@ import lombok.ToString;
 public class Clase implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_clase;
+    private Long idClase;
 
     @Column(nullable = false)
-    private String nombre_clase;
+    private String nombreClase;
 
     @Column(length = 1000)
-    private String descriccion_clase;
+    private String descriccionClase;
 
     @Column(length = 10000)
-    private String contenido_clase;
+    private String contenidoClase;
 
     // 0 - ESTATICO, 1 - OBS - 2 - WEBCAM
     @Column(nullable = false)
-    private int tipo_clase;
+    private int tipoClase;
 
     @Column()
-    private String direccion_clase;
+    private String direccionClase;
 
     @Column(nullable = false)
-    private Integer posicion_clase;
+    private Integer posicionClase;
 
     @ManyToOne
     @JoinColumn(name = "id_curso", nullable = false)
     @JsonBackReference
-    private Curso curso_clase;
+    private Curso cursoClase;
 
     @Override
     public int hashCode() {
-        return Objects.hash(id_clase, direccion_clase, contenido_clase, posicion_clase, nombre_clase);
+        return Objects.hash(idClase, direccionClase, contenidoClase, posicionClase, nombreClase);
     }
 
     @Override
     public boolean equals(Object o) {
         Clase clase = (Clase) o;
-        return this.id_clase == clase.id_clase && this.nombre_clase == clase.nombre_clase
-                && this.descriccion_clase == clase.descriccion_clase && this.contenido_clase == clase.contenido_clase
-                && this.direccion_clase == clase.direccion_clase;
+        return this.idClase == clase.idClase &&
+                this.nombreClase == clase.nombreClase &&
+                this.descriccionClase == clase.descriccionClase &&
+                this.contenidoClase == clase.contenidoClase &&
+                this.direccionClase == clase.direccionClase;
     }
 
 }

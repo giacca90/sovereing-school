@@ -11,6 +11,6 @@ public interface IUsuarioCursosService {
 
     public boolean addClase(Long idCurso, Clase clase);
 
-    public String getClase(Long id_usuario, Long id_curso, Long id_clase);
+    public String getClase(Long idUsuario, Long idCurso, Long idClase);
 
 }

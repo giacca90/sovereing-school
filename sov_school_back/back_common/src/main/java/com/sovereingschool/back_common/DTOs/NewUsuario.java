@@ -17,17 +17,17 @@ import lombok.ToString;
 @Data
 @ToString
 public class NewUsuario implements Serializable {
-	private String nombre_usuario;
+	private String nombreUsuario;
 
-	private String correo_electronico;
+	private String correoElectronico;
 
 	private String password;
 
-	private List<String> foto_usuario;
+	private List<String> fotoUsuario;
 
-	private Plan plan_usuario;
+	private Plan planUsuario;
 
-	private List<Curso> cursos_usuario;
+	private List<Curso> cursosUsuario;
 
-	private Date fecha_registro_usuario;
+	private Date fechaRegistroUsuario;
 }

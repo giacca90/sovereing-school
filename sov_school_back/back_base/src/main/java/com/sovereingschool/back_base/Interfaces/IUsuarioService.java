@@ -13,19 +13,19 @@ import com.sovereingschool.back_common.Models.Usuario;
 import jakarta.mail.MessagingException;
 
 public interface IUsuarioService {
-    public AuthResponse createUsuario(NewUsuario new_usuario);
+    public AuthResponse createUsuario(NewUsuario newUsuario);
 
-    public Usuario getUsuario(Long id_usuario);
+    public Usuario getUsuario(Long idUsuario);
 
-    public String getNombreUsuario(Long id_usuario);
+    public String getNombreUsuario(Long idUsuario);
 
-    public List<String> getFotosUsuario(Long id_usuario);
+    public List<String> getFotosUsuario(Long idUsuario);
 
-    public RoleEnum getRollUsuario(Long id_usuario);
+    public RoleEnum getRollUsuario(Long idUsuario);
 
-    public Plan getPlanUsuario(Long id_usuario);
+    public Plan getPlanUsuario(Long idUsuario);
 
-    public List<Curso> getCursosUsuario(Long id_usuario);
+    public List<Curso> getCursosUsuario(Long idUsuario);
 
     public Usuario updateUsuario(Usuario usuario);
 

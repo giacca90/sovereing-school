@@ -15,25 +15,25 @@ import jakarta.transaction.Transactional;
 @Repository
 public interface LoginRepository extends JpaRepository<Login, Long> {
 
-    @Query("SELECT l.id_usuario FROM Login l WHERE l.correo_electronico = :correo")
+    @Query("SELECT l.idUsuario FROM Login l WHERE l.correoElectronico = :correo")
     Optional<Long> compruebaCorreo(@Param("correo") String correo);
 
-    @Query("SELECT l.correo_electronico FROM Login l WHERE l.id_usuario = :id")
+    @Query("SELECT l.correoElectronico FROM Login l WHERE l.idUsuario = :id")
     Optional<String> findCorreoLoginForId(@Param("id") Long id);
 
-    @Query("SELECT l.password FROM Login l WHERE l.id_usuario = :id")
+    @Query("SELECT l.password FROM Login l WHERE l.idUsuario = :id")
     Optional<String> findPasswordLoginForId(@Param("id") Long id);
 
     @Modifying
     @Transactional
-    @Query("UPDATE Login l SET l.correo_electronico = :new_correo WHERE l.id_usuario = :id")
-    Optional<Integer> changeCorreoLoginForId(@Param("id") Long id, @Param("new_correo") String new_correo);
+    @Query("UPDATE Login l SET l.correoElectronico = :newCorreo WHERE l.idUsuario = :id")
+    Optional<Integer> changeCorreoLoginForId(@Param("id") Long id, @Param("newCorreo") String newCorreo);
 
     @Modifying
     @Transactional
-    @Query("UPDATE Login l SET l.password = :new_password WHERE l.id_usuario = :id")
-    Optional<Integer> changePasswordLoginForId(@Param("id") Long id, @Param("new_password") String new_password);
+    @Query("UPDATE Login l SET l.password = :newPassword WHERE l.idUsuario = :id")
+    Optional<Integer> changePasswordLoginForId(@Param("id") Long id, @Param("newPassword") String newPassword);
 
-    @Query("SELECT l FROM Login l WHERE l.correo_electronico = :correo")
+    @Query("SELECT l FROM Login l WHERE l.correoElectronico = :correo")
     Optional<Login> getLoginForCorreo(@Param("correo") String correo);
 }

@@ -16,7 +16,7 @@ import lombok.ToString;
 @Entity
 public class StatusClase {
     @Id
-    private Long id_clase;
+    private Long idClase;
     private boolean completed;
     private int progress; // Representa el progreso en la clase, por ejemplo en segundos o porcentaje
 }

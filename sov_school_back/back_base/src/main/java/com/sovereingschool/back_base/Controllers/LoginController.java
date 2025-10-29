@@ -137,11 +137,11 @@ public class LoginController {
 	public ResponseEntity<?> changeCorreoLogin(@RequestBody Login login) {
 		Object response = new Object();
 		try {
-			if (login.getCorreo_electronico() == null) {
+			if (login.getCorreoElectronico() == null) {
 				response = "El correo electrónico no puede ser vació";
 				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 			}
-			if (login.getCorreo_electronico().isEmpty()) {
+			if (login.getCorreoElectronico().isEmpty()) {
 				response = "El correo electrónico no puede ser vació";
 				return new ResponseEntity<>(response, HttpStatus.FAILED_DEPENDENCY);
 			}
@@ -237,7 +237,7 @@ public class LoginController {
 			response = this.loginService.loginWithToken(token);
 			Usuario usuario = (Usuario) response;
 			Authentication auth = jwtUtil.createAuthenticationFromToken(token);
-			String refreshToken = jwtUtil.generateToken(auth, "refresh", usuario.getId_usuario());
+			String refreshToken = jwtUtil.generateToken(auth, "refresh", usuario.getIdUsuario());
 			ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
 					.httpOnly(true) // No accesible desde JavaScript
 					.secure(true) // Solo por HTTPS

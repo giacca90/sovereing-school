@@ -35,32 +35,32 @@ import lombok.NoArgsConstructor;
 public class Usuario implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_usuario;
+    private Long idUsuario;
 
     @Column(nullable = false)
-    private String nombre_usuario;
+    private String nombreUsuario;
 
     @Column(unique = true, columnDefinition = "text[]")
-    private List<String> foto_usuario;
+    private List<String> fotoUsuario;
 
     @Column(length = 1500)
     private String presentacion;
 
     @Column(nullable = false, name = "roll_usuario")
     @Enumerated(EnumType.STRING) // Esto es importante
-    private RoleEnum roll_usuario;
+    private RoleEnum rollUsuario;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "plan_usuario", referencedColumnName = "id_plan")
-    private Plan plan_usuario;
+    private Plan planUsuario;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "usuario_curso", joinColumns = @JoinColumn(name = "id_usuario"), inverseJoinColumns = @JoinColumn(name = "id_curso"))
     @JsonIgnoreProperties({ "clases_curso", "planes_curso", "precio_curso" })
-    private List<Curso> cursos_usuario;
+    private List<Curso> cursosUsuario;
 
     @Temporal(TemporalType.DATE)
-    private Date fecha_registro_usuario;
+    private Date fechaRegistroUsuario;
 
     @Column(name = "is_enabled")
     private Boolean isEnabled;

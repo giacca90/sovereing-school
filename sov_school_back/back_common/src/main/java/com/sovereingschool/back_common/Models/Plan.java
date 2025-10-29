@@ -26,16 +26,17 @@ import lombok.NoArgsConstructor;
 public class Plan implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_plan;
+    @Column(name = "id_plan")
+    private Long idPlan;
 
     @Column(unique = true, nullable = false)
-    private String nombre_plan;
+    private String nombrePlan;
 
     @Column(nullable = false)
-    private BigDecimal precio_plan;
+    private BigDecimal precioPlan;
 
     @Column(nullable = false)
-    @ManyToMany(mappedBy = "planes_curso", fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "planesCurso", fetch = FetchType.LAZY)
     @JsonIgnore
-    private List<Curso> cursos_plan;
+    private List<Curso> cursosPlan;
 }

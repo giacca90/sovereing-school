@@ -17,14 +17,14 @@ public interface ClaseRepository extends JpaRepository<Clase, Long> {
 
 	@Modifying
 	@Transactional
-	@Query("UPDATE Clase cl SET cl.nombre_clase = :nombre_clase, cl.tipo_clase = :tipo_clase, cl.direccion_clase = :direccion_clase, cl.posicion_clase = :posicion_clase WHERE cl.id_clase = :id_clase")
-	void updateClase(@Param("id_clase") Long id_clase, @Param("nombre_clase") String nombre_clase,
-			@Param("tipo_clase") int tipo_clase, @Param("direccion_clase") String direccion_clase,
-			@Param("posicion_clase") Integer posicion_clase);
+	@Query("UPDATE Clase cl SET cl.nombreClase = :nombreClase, cl.tipoClase = :tipoClase, cl.direccionClase = :direccionClase, cl.posicionClase = :posicionClase WHERE cl.idClase = :idClase")
+	void updateClase(@Param("idClase") Long idClase, @Param("nombreClase") String nombreClase,
+			@Param("tipoClase") int tipoClase, @Param("direccionClase") String direccionClase,
+			@Param("posicionClase") Integer posicionClase);
 
-	@Query("SELECT c.nombre_clase FROM Clase c WHERE c.id_clase = :id")
+	@Query("SELECT c.nombreClase FROM Clase c WHERE c.idClase = :id")
 	Optional<String> findNombreClaseById(@Param("id") Long id);
 
-	@Query("SELECT c FROM Clase c WHERE c.direccion_clase = :direccion_clase")
-	Optional<Clase> findByDireccionClase(@Param("direccion_clase") String direccion_clase);
+	@Query("SELECT c FROM Clase c WHERE c.direccionClase = :direccionClase")
+	Optional<Clase> findByDireccionClase(@Param("direccionClase") String direccionClase);
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -60,9 +61,9 @@ public class InitAppService implements IInitAppService {
         List<ProfesInit> profesInit = new ArrayList<>();
         profes.forEach(profe -> {
             ProfesInit init = new ProfesInit();
-            init.setId_usuario(profe.getId_usuario());
-            init.setNombre_usuario(profe.getNombre_usuario());
-            init.setFoto_usuario(profe.getFoto_usuario());
+            init.setIdUsuario(profe.getIdUsuario());
+            init.setNombreUsuario(profe.getNombreUsuario());
+            init.setFotoUsuario(profe.getFotoUsuario());
             init.setPresentacion(profe.getPresentacion());
             profesInit.add(init);
 
@@ -72,16 +73,14 @@ public class InitAppService implements IInitAppService {
         List<CursosInit> cursosInit = new ArrayList<>();
         cursos.forEach(curso -> {
             CursosInit init = new CursosInit();
-            init.setId_curso(curso.getId_curso());
-            init.setNombre_curso(curso.getNombre_curso());
-            init.setImagen_curso(curso.getImagen_curso());
-            init.setDescriccion_corta(curso.getDescriccion_corta());
-            List<Long> ids_profes = new ArrayList<>();
-            curso.getProfesores_curso().forEach(profe -> {
-                ids_profes.add(profe.getId_usuario());
-            });
+            init.setIdCurso(curso.getIdCurso());
+            init.setNombreCurso(curso.getNombreCurso());
+            init.setImagenCurso(curso.getImagenCurso());
+            init.setDescriccionCorta(curso.getDescriccionCorta());
+            List<Long> idsProfes = new ArrayList<>();
+            curso.getProfesoresCurso().forEach(profe -> idsProfes.add(profe.getIdUsuario()));
 
-            init.setProfesores_curso(ids_profes);
+            init.setProfesoresCurso(idsProfes);
             cursosInit.add(init);
         });
 
@@ -117,7 +116,7 @@ public class InitAppService implements IInitAppService {
                     .body(Mono.just(init), InitApp.class)
                     .retrieve()
                     .onStatus(
-                            status -> status.isError(),
+                            HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                 logger.error("Error HTTP del SSR: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del SSR: " + errorBody));

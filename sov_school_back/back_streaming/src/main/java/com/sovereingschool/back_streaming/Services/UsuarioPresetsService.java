@@ -30,9 +30,9 @@ public class UsuarioPresetsService {
     public boolean createPresetsForEligibleUsers() {
         try {
             this.usuarioRepository.findAll().forEach((Usuario user) -> {
-                if (user.getRoll_usuario().name().equals("PROFESOR")
-                        || user.getRoll_usuario().name().equals("ADMIN")) {
-                    this.presetRepository.save(new Preset(user.getId_usuario()));
+                if (user.getRollUsuario().name().equals("PROFESOR")
+                        || user.getRollUsuario().name().equals("ADMIN")) {
+                    this.presetRepository.save(new Preset(user.getIdUsuario()));
                 }
             });
             return true;
@@ -42,17 +42,17 @@ public class UsuarioPresetsService {
         }
     }
 
-    public Preset getPresetsForUser(Long id_usuario) {
-        return this.presetRepository.findByIdUsuario(id_usuario).orElse(null);
+    public Preset getPresetsForUser(Long idUsuario) {
+        return this.presetRepository.findByIdUsuario(idUsuario).orElse(null);
     }
 
-    public void savePresetsForUser(Long id_usuario, Map<String, Preset.PresetValue> presets) {
-        this.deletePresetsForUser(id_usuario);
-        this.presetRepository.save(new Preset(id_usuario, presets));
+    public void savePresetsForUser(Long idUsuario, Map<String, Preset.PresetValue> presets) {
+        this.deletePresetsForUser(idUsuario);
+        this.presetRepository.save(new Preset(idUsuario, presets));
     }
 
-    public void deletePresetsForUser(Long id_usuario) {
-        this.presetRepository.deleteByIdUsuario(id_usuario);
+    public void deletePresetsForUser(Long idUsuario) {
+        this.presetRepository.deleteByIdUsuario(idUsuario);
     }
 
 }

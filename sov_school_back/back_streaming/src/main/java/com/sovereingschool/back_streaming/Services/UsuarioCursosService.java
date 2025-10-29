@@ -55,28 +55,28 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     public void syncUserCourses() {
         List<Usuario> users = usuarioRepository.findAll();
         for (Usuario user : users) {
-            if (usuarioCursosRepository.findByIdUsuario(user.getId_usuario()).isPresent())
+            if (usuarioCursosRepository.findByIdUsuario(user.getIdUsuario()).isPresent())
                 continue;
-            List<Curso> courses = user.getCursos_usuario();
+            List<Curso> courses = user.getCursosUsuario();
             List<StatusCurso> courseStatuses = courses.stream().map(course -> {
-                List<Clase> classes = course.getClases_curso();
+                List<Clase> classes = course.getClasesCurso();
                 List<StatusClase> classStatuses = classes.stream().map(clazz -> {
                     StatusClase classStatus = new StatusClase();
-                    classStatus.setId_clase(clazz.getId_clase());
+                    classStatus.setIdClase(clazz.getIdClase());
                     classStatus.setCompleted(false);
                     classStatus.setProgress(0);
                     return classStatus;
                 }).toList();
 
                 StatusCurso courseStatus = new StatusCurso();
-                courseStatus.setId_curso(course.getId_curso());
+                courseStatus.setIdCurso(course.getIdCurso());
                 courseStatus.setClases(classStatuses);
                 return courseStatus;
             }).toList();
 
             UsuarioCursos userCourses = new UsuarioCursos();
-            userCourses.setId_usuario(user.getId_usuario());
-            userCourses.setRol_usuario(user.getRoll_usuario());
+            userCourses.setIdUsuario(user.getIdUsuario());
+            userCourses.setRolUsuario(user.getRollUsuario());
             userCourses.setCursos(courseStatuses);
             usuarioCursosRepository.save(userCourses);
         }
@@ -84,32 +84,32 @@ public class UsuarioCursosService implements IUsuarioCursosService {
 
     @Override
     public String addNuevoUsuario(Usuario usuario) {
-        if (usuarioCursosRepository.findByIdUsuario(usuario.getId_usuario()).isPresent()) {
-            throw new RuntimeException("Ya existe un usuario con el ID " + usuario.getId_usuario());
+        if (usuarioCursosRepository.findByIdUsuario(usuario.getIdUsuario()).isPresent()) {
+            throw new RuntimeException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
         }
-        List<Curso> courses = usuario.getCursos_usuario();
+        List<Curso> courses = usuario.getCursosUsuario();
         List<StatusCurso> courseStatuses = new ArrayList<>();
         if (courses != null) {
             courseStatuses = courses.stream().map(course -> {
-                List<Clase> classes = course.getClases_curso();
+                List<Clase> classes = course.getClasesCurso();
                 List<StatusClase> classStatuses = classes.stream().map(clazz -> {
                     StatusClase classStatus = new StatusClase();
-                    classStatus.setId_clase(clazz.getId_clase());
+                    classStatus.setIdClase(clazz.getIdClase());
                     classStatus.setCompleted(false);
                     classStatus.setProgress(0);
                     return classStatus;
                 }).toList();
 
                 StatusCurso courseStatus = new StatusCurso();
-                courseStatus.setId_curso(course.getId_curso());
+                courseStatus.setIdCurso(course.getIdCurso());
                 courseStatus.setClases(classStatuses);
                 return courseStatus;
             }).toList();
         }
 
         UsuarioCursos userCourses = new UsuarioCursos();
-        userCourses.setId_usuario(usuario.getId_usuario());
-        userCourses.setRol_usuario(usuario.getRoll_usuario()); // Asegurarse de establecer el rol
+        userCourses.setIdUsuario(usuario.getIdUsuario());
+        userCourses.setRolUsuario(usuario.getRollUsuario()); // Asegurarse de establecer el rol
         userCourses.setCursos(courseStatuses);
 
         usuarioCursosRepository.save(userCourses);
@@ -117,27 +117,27 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     }
 
     @Override
-    public String getClase(Long id_usuario, Long id_curso, Long id_clase) {
-        UsuarioCursos usuario = this.usuarioCursosRepository.findByIdUsuario(id_usuario).orElseThrow(() -> {
-            logger.error("Error en obtener el usuario del streaming. id_usuario: {}", id_usuario);
+    public String getClase(Long idUsuario, Long idCurso, Long idClase) {
+        UsuarioCursos usuario = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
+            logger.error("Error en obtener el usuario del streaming. id_usuario: {}", idUsuario);
             throw new EntityNotFoundException("Error en obtener el usuario del streaming");
         });
 
-        if (id_clase == 0) {
-            if (usuario.getRol_usuario().name().equals("PROFESOR") || usuario.getRol_usuario().name().equals("ADMIN")) {
-                id_clase = this.cursoRepository.findById(id_curso).get().getClases_curso().get(0).getId_clase();
+        if (idClase == 0) {
+            if (usuario.getRolUsuario().name().equals("PROFESOR") || usuario.getRolUsuario().name().equals("ADMIN")) {
+                idClase = this.cursoRepository.findById(idCurso).get().getClasesCurso().get(0).getIdClase();
             }
         }
 
-        if (usuario.getRol_usuario().name().equals("PROFESOR") || usuario.getRol_usuario().name().equals("ADMIN")) {
+        if (usuario.getRolUsuario().name().equals("PROFESOR") || usuario.getRolUsuario().name().equals("ADMIN")) {
             try {
 
-                String direccion = this.claseRepository.findById(id_clase).get().getDireccion_clase();
+                String direccion = this.claseRepository.findById(idClase).get().getDireccionClase();
                 if (direccion == null) {
                     logger.error("Clase no encontrada");
                     return null;
                 }
-                return this.claseRepository.findById(id_clase).get().getDireccion_clase();
+                return this.claseRepository.findById(idClase).get().getDireccionClase();
             } catch (Exception e) {
                 logger.error("Error en obtener la clase: {}", e.getMessage());
             }
@@ -146,17 +146,17 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         List<StatusCurso> cursos = usuario.getCursos();
 
         for (StatusCurso curso : cursos) {
-            if (curso.getId_curso().equals(id_curso)) {
+            if (curso.getIdCurso().equals(idCurso)) {
                 List<StatusClase> clases = curso.getClases();
                 for (StatusClase clase : clases) {
-                    if (id_clase == 0) {
+                    if (idClase == 0) {
                         if (!clase.isCompleted()) {
-                            return this.claseRepository.findById(clase.getId_clase()).get().getDireccion_clase();
+                            return this.claseRepository.findById(clase.getIdClase()).get().getDireccionClase();
                         }
                         continue;
                     }
-                    if (clase.getId_clase().equals(id_clase)) {
-                        return this.claseRepository.findById(id_clase).get().getDireccion_clase();
+                    if (clase.getIdClase().equals(idClase)) {
+                        return this.claseRepository.findById(idClase).get().getDireccionClase();
                     }
                 }
             }
@@ -172,16 +172,16 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             query.addCriteria(Criteria.where("cursos.id_curso").is(idCurso));
             List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
-            if (usuarioCursos == null || usuarioCursos.size() == 0) {
+            if (usuarioCursos == null || usuarioCursos.isEmpty()) {
                 logger.error("No se encontró el documento.");
                 return false;
             }
 
             for (UsuarioCursos usuario : usuarioCursos) {
                 for (StatusCurso curso : usuario.getCursos()) {
-                    if (curso.getId_curso().equals(idCurso)) {
+                    if (curso.getIdCurso().equals(idCurso)) {
                         curso.getClases()
-                                .add(new StatusClase(clase.getId_clase(), false, 0));
+                                .add(new StatusClase(clase.getIdClase(), false, 0));
                         mongoTemplate.save(usuario);
                         break;
                     }
@@ -201,16 +201,16 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             query.addCriteria(Criteria.where("cursos.id_curso").is(idCurso));
             List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
-            if (usuarioCursos == null || usuarioCursos.size() == 0) {
+            if (usuarioCursos == null || usuarioCursos.isEmpty()) {
                 logger.error("No se encontró el documento.");
                 return false;
             }
 
             for (UsuarioCursos usuario : usuarioCursos) {
                 for (StatusCurso curso : usuario.getCursos()) {
-                    if (curso.getId_curso().equals(idCurso)) {
+                    if (curso.getIdCurso().equals(idCurso)) {
                         for (int i = 0; i < curso.getClases().size(); i++) {
-                            if (curso.getClases().get(i).getId_clase().equals(idClase)) {
+                            if (curso.getClases().get(i).getIdClase().equals(idClase)) {
                                 curso.getClases().remove(i);
                                 mongoTemplate.save(usuario);
                                 break;
@@ -227,25 +227,25 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         }
     }
 
-    public Long getStatus(Long id_usuario, Long id_curso) {
-        UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(id_usuario).orElseThrow(() -> {
+    public Long getStatus(Long idUsuario, Long idCurso) {
+        UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
             logger.error("Error en obtener el usuario del chat");
             throw new EntityNotFoundException("Error en obtener el usuario del chat");
         });
-        if (usuarioCursos.getRol_usuario().name().equals("PROFESOR")
-                || usuarioCursos.getRol_usuario().name().equals("ADMIN")) {
-            return this.cursoRepository.findById(id_curso).get().getClases_curso().get(0).getId_clase();
+        if (usuarioCursos.getRolUsuario().name().equals("PROFESOR")
+                || usuarioCursos.getRolUsuario().name().equals("ADMIN")) {
+            return this.cursoRepository.findById(idCurso).get().getClasesCurso().get(0).getIdClase();
         } else {
             List<StatusCurso> lst = usuarioCursos.getCursos();
             for (StatusCurso sc : lst) {
-                if (sc.getId_curso().equals(id_curso)) {
+                if (sc.getIdCurso().equals(idCurso)) {
                     List<StatusClase> lscl = sc.getClases();
                     for (StatusClase scl : lscl) {
                         if (!scl.isCompleted()) {
-                            return scl.getId_clase();
+                            return scl.getIdClase();
                         }
                     }
-                    return lscl.get(0).getId_clase();
+                    return lscl.get(0).getIdClase();
                 }
             }
         }
@@ -258,7 +258,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         query.addCriteria(Criteria.where("cursos.id_curso").is(id));
         List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
-        if (usuarioCursos == null || usuarioCursos.size() == 0) {
+        if (usuarioCursos == null || usuarioCursos.isEmpty()) {
             logger.error("No se encontró el documento.");
             return false;
         }
@@ -266,7 +266,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         for (UsuarioCursos usrCursos : usuarioCursos) {
             List<StatusCurso> statusCurso = usrCursos.getCursos();
             for (int i = 0; i < statusCurso.size(); i++) {
-                if (statusCurso.get(i).getId_curso().equals(id)) {
+                if (statusCurso.get(i).getIdCurso().equals(id)) {
                     statusCurso.remove(i);
                     this.usuarioCursosRepository.save(usrCursos);
                     break;
@@ -277,16 +277,16 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     }
 
     public void actualizarCursoStream(Curso curso) {
-        List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getId_curso());
-        if (usuarios != null && usuarios.size() != 0) {
+        List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getIdCurso());
+        if (usuarios != null && !usuarios.isEmpty()) {
             for (UsuarioCursos usuario : usuarios) {
                 List<StatusCurso> cursosStatus = usuario.getCursos();
                 for (StatusCurso cursoStatus : cursosStatus) {
-                    if (cursoStatus.getId_curso().equals(curso.getId_curso())) {
+                    if (cursoStatus.getIdCurso().equals(curso.getIdCurso())) {
                         cursoStatus.getClases().clear();
-                        for (Clase clase : curso.getClases_curso()) {
+                        for (Clase clase : curso.getClasesCurso()) {
                             StatusClase claseStatus = new StatusClase();
-                            claseStatus.setId_clase(clase.getId_clase());
+                            claseStatus.setIdClase(clase.getIdClase());
                             claseStatus.setCompleted(false);
                             claseStatus.setProgress(0);
                             cursoStatus.getClases().add(claseStatus);
@@ -300,7 +300,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
 
         // Convertir los videos del curso
         try {
-            if (curso.getClases_curso() != null && curso.getClases_curso().size() > 0) {
+            if (curso.getClasesCurso() != null && !curso.getClasesCurso().isEmpty()) {
                 this.streamingService.convertVideos(curso);
             }
         } catch (IOException | InterruptedException e) {

@@ -44,32 +44,32 @@ public class PresetController {
         }
     }
 
-    @GetMapping("/get/{id_usuario}")
-    public ResponseEntity<?> getPresets(@PathVariable Long id_usuario) {
+    @GetMapping("/get/{idUsuario}")
+    public ResponseEntity<?> getPresets(@PathVariable Long idUsuario) {
         try {
-            Preset result = this.usuarioPresetsService.getPresetsForUser(id_usuario);
+            Preset result = this.usuarioPresetsService.getPresetsForUser(idUsuario);
             if (result == null) {
                 return new ResponseEntity<>(HttpStatus.OK);
             }
             Map<String, PresetValue> presetsMap = result.getPresets();
             return new ResponseEntity<>(presetsMap, HttpStatus.OK);
         } catch (Exception e) {
-            logger.error("Error en obtener presets para usuario {}: {}", id_usuario, e.getMessage());
+            logger.error("Error en obtener presets para usuario {}: {}", idUsuario, e.getMessage());
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @PutMapping("/save/{id_usuario}")
-    public ResponseEntity<?> update(@RequestBody String data, @PathVariable Long id_usuario) {
+    @PutMapping("/save/{idUsuario}")
+    public ResponseEntity<?> update(@RequestBody String data, @PathVariable Long idUsuario) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             Map<String, PresetValue> presetsMap = objectMapper.readValue(data,
                     new TypeReference<Map<String, PresetValue>>() {
                     });
-            this.usuarioPresetsService.savePresetsForUser(id_usuario, presetsMap);
+            this.usuarioPresetsService.savePresetsForUser(idUsuario, presetsMap);
             return new ResponseEntity<>(true, HttpStatus.OK);
         } catch (Exception e) {
-            logger.error("Error en actualizar presets para usuario {}: {}", id_usuario, e.getMessage());
+            logger.error("Error en actualizar presets para usuario {}: {}", idUsuario, e.getMessage());
             return new ResponseEntity<>(false, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
