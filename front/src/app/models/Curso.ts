@@ -3,36 +3,36 @@ import { Plan } from './Plan';
 import { Usuario } from './Usuario';
 
 export class Curso {
-	public id_curso: number;
+	public idCurso: number;
 
-	public nombre_curso: string;
+	public nombreCurso: string;
 
-	public profesores_curso: Usuario[];
+	public profesoresCurso: Usuario[];
 
-	public fecha_publicacion_curso?: Date;
+	public fechaPublicacionCurso?: Date;
 
-	public clases_curso?: Clase[];
+	public clasesCurso?: Clase[];
 
-	public planes_curso?: Plan[];
+	public planesCurso?: Plan[];
 
-	public descriccion_corta: string;
+	public descriccionCorta: string;
 
-	public descriccion_larga?: string;
+	public descriccionLarga?: string;
 
-	public imagen_curso: string;
+	public imagenCurso: string;
 
-	public precio_curso?: number;
+	public precioCurso?: number;
 
-	constructor(_id_curso: number, _nombre_curso: string, _profesores_curso: Usuario[], _descriccion_corta: string, _imagen_curso: string, _fecha_publicacion_curso?: Date, _clases_curso?: Clase[], _planes_curso?: Plan[], _descriccion_larga?: string, _precio_curso?: number) {
-		this.id_curso = _id_curso;
-		this.nombre_curso = _nombre_curso;
-		this.profesores_curso = _profesores_curso;
-		this.fecha_publicacion_curso = _fecha_publicacion_curso;
-		this.clases_curso = _clases_curso;
-		this.planes_curso = _planes_curso;
-		this.descriccion_corta = _descriccion_corta;
-		this.descriccion_larga = _descriccion_larga;
-		this.imagen_curso = _imagen_curso;
-		this.precio_curso = _precio_curso;
+	constructor(_idCurso: number, _nombreCurso: string, _profesoresCurso: Usuario[], _descriccionCorta: string, _imagenCurso: string, _fechaPublicacionCurso?: Date, _clasesCurso?: Clase[], _planesCurso?: Plan[], _descriccionLarga?: string, _precioCurso?: number) {
+		this.idCurso = _idCurso;
+		this.nombreCurso = _nombreCurso;
+		this.profesoresCurso = _profesoresCurso;
+		this.fechaPublicacionCurso = _fechaPublicacionCurso;
+		this.clasesCurso = _clasesCurso;
+		this.planesCurso = _planesCurso;
+		this.descriccionCorta = _descriccionCorta;
+		this.descriccionLarga = _descriccionLarga;
+		this.imagenCurso = _imagenCurso;
+		this.precioCurso = _precioCurso;
 	}
 }

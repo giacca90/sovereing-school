@@ -1,7 +1,7 @@
 <div class="dark:scrollbar dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-900 absolute top-0 left-0 z-10 flex h-screen w-full overflow-y-auto bg-white/90 dark:bg-black/90">
 	<div class="m-2 mt-2 mb-2 flex h-fit min-h-screen grow flex-col justify-start rounded-lg border border-black p-2 dark:border-gray-400">
-		<input class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" type="text" placeholder="Pon un nombre a tu Clase" [(ngModel)]="clase.nombre_clase" />
-		@if (clase.id_clase === 0) {
+		<input class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" type="text" placeholder="Pon un nombre a tu Clase" [(ngModel)]="clase.nombreClase" />
+		@if (clase.idClase === 0) {
 			<div class="flex flex-col items-center md:flex-row">
 				<button id="claseVideo" class="text- m-2 cursor-pointer rounded-lg border border-black p-2 text-blue-700 dark:border-gray-400" (click)="cambiaTipoClase(0)">Clase en Video pre-gravado</button>
 				<button id="claseOBS" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cambiaTipoClase(1)">Clase en Vivo desde OBS</button>
@@ -10,25 +10,25 @@
 			</div>
 			<div class="flex grow flex-col items-center md:flex-row md:items-start">
 				<!-- Si no es una clase WebOBS -->
-				@if (this.clase.tipo_clase !== 2) {
+				@if (this.clase.tipoClase !== 2) {
 					<div class="m-2 flex w-11/12 flex-col md:w-3/5">
 						<!-- Si es una clase de video o una edición-->
-						@if (this.clase.tipo_clase === 0 || this.clase.id_clase !== 0) {
+						@if (this.clase.tipoClase === 0 || this.clase.idClase !== 0) {
 							<app-editor-video [clase]="clase" (videoSeleccionado)="this.subeVideo($event)"></app-editor-video>
 						}
 						<!-- Si es una clase OBS -->
-						@if (this.clase.tipo_clase === 1) {
+						@if (this.clase.tipoClase === 1) {
 							<app-editor-obs (obsEvent)="obsEvent($event)" [emitiendo]="this.streamingService.emitiendo" [status]="streamingService.status" [urlPreview]="this.streamingService.UrlPreview" [rtmpUrl]="this.streamingService.rtmpUrl"></app-editor-obs>
 						}
 					</div>
 				}
 				<div class="m-2 flex w-full grow flex-col">
-					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccion_clase" />
-					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenido_clase"></textarea>
+					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccionClase" />
+					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenidoClase"></textarea>
 				</div>
 			</div>
 			<!-- Si es una clase WebOBS -->
-			@if (this.clase.tipo_clase === 2) {
+			@if (this.clase.tipoClase === 2) {
 				<web-obs class="m-2" (emision)="emiteWebOBS($event)" (savePresets)="savePresets($event)" [isInLive]="this.streamingService.emitiendo" [status]="streamingService.status" [savedPresets]="this.savedPresets" [savedFiles]="this.savedFiles"></web-obs>
 			}
 		} @else {
@@ -38,8 +38,8 @@
 					<app-editor-video [clase]="clase" (videoSeleccionado)="this.subeVideo($event)"></app-editor-video>
 				</div>
 				<div class="m-2 flex w-full grow flex-col">
-					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccion_clase" />
-					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenido_clase"></textarea>
+					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccionClase" />
+					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenidoClase"></textarea>
 				</div>
 			</div>
 		}

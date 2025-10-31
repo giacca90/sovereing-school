@@ -17,8 +17,8 @@ import { ChatComponent } from '../chat/chat/chat.component';
 	styleUrl: './reproduction.component.css',
 })
 export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
-	public id_curso: number = 0;
-	public id_clase: number = 0;
+	public idCurso: number = 0;
+	public idClase: number = 0;
 	public momento: number | null = null;
 	private readonly isBrowser: boolean;
 	private readonly subscription: Subscription = new Subscription();
@@ -42,17 +42,17 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	ngOnInit(): void {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
-				this.id_curso = params['id_curso'];
-				this.id_clase = params['id_clase'];
+				this.idCurso = params['idCurso'];
+				this.idClase = params['idClase'];
 
-				if (this.id_clase == 0) {
-					this.cursoService.getStatusCurso(this.id_curso).subscribe({
+				if (this.idClase == 0) {
+					this.cursoService.getStatusCurso(this.idCurso).subscribe({
 						next: (resp) => {
 							if (resp === 0) {
 								alert('Este curso no está disponible');
 								this.router.navigate(['/']);
 							} else {
-								this.router.navigate(['/repro/' + this.id_curso + '/' + resp]);
+								this.router.navigate(['/repro/' + this.idCurso + '/' + resp]);
 							}
 						},
 						error: (e) => {
@@ -76,10 +76,10 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	loadData() {
-		this.cursoService.getCurso(this.id_curso).then((result) => {
+		this.cursoService.getCurso(this.idCurso).then((result) => {
 			this.curso = result;
-			if (this.curso?.clases_curso) {
-				const result = this.curso.clases_curso.find((clase) => clase.id_clase == this.id_clase);
+			if (this.curso?.clasesCurso) {
+				const result = this.curso.clasesCurso.find((clase) => clase.idClase == this.idClase);
 				if (result) {
 					this.clase = result;
 					this.cdr.detectChanges();
@@ -127,7 +127,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 			});
 
 			this.player.src({
-				src: `${this.backStream}/${this.id_curso}/${this.id_clase}/master.m3u8`,
+				src: `${this.backStream}/${this.idCurso}/${this.idClase}/master.m3u8`,
 				type: 'application/x-mpegURL',
 				withCredentials: true,
 			});
@@ -251,7 +251,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 								for (let j = 0; j < qualityLevels.length; j++) {
 									qualityLevels[j].enabled = qualityLevels[j].height === height;
 								}
-								if (vhs && vhs.autoLevelEnabled !== undefined) {
+								if (vhs?.autoLevelEnabled !== undefined) {
 									vhs.autoLevelEnabled = false;
 								}
 								const player = this.player;
@@ -348,7 +348,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	navega(clase: Clase) {
-		this.router.navigate(['repro/' + this.id_curso + '/' + clase.id_clase]);
+		this.router.navigate(['repro/' + this.idCurso + '/' + clase.idClase]);
 	}
 
 	cambiaVista(vista: number) {
@@ -388,7 +388,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		pregunta.style.cursor = 'pointer';
 		pregunta.addEventListener('click', () => {
 			this.cambiaVista(1);
-			this.chatComponent.creaPregunta(this.id_clase, timeInSeconds);
+			this.chatComponent.creaPregunta(this.idClase, timeInSeconds);
 			curtain.remove();
 		});
 
@@ -414,7 +414,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		}
 
 		// Ejecutar el código después de verificar que `chat` está definido
-		const claseChat: ClaseChat | undefined = this.chatComponent.chat?.clases.find((clase) => clase.id_clase == this.id_clase);
+		const claseChat: ClaseChat | undefined = this.chatComponent.chat?.clases.find((clase) => clase.idClase == this.idClase);
 		if (claseChat) {
 			for (const preg of claseChat.mensajes) {
 				if (!preg.pregunta) continue; // saltar mensajes sin tiempo de pregunta
@@ -470,9 +470,9 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 
 					cortina.addEventListener('click', () => {
 						this.cambiaVista(1);
-						this.chatComponent.abreChatClase(this.id_clase);
+						this.chatComponent.abreChatClase(this.idClase);
 						cortina.remove();
-						const mensajeElement = document.getElementById('mex-' + preg.id_mensaje);
+						const mensajeElement = document.getElementById('mex-' + preg.idMensaje);
 						if (mensajeElement) {
 							mensajeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 						} else {

@@ -194,7 +194,7 @@ export class ChatService {
 				respuesta, // id mensaje
 				idCurso, // id curso
 				clase, // id clase
-				this.loginService.usuario?.id_usuario, // id usuario
+				this.loginService.usuario?.idUsuario, // id usuario
 				null, // nombre curso
 				null, // nombre clase
 				null, // nombre usuario
@@ -211,7 +211,7 @@ export class ChatService {
 			null, // id mensaje
 			idCurso, // id curso
 			clase, // id clase
-			this.loginService.usuario?.id_usuario, // id usuario
+			this.loginService.usuario?.idUsuario, // id usuario
 			null, // nombre curso
 			null, // nombre clase
 			null, // nombre usuario
@@ -233,7 +233,7 @@ export class ChatService {
 	mensajeLeido(idMensaje: string) {
 		this.client.publish({
 			destination: '/app/leido',
-			body: JSON.stringify(this.loginService.usuario?.id_usuario + ',' + idMensaje),
+			body: JSON.stringify(this.loginService.usuario?.idUsuario + ',' + idMensaje),
 		});
 	}
 

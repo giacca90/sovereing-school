@@ -114,11 +114,10 @@ export class InitService {
 	 * @param data Datos de inicio :Init
 	 */
 	private cargarEnServicios(data: Init) {
-		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.id_usuario, profe.nombre_usuario, profe.foto_usuario, profe.presentacion));
-
+		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.idUsuario, profe.nombreUsuario, profe.fotoUsuario, profe.presentacion));
 		this.cursoService.cursos = data.cursosInit.map((curso) => {
-			const profes = curso.profesores_curso.map((id) => this.usuarioService.profes.find((p) => p.id_usuario === id)).filter(Boolean) as Usuario[];
-			return new Curso(curso.id_curso, curso.nombre_curso, profes, curso.descriccion_corta, curso.imagen_curso);
+			const profes = curso.profesoresCurso.map((id) => this.usuarioService.profes.find((p) => p.idUsuario === id)).filter(Boolean) as Usuario[];
+			return new Curso(curso.idCurso, curso.nombreCurso, profes, curso.descriccionCorta, curso.imagenCurso);
 		});
 
 		this.estadistica = data.estadistica;

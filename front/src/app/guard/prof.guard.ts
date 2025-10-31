@@ -23,23 +23,23 @@ export class ProfGuard implements CanActivate {
 			return false;
 		}
 
-		const id_curso: number = Number(route.params['id_curso']);
+		const idCurso: number = Number(route.params['idCurso']);
 
-		if (id_curso === 0) {
+		if (idCurso === 0) {
 			return true;
 		}
 
 		try {
-			const curso = await this.cursoService.getCurso(id_curso);
+			const curso = await this.cursoService.getCurso(idCurso);
 			if (!curso) {
-				console.error('Curso no encontrado: ' + id_curso);
+				console.error('Curso no encontrado: ' + idCurso);
 				this.router.navigate(['/']);
 				return false;
 			}
 
-			const isProfesor = curso.profesores_curso.some((profesor) => profesor.id_usuario === this.loginService.usuario?.id_usuario);
+			const isProfesor = curso.profesoresCurso.some((profesor) => profesor.idUsuario === this.loginService.usuario?.idUsuario);
 			if (!isProfesor) {
-				console.error('Usuario no es profesor del curso: ' + id_curso);
+				console.error('Usuario no es profesor del curso: ' + idCurso);
 				this.router.navigate(['/']);
 			}
 			return isProfesor;

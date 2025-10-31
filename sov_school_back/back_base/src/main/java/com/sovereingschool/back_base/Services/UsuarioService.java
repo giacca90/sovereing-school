@@ -66,8 +66,9 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @return String con el color hexadecimal
      */
-    public static String generarColorHex() {
-        Random random = new Random();
+    private static Random random = new Random();
+
+    private static String generarColorHex() {
         int r = random.nextInt(256);
         int g = random.nextInt(256);
         int b = random.nextInt(256);
@@ -95,11 +96,11 @@ public class UsuarioService implements IUsuarioService {
     @Value("${variable.FRONT}")
     private String frontURL;
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
     @Value("${variable.FOTOS_DIR}")
     private String uploadDir;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public UsuarioService(PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepo,
             CursoRepository cursoRepo, LoginRepository loginRepo, JwtUtil jwtUtil,
@@ -155,60 +156,10 @@ public class UsuarioService implements IUsuarioService {
             this.loginRepo.save(login);
 
             // Crear el usuario en el microservicio de chat
-            try {
-                WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
-                webClient.post().uri("/crea_usuario_chat")
-                        .body(Mono.just(usuarioInsertado), Usuario.class)
-                        .retrieve()
-                        .onStatus(
-                                HttpStatusCode::isError,
-                                response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                    logger.error("Error HTTP del microservicio de stream: {}", errorBody);
-                                    return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
-                                }))
-                        .bodyToMono(String.class)
-                        .onErrorResume(e -> {
-                            logger.error("Error al conectar con el microservicio de chat: {}", e.getMessage());
-                            return Mono.empty(); // Continuar sin interrumpir la aplicación
-                        }).subscribe(res -> {
-                            // Maneja el resultado cuando esté disponible
-                            if (res == null || !res.equals("Usuario chat creado con exito!!!")) {
-                                logger.error("Error en crear el usuario en el chat: ");
-                                logger.error(res);
-                            }
-                        });
-            } catch (Exception e) {
-                logger.error("Error en crear el usuario en el chat: {}", e.getMessage());
-            }
+            this.createUsuarioChat(usuarioInsertado);
 
             // Crear el usuario en el microservicio de stream
-            try {
-                WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
-                webClientStream.put()
-                        .uri("/nuevoUsuario")
-                        .body(Mono.just(usuarioInsertado), Usuario.class)
-                        .retrieve()
-                        .onStatus(
-                                HttpStatusCode::isError, // compatible con HttpStatusCode
-                                response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                    logger.error("Error HTTP del microservicio de stream: {}", errorBody);
-                                    return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
-                                }))
-                        .bodyToMono(String.class)
-                        .onErrorResume(e -> {
-                            logger.error("Excepción al conectar con el microservicio de stream: {}", e.getMessage());
-                            return Mono.empty();
-                        })
-                        .subscribe(res -> {
-                            if (res == null || !res.equals("Nuevo Usuario Insertado con Exito!!!")) {
-                                logger.error("Error inesperado al crear el usuario en el stream:");
-                                logger.error(res);
-                            }
-                        });
-
-            } catch (Exception e) {
-                logger.error("Error en crear el usuario en el stream: {}", e.getMessage());
-            }
+            this.createUsuarioStream(usuarioInsertado);
 
             // Creamos la respuesta con JWT
             List<SimpleGrantedAuthority> roles = new ArrayList<>();
@@ -230,13 +181,7 @@ public class UsuarioService implements IUsuarioService {
             String refreshToken = jwtUtil.generateToken(auth, "refresh", usuarioInsertado.getIdUsuario());
 
             // Actualizar el SSR
-            try {
-                this.initAppService.refreshSSR();
-            } catch (Exception e) {
-                logger.error("Error en actualizar el SSR: {}", e.getMessage());
-                throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
-            }
-
+            this.updateSSR();
             return new AuthResponse(true, "Usuario creado con éxito", usuarioInsertado, accessToken, refreshToken);
 
         } catch (DataIntegrityViolationException e) {
@@ -439,35 +384,10 @@ public class UsuarioService implements IUsuarioService {
         oldUsuario.get().setCursosUsuario(cursos);
 
         // Añadir el usuario al microservicio de stream
-        try {
-            WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
-            webClientStream.put().uri("/nuevoCursoUsuario")
-                    .body(Mono.just(oldUsuario), Usuario.class)
-                    .retrieve()
-                    .onStatus(
-                            HttpStatusCode::isError,
-                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
-                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
-                            }))
-                    .bodyToMono(String.class)
-                    .onErrorResume(e -> {
-                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
-                        return Mono.empty(); // Continuar sin interrumpir la aplicación
-                    }).subscribe(res -> {
-                        // Maneja el resultado cuando esté disponible
-                        if (res == null || !res.equals("Usuario creado con exito!!!")) {
-                            logger.error("Error en crear el usuario en el stream:");
-                            logger.error(res);
-
-                        }
-                    });
-        } catch (Exception e) {
-            logger.error("Error en crear el usuario en el stream: {}", e.getMessage());
-        }
+        this.addUsuarioStream(oldUsuario.get());
 
         // Añadir el usuario al microservicio de chat
-        // TODO: Implementar la lógica para añadir el usuario al microservicio de chat
+        this.addUsuarioChat(oldUsuario.get());
 
         return this.usuarioRepo.changeUsuarioForId(cursosUsuario.getIdUsuario(), oldUsuario.get()).orElseThrow(() -> {
             logger.error("Error en cambiar los cursos del usuario");
@@ -496,13 +416,7 @@ public class UsuarioService implements IUsuarioService {
             this.usuarioRepo.deleteById(id);
 
             // Actualizar el SSR
-            try {
-                this.initAppService.refreshSSR();
-            } catch (Exception e) {
-                logger.error("Error en actualizar el SSR: {}", e.getMessage());
-                throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
-            }
-            return "Usuario eliminado con éxito!!!";
+            this.initAppService.refreshSSR();
         } catch (IllegalArgumentException e) {
             logger.error("Error en eliminar el usuario con ID {}", id);
             throw new IllegalArgumentException("Error en eliminar el usuario con ID " + id);
@@ -511,7 +425,13 @@ public class UsuarioService implements IUsuarioService {
             throw new RuntimeException("Error en eliminar el usuario con ID " + id);
         }
 
-        // TODO: Eliminar el usuario en ambos microservicios
+        // Eliminamos el usuario del chat
+        this.deleteUsuarioChat(id);
+
+        // Eliminamos el usuario del stream
+        this.deleteUsuarioStream(id);
+
+        return "Usuario eliminado con éxito!!!";
     }
 
     @Override
@@ -579,5 +499,138 @@ public class UsuarioService implements IUsuarioService {
             logger.error("Error al obtener todos los usuarios: {}", e.getMessage());
             throw new RuntimeException("Error al obtener todos los usuarios: " + e.getMessage());
         }
+    }
+
+    private void createUsuarioChat(Usuario usuarioInsertado) {
+        try {
+            WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
+            webClient.post().uri("/crea_usuario_chat")
+                    .body(Mono.just(usuarioInsertado), Usuario.class)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::isError,
+                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
+                            }))
+                    .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        logger.error("Error al conectar con el microservicio de chat: {}", e.getMessage());
+                        return Mono.empty(); // Continuar sin interrumpir la aplicación
+                    }).subscribe(res -> {
+                        // Maneja el resultado cuando esté disponible
+                        if (res == null || !res.equals("Usuario chat creado con exito!!!")) {
+                            logger.error("Error en crear el usuario en el chat: ");
+                            logger.error(res);
+                        }
+                    });
+        } catch (Exception e) {
+            logger.error("Error en crear el usuario en el chat: {}", e.getMessage());
+        }
+    }
+
+    private void createUsuarioStream(Usuario usuarioInsertado) {
+        try {
+            WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
+            webClientStream.put()
+                    .uri("/nuevoUsuario")
+                    .body(Mono.just(usuarioInsertado), Usuario.class)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::isError, // compatible con HttpStatusCode
+                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
+                            }))
+                    .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        logger.error("Excepción al conectar con el microservicio de stream: {}", e.getMessage());
+                        return Mono.empty();
+                    })
+                    .subscribe(res -> {
+                        if (res == null || !res.equals("Nuevo Usuario Insertado con Exito!!!")) {
+                            logger.error("Error inesperado al crear el usuario en el stream:");
+                            logger.error(res);
+                        }
+                    });
+
+        } catch (Exception e) {
+            logger.error("Error en crear el usuario en el stream: {}", e.getMessage());
+        }
+    }
+
+    private void updateSSR() {
+        try {
+            this.initAppService.refreshSSR();
+        } catch (Exception e) {
+            logger.error("Error en actualizar el SSR: {}", e.getMessage());
+            throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
+        }
+    }
+
+    private void addUsuarioStream(Usuario usuario) {
+        try {
+            WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
+            webClientStream.put().uri("/nuevoCursoUsuario")
+                    .body(Mono.just(usuario), Usuario.class)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::isError,
+                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
+                            }))
+                    .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
+                        return Mono.empty(); // Continuar sin interrumpir la aplicación
+                    }).subscribe(res -> {
+                        // Maneja el resultado cuando esté disponible
+                        if (res == null || !res.equals("Usuario creado con exito!!!")) {
+                            logger.error("Error en crear el usuario en el stream:");
+                            logger.error(res);
+
+                        }
+                    });
+        } catch (Exception e) {
+            logger.error("Error en crear el usuario en el stream: {}", e.getMessage());
+        }
+    }
+
+    private void addUsuarioChat(Usuario usuario) {
+        try {
+            WebClient webClientStream = webClientConfig.createSecureWebClient(backChatURL);
+            // TODO: implementar en el servicio de chat
+            webClientStream.put().uri("/nuevoUsuarioChat")
+                    .body(Mono.just(usuario), Usuario.class)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::isError,
+                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
+                            }))
+                    .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
+                        return Mono.empty(); // Continuar sin interrumpir la aplicación
+                    }).subscribe(res -> {
+                        // Maneja el resultado cuando esté disponible
+                        if (res == null || !res.equals("Usuario creado con exito!!!")) {
+                            logger.error("Error en crear el usuario en el stream:");
+                            logger.error(res);
+                        }
+                    });
+        } catch (Exception e) {
+            logger.error("Error en crear el usuario en el stream: {}", e.getMessage());
+        }
+    }
+
+    private void deleteUsuarioStream(Long id) {
+        // TODO: Auto-generated method stub
+    }
+
+    private void deleteUsuarioChat(Long id) {
+        // TODO: Auto-generated method stub
     }
 }

@@ -15,7 +15,7 @@ export class AdminGuard implements CanActivate {
 
 	canActivate(): boolean {
 		if (isPlatformServer(this.platformId)) return false;
-		if (!this.loginService.usuario || this.loginService.usuario.roll_usuario !== 'admin') {
+		if (!this.loginService.usuario || this.loginService.usuario.rollUsuario !== 'admin') {
 			this.router.navigate(['/']);
 			return false;
 		}

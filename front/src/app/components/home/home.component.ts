@@ -134,7 +134,7 @@ export class HomeComponent {
 
 				const img = document.createElement('img');
 				img.classList.add('h-1/2', 'sm:h-full', 'w-auto', 'object-contain', 'mr-4');
-				img.src = profe.foto_usuario[0];
+				img.src = profe.fotoUsuario[0];
 				img.alt = 'profe';
 				div.appendChild(img);
 
@@ -143,7 +143,7 @@ export class HomeComponent {
 
 				const nombre = document.createElement('p');
 				nombre.classList.add('text-blond', 'text-green-700', 'text-center');
-				nombre.textContent = profe.nombre_usuario.toString();
+				nombre.textContent = profe.nombreUsuario.toString();
 
 				const pres = document.createElement('p');
 				pres.classList.add('text-center');

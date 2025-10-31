@@ -18,9 +18,9 @@ export class EditorVideoComponent implements AfterViewInit {
 	constructor() {}
 
 	ngAfterViewInit(): void {
-		if (!this.clase?.direccion_clase) return;
+		if (!this.clase?.direccionClase) return;
 
-		console.log('📡 Cargando video desde:', this.clase.direccion_clase);
+		console.log('📡 Cargando video desde:', this.clase.direccionClase);
 
 		this.backStream = (globalThis.window as any).__env?.BACK_STREAM ?? '';
 		const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
@@ -53,7 +53,7 @@ export class EditorVideoComponent implements AfterViewInit {
 				});
 
 				// Asignar fuente HLS
-				const srcUrl = `${this.backStream}/${this.clase.curso_clase}/${this.clase.id_clase}/master.m3u8`;
+				const srcUrl = `${this.backStream}/${this.clase.cursoClase}/${this.clase.idClase}/master.m3u8`;
 				this.player.src({
 					src: srcUrl,
 					type: 'application/x-mpegURL',
@@ -95,8 +95,8 @@ export class EditorVideoComponent implements AfterViewInit {
 			}
 
 			// Asegurar que la clase tenga id inicial
-			if (this.clase && !this.clase.id_clase) {
-				this.clase.id_clase = 0;
+			if (this.clase && !this.clase.idClase) {
+				this.clase.idClase = 0;
 			}
 
 			// ✅ Emitir el archivo al padre

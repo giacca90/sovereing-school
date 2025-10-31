@@ -9,7 +9,7 @@ import { Usuario } from '../models/Usuario';
 	providedIn: 'root',
 })
 export class LoginService {
-	private id_usuario: number | null = null;
+	private idUsuario: number | null = null;
 	public usuario: Usuario | null = null;
 	USER_KEY = makeStateKey<Usuario>('usuario');
 
@@ -44,7 +44,7 @@ export class LoginService {
 
 	get loginSSRUrl(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
-			const url = (globalThis.window as any).__env.FRONT_URL ?? '';
+			const url = (globalThis.window as any).__env.FRONTURL ?? '';
 			return url + '/ssr-login';
 		}
 		return '';
@@ -52,7 +52,7 @@ export class LoginService {
 
 	get logoutSSRUrl(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
-			const url = (globalThis.window as any).__env.FRONT_URL ?? '';
+			const url = (globalThis.window as any).__env.FRONTURL ?? '';
 			return url + '/ssr-logout';
 		}
 		return '';
@@ -67,7 +67,7 @@ export class LoginService {
 							resolve(false);
 							sub.unsubscribe();
 						} else {
-							this.id_usuario = response.body;
+							this.idUsuario = response.body;
 							resolve(true);
 							sub.unsubscribe();
 						}
@@ -87,7 +87,7 @@ export class LoginService {
 
 	async compruebaPassword(password: string): Promise<boolean> {
 		return new Promise((resolve) => {
-			const sub = this.http.get<Auth>(this.apiUrl + this.id_usuario + '/' + password, { observe: 'response', withCredentials: true }).subscribe({
+			const sub = this.http.get<Auth>(this.apiUrl + this.idUsuario + '/' + password, { observe: 'response', withCredentials: true }).subscribe({
 				next: (response: HttpResponse<Auth>) => {
 					if (response.ok && response.body) {
 						if (!response.body.status && response.body.usuario === null) {
@@ -147,7 +147,7 @@ export class LoginService {
 
 	logout(): void {
 		this.usuario = null;
-		this.id_usuario = null;
+		this.idUsuario = null;
 		localStorage.clear();
 		this.http.get<string>(this.apiUrl + 'logout', { observe: 'response', responseType: 'text' as 'json', withCredentials: true }).subscribe({
 			next: (response: HttpResponse<string>) => {

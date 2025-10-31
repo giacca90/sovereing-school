@@ -1,13 +1,13 @@
 export class Plan {
-	public id_plan: number;
+	public idPlan: number;
 
-	public nombre_plan?: string | null;
+	public nombrePlan?: string | null;
 
-	public precio_plan?: number | null;
+	public precioPlan?: number | null;
 
-	constructor(_id_plan: number, _nombre_plan?: string, _precio_plan?: number) {
-		this.id_plan = _id_plan;
-		this.nombre_plan = _nombre_plan;
-		this.precio_plan = _precio_plan;
+	constructor(_idPlan: number, _nombrePlan?: string, _precioPlan?: number) {
+		this.idPlan = _idPlan;
+		this.nombrePlan = _nombrePlan;
+		this.precioPlan = _precioPlan;
 	}
 }

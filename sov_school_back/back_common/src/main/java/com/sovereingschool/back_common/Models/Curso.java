@@ -40,8 +40,7 @@ public class Curso implements Serializable {
 
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "curso_profesor", joinColumns = @JoinColumn(name = "id_curso"), inverseJoinColumns = @JoinColumn(name = "id_usuario"))
-	@JsonIgnoreProperties({ "roll_usuario", "plan_usuario", "cursos_usuario",
-			"fecha_registro_usuario" })
+	@JsonIgnoreProperties({ "rollUsuario", "planUsuario", "cursosUsuario", "fechaRegistroUsuario" })
 	private List<Usuario> profesoresCurso;
 
 	private Date fechaPublicacionCurso;
@@ -53,7 +52,7 @@ public class Curso implements Serializable {
 
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "cursos_plan", joinColumns = @JoinColumn(name = "id_curso"), inverseJoinColumns = @JoinColumn(name = "id_plan"))
-	@JsonIgnoreProperties({ "precio_plan", "cursos_plan" })
+	@JsonIgnoreProperties({ "precioPlan", "cursosPlan" })
 	private List<Plan> planesCurso;
 
 	private String descriccionCorta;

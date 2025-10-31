@@ -5,39 +5,39 @@ export class Init {
 	public cursosInit: CursosInit[];
 	public estadistica: Estadistica;
 
-	constructor(_curso: CursosInit[], _prof: ProfesInit[], _estadistica: Estadistica) {
+	constructor(Curso: CursosInit[], _prof: ProfesInit[], _estadistica: Estadistica) {
 		this.profesInit = _prof;
-		this.cursosInit = _curso;
+		this.cursosInit = Curso;
 		this.estadistica = _estadistica;
 	}
 }
 
 export class ProfesInit {
-	id_usuario: number;
-	nombre_usuario: string;
-	foto_usuario: string[];
+	idUsuario: number;
+	nombreUsuario: string;
+	fotoUsuario: string[];
 	presentacion: string;
 
 	constructor(_id: number, _nombre: string, _foto: string[], _presentacion: string) {
-		this.id_usuario = _id;
-		this.nombre_usuario = _nombre;
-		this.foto_usuario = _foto;
+		this.idUsuario = _id;
+		this.nombreUsuario = _nombre;
+		this.fotoUsuario = _foto;
 		this.presentacion = _presentacion;
 	}
 }
 
 export class CursosInit {
-	id_curso: number;
-	nombre_curso: string;
-	profesores_curso: number[];
-	descriccion_corta: string;
-	imagen_curso: string;
+	idCurso: number;
+	nombreCurso: string;
+	profesoresCurso: number[];
+	descriccionCorta: string;
+	imagenCurso: string;
 
 	constructor(_id: number, _nombre: string, _prof: number[], _desc: string, _imagen: string) {
-		this.id_curso = _id;
-		this.nombre_curso = _nombre;
-		this.profesores_curso = _prof;
-		this.descriccion_corta = _desc;
-		this.imagen_curso = _imagen;
+		this.idCurso = _id;
+		this.nombreCurso = _nombre;
+		this.profesoresCurso = _prof;
+		this.descriccionCorta = _desc;
+		this.imagenCurso = _imagen;
 	}
 }

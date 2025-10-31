@@ -29,17 +29,17 @@ export class CursosService {
 		return '';
 	}
 
-	async getCurso(id_curso: number, fromServer = false): Promise<Curso | null> {
-		if (!id_curso) return null;
+	async getCurso(idCurso: number, fromServer = false): Promise<Curso | null> {
+		if (!idCurso) return null;
 
-		const curso = this.cursos.find((c) => c.id_curso === id_curso);
+		const curso = this.cursos.find((c) => c.idCurso === idCurso);
 		if (!curso) return null;
 
 		// Si ya tiene clases cargadas y no se fuerza la recarga → devolver directamente
-		if (curso.clases_curso && !fromServer) return curso;
+		if (curso.clasesCurso && !fromServer) return curso;
 
 		try {
-			const response: Curso = await firstValueFrom(this.http.get<Curso>(`${this.backURL}/cursos/getCurso/${id_curso}`));
+			const response: Curso = await firstValueFrom(this.http.get<Curso>(`${this.backURL}/cursos/getCurso/${idCurso}`));
 
 			if (!response) {
 				console.error('Respuesta vacía al cargar curso');
@@ -48,16 +48,16 @@ export class CursosService {
 
 			// Actualiza solo las propiedades relevantes sin romper la referencia
 			Object.assign(curso, {
-				clases_curso: response.clases_curso?.sort((a, b) => a.posicion_clase - b.posicion_clase),
-				descriccion_larga: response.descriccion_larga,
-				fecha_publicacion_curso: response.fecha_publicacion_curso,
-				planes_curso: response.planes_curso,
-				precio_curso: response.precio_curso,
+				clasesCurso: response.clasesCurso?.sort((a, b) => a.posicionClase - b.posicionClase),
+				descriccionLarga: response.descriccionLarga,
+				fechaPublicacionCurso: response.fechaPublicacionCurso,
+				planesCurso: response.planesCurso,
+				precioCurso: response.precioCurso,
 			});
 
-			if (curso.clases_curso) {
-				for (const clase of curso.clases_curso) {
-					clase.curso_clase = curso.id_curso;
+			if (curso.clasesCurso) {
+				for (const clase of curso.clasesCurso) {
+					clase.cursoClase = curso.idCurso;
 				}
 			}
 
@@ -76,7 +76,7 @@ export class CursosService {
 		return this.http.put<Curso>(`${this.backURL}/cursos/update`, curso, { observe: 'response', responseType: 'json' }).pipe(
 			map((response: HttpResponse<Curso>) => {
 				if (response.ok && response.body) {
-					const old = this.cursos.find((c) => c.id_curso === curso.id_curso);
+					const old = this.cursos.find((c) => c.idCurso === curso.idCurso);
 					if (!old) {
 						this.cursos.push(response.body);
 					}
@@ -111,8 +111,8 @@ export class CursosService {
 	getCursosProfe(profe: Usuario) {
 		const cursosProfe: Curso[] = [];
 		for (const curso of this.cursos) {
-			for (const profe2 of curso.profesores_curso) {
-				if (profe2.id_usuario === profe.id_usuario) {
+			for (const profe2 of curso.profesoresCurso) {
+				if (profe2.idUsuario === profe.idUsuario) {
 					cursosProfe.push(curso);
 				}
 			}
@@ -121,10 +121,10 @@ export class CursosService {
 	}
 
 	deleteCurso(curso: Curso): Observable<boolean> {
-		return this.http.delete<string>(this.backURL + '/cursos/delete/' + curso.id_curso, { observe: 'response', responseType: 'text' as 'json' }).pipe(
+		return this.http.delete<string>(this.backURL + '/cursos/delete/' + curso.idCurso, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
 				if (response.ok) {
-					this.cursos = this.cursos.filter((c) => c.id_curso !== curso.id_curso);
+					this.cursos = this.cursos.filter((c) => c.idCurso !== curso.idCurso);
 					return true;
 				}
 				return false;
@@ -136,8 +136,8 @@ export class CursosService {
 		);
 	}
 
-	getStatusCurso(id_curso: number): Observable<number | boolean> {
-		return this.http.get<number>(this.backURLStreaming + '/status/' + id_curso, { observe: 'response' }).pipe(
+	getStatusCurso(idCurso: number): Observable<number | boolean> {
+		return this.http.get<number>(this.backURLStreaming + '/status/' + idCurso, { observe: 'response' }).pipe(
 			map((response: HttpResponse<number>) => {
 				if (response.ok && response.body) {
 					return response.body;
@@ -157,7 +157,7 @@ export class CursosService {
 				if (response.ok && response.body) {
 					this.cursos = response.body;
 					for (const curso of this.cursos) {
-						curso.clases_curso = curso.clases_curso?.sort((a, b) => a.posicion_clase - b.posicion_clase);
+						curso.clasesCurso = curso.clasesCurso?.sort((a, b) => a.posicionClase - b.posicionClase);
 					}
 					return this.cursos;
 				}

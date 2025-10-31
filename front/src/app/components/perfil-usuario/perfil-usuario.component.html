@@ -4,19 +4,19 @@
 	@if (usuario) {
 		<div class="flex w-full flex-col items-center md:flex-row">
 			<div class="m-4 w-1/2 md:w-1/6">
-				@if (usuario.foto_usuario[0] && usuario.foto_usuario.length > 0) {
-					@if (!usuario.foto_usuario[0].includes('.') && usuario.foto_usuario[0].startsWith('#')) {
+				@if (usuario.fotoUsuario[0] && usuario.fotoUsuario.length > 0) {
+					@if (!usuario.fotoUsuario[0].includes('.') && usuario.fotoUsuario[0].startsWith('#')) {
 						<div class="h-full w-full items-center justify-center border border-black dark:border-gray-400">
-							<svg id="fotoPrincipal" class="mt-4 mb-0 h-full w-full" [ngStyle]="{ color: usuario.foto_usuario[0] }" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+							<svg id="fotoPrincipal" class="mt-4 mb-0 h-full w-full" [ngStyle]="{ color: usuario.fotoUsuario[0] }" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
 								<path d="M12 12c2.761 0 5-2.686 5-6s-2.239-6-5-6-5 2.686-5 6 2.239 6 5 6zm0 2c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z" />
 							</svg>
 						</div>
 					} @else {
-						<img id="fotoPrincipal" class="border border-black dark:border-gray-400" [src]="usuario.foto_usuario[0]" alt="Foto " />
+						<img id="fotoPrincipal" class="border border-black dark:border-gray-400" [src]="usuario.fotoUsuario[0]" alt="Foto " />
 					}
 				}
 				<div class="flex flex-wrap">
-					@for (foto of this.usuario.foto_usuario; track foto; let i = $index) {
+					@for (foto of this.usuario.fotoUsuario; track foto; let i = $index) {
 						@if (editable) {
 							@if (!foto.startsWith('#')) {
 								<div class="relative m-1 aspect-square w-1/4 cursor-pointer border border-black dark:border-gray-400" (click)="cambiaFoto(i)" (keydown.enter)="cambiaFoto(i)">
@@ -25,7 +25,7 @@
 									} @else {
 										<img id="foto-{{ i }}" class="aspect-square p-1" [src]="foto" alt="Foto {{ i + 1 }}" />
 									}
-									<svg class="absolute top-1 right-1 cursor-pointer" (click)="usuario.foto_usuario.splice(i, 1); usuario.foto_usuario.length === 0 ? usuario.foto_usuario.push(this.generateRandomColor()) : null" (keydown.enter)="usuario.foto_usuario.splice(i, 1); usuario.foto_usuario.length === 0 ? usuario.foto_usuario.push(this.generateRandomColor()) : null" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
+									<svg class="absolute top-1 right-1 cursor-pointer" (click)="usuario.fotoUsuario.splice(i, 1); usuario.fotoUsuario.length === 0 ? usuario.fotoUsuario.push(this.generateRandomColor()) : null" (keydown.enter)="usuario.fotoUsuario.splice(i, 1); usuario.fotoUsuario.length === 0 ? usuario.fotoUsuario.push(this.generateRandomColor()) : null" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 								</div>
 							}
 						} @else {
@@ -51,9 +51,9 @@
 			<div class="flex grow flex-col items-center">
 				<span>Nombre: </span>
 				@if (editable) {
-					<input class="border-2 border-black bg-transparent dark:border-gray-400" id="nombre" type="text" placeholder="Tu nombre" [(ngModel)]="usuario.nombre_usuario" />
+					<input class="border-2 border-black bg-transparent dark:border-gray-400" id="nombre" type="text" placeholder="Tu nombre" [(ngModel)]="usuario.nombreUsuario" />
 				} @else {
-					<p>{{ this.usuario.nombre_usuario }}</p>
+					<p>{{ this.usuario.nombreUsuario }}</p>
 				}
 				<br />
 				<span>Presentación: </span>

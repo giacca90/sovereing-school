@@ -84,7 +84,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 
 		if (!this.validarVideo()) return;
 
-		if (this.clase.id_clase === 0) {
+		if (this.clase.idClase === 0) {
 			this.prepararNuevaClase();
 		} else {
 			this.actualizarClaseExistente();
@@ -106,7 +106,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	 */
 	eliminaClase(clase: Clase) {
 		if (confirm('Esto eliminará definitivamente la clase. Estás seguro??')) {
-			this.curso.clases_curso = this.curso.clases_curso?.filter((c) => c.id_clase !== clase.id_clase);
+			this.curso.clasesCurso = this.curso.clasesCurso?.filter((c) => c.idClase !== clase.idClase);
 			this.cursoService.updateCurso(this.curso).subscribe({
 				next: (success: Curso) => {
 					if (!success) {
@@ -155,13 +155,13 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 			switch (tipo) {
 				case 0: {
 					// Video estatico
-					this.clase.tipo_clase = 0;
+					this.clase.tipoClase = 0;
 					videoButton.classList.add('text-blue-700');
 					break;
 				}
 				case 1: {
 					// OBS
-					this.clase.tipo_clase = 1;
+					this.clase.tipoClase = 1;
 					obsButton.classList.add('text-blue-700');
 					break;
 				}
@@ -181,18 +181,18 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 									this.savedPresets = new Map();
 								}
 
-								if (this.clase) this.clase.tipo_clase = 2;
+								if (this.clase) this.clase.tipoClase = 2;
 								webcamButton.classList.add('text-blue-700');
 							},
 							error: (error) => {
 								console.error('Error al obtener presets:', error);
 								this.savedPresets = new Map();
-								if (this.clase) this.clase.tipo_clase = 2;
+								if (this.clase) this.clase.tipoClase = 2;
 								webcamButton.classList.add('text-blue-700');
 							},
 						});
 					} else {
-						this.clase.tipo_clase = 2;
+						this.clase.tipoClase = 2;
 						webcamButton.classList.add('text-blue-700');
 					}
 				}
@@ -214,9 +214,9 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	subeVideo(file: File) {
-		this.streamingService.subeVideo(file, this.clase.curso_clase, this.clase.id_clase).subscribe((result) => {
+		this.streamingService.subeVideo(file, this.clase.cursoClase, this.clase.idClase).subscribe((result) => {
 			if (result) {
-				this.clase.direccion_clase = result;
+				this.clase.direccionClase = result;
 
 				// Actualizar botones
 				const button = document.getElementById('video-upload-button') as HTMLSpanElement;
@@ -237,11 +237,11 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	 * Recupera las imagenes del curso y del usuario para el componente WebOBS
 	 */
 	async preparaWebcam() {
-		if (this.curso?.imagen_curso) {
-			fetch(this.curso.imagen_curso, { credentials: 'include' }).then((response) => {
+		if (this.curso?.imagenCurso) {
+			fetch(this.curso.imagenCurso, { credentials: 'include' }).then((response) => {
 				response.blob().then((blob) => {
 					if (!this.curso) return;
-					const fileName = this.curso.imagen_curso.split('/').pop();
+					const fileName = this.curso.imagenCurso.split('/').pop();
 					// Detectar el tipo MIME del Blob
 					const mimeType = blob.type || 'application/octet-stream';
 					if (fileName) {
@@ -255,7 +255,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 			});
 		}
 
-		const fotos = this.loginService.usuario?.foto_usuario ?? [];
+		const fotos = this.loginService.usuario?.fotoUsuario ?? [];
 
 		for (const url of fotos) {
 			console.log('📸 Foto del usuario:', url);
@@ -307,19 +307,19 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 			return;
 		}
 
-		if (this.curso.id_curso == 0) {
+		if (this.curso.idCurso == 0) {
 			if (!confirm('El curso no existe. \nPara emitir en directo, primero hay que crear la clase\n¿Desea crear el curso con los datos actuales?')) {
 				this.readyComponent = false;
 				return;
 			}
 			if (!this.streamingService.streamId) return;
-			this.clase.direccion_clase = this.streamingService.streamId;
-			const clasesCurso = this.curso.clases_curso;
+			this.clase.direccionClase = this.streamingService.streamId;
+			const clasesCurso = this.curso.clasesCurso;
 			if (!clasesCurso) {
-				this.curso.clases_curso = new Array<Clase>();
+				this.curso.clasesCurso = new Array<Clase>();
 			}
-			if (this.curso.clases_curso) {
-				this.clase.posicion_clase = this.curso.clases_curso.length + 1;
+			if (this.curso.clasesCurso) {
+				this.clase.posicionClase = this.curso.clasesCurso.length + 1;
 			}
 			clasesCurso?.push(this.clase);
 			this.cursoService.updateCurso(this.curso).subscribe({
@@ -388,7 +388,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 			return;
 		}
 
-		if (this.curso.id_curso == 0) {
+		if (this.curso.idCurso == 0) {
 			if (!confirm('El curso no existe. \nPara emitir en directo, primero hay que crear la clase\n¿Desea crear el curso con los datos actuales?')) {
 				return;
 			}
@@ -397,16 +397,16 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 		this.readyComponent = true;
 
 		try {
-			this.clase.direccion_clase = streamUrl;
-			this.curso.clases_curso ??= [];
+			this.clase.direccionClase = streamUrl;
+			this.curso.clasesCurso ??= [];
 
-			this.clase.posicion_clase = this.curso.clases_curso.length + 1;
+			this.clase.posicionClase = this.curso.clasesCurso.length + 1;
 			const url = this.streamingService.rtmpUrl;
 			if (url) {
-				this.clase.direccion_clase = url.substring(url.lastIndexOf('/') + 1);
+				this.clase.direccionClase = url.substring(url.lastIndexOf('/') + 1);
 			}
 
-			this.curso.clases_curso?.push(this.clase);
+			this.curso.clasesCurso?.push(this.clase);
 			this.cursoService.updateCurso(this.curso).subscribe({
 				next: (success: Curso | null) => {
 					if (!success) {
@@ -435,17 +435,17 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	 * @returns {boolean} true si la clase está completa
 	 */
 	private confirmacion(): boolean {
-		if (this.clase.nombre_clase == null || this.clase.nombre_clase == '') {
+		if (this.clase.nombreClase == null || this.clase.nombreClase == '') {
 			alert('Debes poner un nombre para la clase');
 			this.readyComponent = false;
 			return false;
 		}
-		if (this.clase.descriccion_clase == null || this.clase.descriccion_clase == '') {
+		if (this.clase.descriccionClase == null || this.clase.descriccionClase == '') {
 			alert('Debes poner una descripción para la clase');
 			this.readyComponent = false;
 			return false;
 		}
-		if (this.clase.contenido_clase == null || this.clase.contenido_clase == '') {
+		if (this.clase.contenidoClase == null || this.clase.contenidoClase == '') {
 			alert('Debes poner contenido para la clase');
 			this.readyComponent = false;
 			return false;
@@ -457,7 +457,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	 * @returns {boolean} true si hay video
 	 */
 	private validarVideo(): boolean {
-		if (this.clase.id_clase === 0 && this.clase.tipo_clase === 0 && !this.readyComponent) {
+		if (this.clase.idClase === 0 && this.clase.tipoClase === 0 && !this.readyComponent) {
 			alert('Debes primero subir un video');
 			return false;
 		}
@@ -466,14 +466,14 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 
 	/** Prepara la clase si es nueva */
 	private prepararNuevaClase() {
-		this.curso.clases_curso ??= [];
-		this.clase.posicion_clase = this.curso.clases_curso.length + 1;
+		this.curso.clasesCurso ??= [];
+		this.clase.posicionClase = this.curso.clasesCurso.length + 1;
 	}
 
 	/** Actualiza la clase existente en el array */
 	private actualizarClaseExistente() {
-		const clasesCurso = this.curso.clases_curso ?? [];
-		const idx = clasesCurso.findIndex((c) => c.id_clase === this.clase.id_clase);
+		const clasesCurso = this.curso.clasesCurso ?? [];
+		const idx = clasesCurso.findIndex((c) => c.idClase === this.clase.idClase);
 		if (idx !== -1) {
 			clasesCurso[idx] = { ...this.clase };
 		}
@@ -481,9 +481,9 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 
 	/** Procesa la clase según su tipo */
 	private async procesarClasePorTipo(): Promise<void> {
-		if (this.clase.tipo_clase === 0) {
-			if (this.clase.curso_clase === 0) {
-				this.curso.clases_curso?.push(this.clase);
+		if (this.clase.tipoClase === 0) {
+			if (this.clase.cursoClase === 0) {
+				this.curso.clasesCurso?.push(this.clase);
 				this.close();
 				return;
 			}
@@ -503,7 +503,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 
 		// Clase de tipo distinto a 0
 		if (!this.readyService) {
-			const actual = await this.cursoService.getCurso(this.curso.id_curso, true);
+			const actual = await this.cursoService.getCurso(this.curso.idCurso, true);
 			Object.assign(this.curso, actual);
 			this.close();
 		}

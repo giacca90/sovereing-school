@@ -1,39 +1,39 @@
 <div class="flex grow flex-col overflow-auto dark:text-gray-500">
-	<img class="absolute -z-50 h-full w-full object-cover object-center opacity-20" [src]="this.chat?.foto_curso" alt="curso" />
+	<img class="absolute -z-50 h-full w-full object-cover object-center opacity-20" [src]="this.chat?.fotoCurso" alt="curso" />
 	@if (this.chat === null) {
 		<h3>CARGANDO...</h3>
 	} @else {
-		<h3 class="text-center font-bold text-green-700">{{ this.chat.nombre_curso }} (CHAT)</h3>
+		<h3 class="text-center font-bold text-green-700">{{ this.chat.nombreCurso }} (CHAT)</h3>
 		<div class="m-2 flex flex-col rounded-lg border border-black p-2 dark:border-gray-400">
 			@for (clase of this.chat.clases; track $index) {
-				<button class="m-2 flex cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="abreChatClase(clase.id_clase)">
-					<p class="grow">{{ clase.nombre_clase }}</p>
-					<svg id="arrow-{{ clase.id_clase }}" class="h-6 w-6 transition-transform duration-300 ease-in-out dark:text-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+				<button class="m-2 flex cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="abreChatClase(clase.idClase)">
+					<p class="grow">{{ clase.nombreClase }}</p>
+					<svg id="arrow-{{ clase.idClase }}" class="h-6 w-6 transition-transform duration-300 ease-in-out dark:text-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 						<path d="M8 8.1716L3.4142 3.5858L0.5858 6.4142L8 13.8284L15.4142 6.4142L12.5858 3.5858L8 8.1716Z" fill="currentColor" />
 					</svg>
 				</button>
-				<div id="clase-{{ clase.id_clase }}" class="clases hidden">
+				<div id="clase-{{ clase.idClase }}" class="clases hidden">
 					@if (clase.mensajes.length === 0) {
 						<p class="text-center text-gray-500">No hay mensajes en esta clase</p>
 					}
 					@for (mex of clase.mensajes; track $index) {
-						<div id="mex-{{ mex.id_mensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
+						<div id="mex-{{ mex.idMensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
 							<div class="grow flex-col">
 								<div class="flex">
-									<p class="text-gray-500">Mensaje de: {{ mex.nombre_usuario }}</p>
-									<img class="h-7 w-7" src="{{ mex.foto_usuario }}" alt="usuario" />
+									<p class="text-gray-500">Mensaje de: {{ mex.nombreUsuario }}</p>
+									<img class="h-7 w-7" src="{{ mex.fotoUsuario }}" alt="usuario" />
 								</div>
 								@if (mex.respuesta) {
 									<div class="flex">
-										<p class="text-gray-500">En respuesta a: {{ mex.respuesta.nombre_usuario }}</p>
-										<img class="h-7 w-7" src="{{ mex.respuesta.foto_usuario }}" alt="usuario" />
+										<p class="text-gray-500">En respuesta a: {{ mex.respuesta.nombreUsuario }}</p>
+										<img class="h-7 w-7" src="{{ mex.respuesta.fotoUsuario }}" alt="usuario" />
 									</div>
 									<p class="text-gray-500">{{ mex.respuesta.mensaje }}</p>
 								}
-								@if (mex.pregunta && mex.id_curso && mex.id_clase) {
+								@if (mex.pregunta && mex.idCurso && mex.idClase) {
 									<p class="text-gray-500">
 										Pregunta en el momento
-										<a [routerLink]="['/repro', loginService.usuario?.id_usuario, mex.id_curso, mex.id_clase]" [queryParams]="{ momento: mex.pregunta }" class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700"> {{ Math.floor(mex.pregunta / 60) }}:{{ (mex.pregunta % 60).toString().padStart(2, '0') }} </a>
+										<a [routerLink]="['/repro', loginService.usuario?.idUsuario, mex.idCurso, mex.idClase]" [queryParams]="{ momento: mex.pregunta }" class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700"> {{ Math.floor(mex.pregunta / 60) }}:{{ (mex.pregunta % 60).toString().padStart(2, '0') }} </a>
 									</p>
 								}
 								<p>{{ mex.mensaje }}</p>
@@ -46,8 +46,8 @@
 						<div class="rounded-t-lg border border-black border-b-transparent p-2 dark:border-gray-400">
 							<div class="flex">
 								<div class="flex">
-									<p class="grow text-gray-500">En respuesta a: {{ respuestaClase.nombre_usuario }}</p>
-									<img class="h-7 w-7" src="{{ respuestaClase.foto_usuario }}" alt="usuario" />
+									<p class="grow text-gray-500">En respuesta a: {{ respuestaClase.nombreUsuario }}</p>
+									<img class="h-7 w-7" src="{{ respuestaClase.fotoUsuario }}" alt="usuario" />
 								</div>
 								<svg (click)="this.respuesta = null; this.respuestaClase = null; this.cdr.detectChanges()" (keydown.enter)="this.respuesta = null; this.respuestaClase = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 									<path d="M20.7457 3.32851C20.3552 2.93798 19.722 2.93798 19.3315 3.32851L12.0371 10.6229L4.74275 3.32851C4.35223 2.93798 3.71906 2.93798 3.32854 3.32851C2.93801 3.71903 2.93801 4.3522 3.32854 4.74272L10.6229 12.0371L3.32856 19.3314C2.93803 19.722 2.93803 20.3551 3.32856 20.7457C3.71908 21.1362 4.35225 21.1362 4.74277 20.7457L12.0371 13.4513L19.3315 20.7457C19.722 21.1362 20.3552 21.1362 20.7457 20.7457C21.1362 20.3551 21.1362 19.722 20.7457 19.3315L13.4513 12.0371L20.7457 4.74272C21.1362 4.3522 21.1362 3.71903 20.7457 3.32851Z" fill="currentColor" />
@@ -60,31 +60,31 @@
 						<div class="rounded-t-lg border border-black border-b-transparent p-2 dark:border-gray-400">
 							<div class="flex">
 								<p class="grow text-gray-500">Pregunta en el momento {{ pregunta.minute }}:{{ pregunta.second }}</p>
-								<svg (click)="cierraPregunta(clase.id_clase)" (keydown.enter)="cierraPregunta(clase.id_clase)" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<svg (click)="cierraPregunta(clase.idClase)" (keydown.enter)="cierraPregunta(clase.idClase)" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 									<path d="M20.7457 3.32851C20.3552 2.93798 19.722 2.93798 19.3315 3.32851L12.0371 10.6229L4.74275 3.32851C4.35223 2.93798 3.71906 2.93798 3.32854 3.32851C2.93801 3.71903 2.93801 4.3522 3.32854 4.74272L10.6229 12.0371L3.32856 19.3314C2.93803 19.722 2.93803 20.3551 3.32856 20.7457C3.71908 21.1362 4.35225 21.1362 4.74277 20.7457L12.0371 13.4513L19.3315 20.7457C19.722 21.1362 20.3552 21.1362 20.7457 20.7457C21.1362 20.3551 21.1362 19.722 20.7457 19.3315L13.4513 12.0371L20.7457 4.74272C21.1362 4.3522 21.1362 3.71903 20.7457 3.32851Z" fill="currentColor" />
 								</svg>
 							</div>
 						</div>
 					}
 					<div class="flex">
-						<input id="mexc-{{ clase.id_clase }}" (keydown.enter)="enviarMensaje(clase.id_clase)" type="text" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Escribe tu mensaje en la clase..." autocomplete="off" />
-						<button type="button" class="cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="this.enviarMensaje(clase.id_clase)">Enviar</button>
+						<input id="mexc-{{ clase.idClase }}" (keydown.enter)="enviarMensaje(clase.idClase)" type="text" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Escribe tu mensaje en la clase..." autocomplete="off" />
+						<button type="button" class="cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="this.enviarMensaje(clase.idClase)">Enviar</button>
 					</div>
 				</div>
 			}
 		</div>
 		<br />
 		@for (mensaje of this.chat.mensajes; track $index) {
-			<div id="mex-{{ mensaje.id_mensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
+			<div id="mex-{{ mensaje.idMensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
 				<div class="grow flex-col">
 					<div class="flex">
-						<p class="text-gray-500">Mensaje de: {{ mensaje.nombre_usuario }}</p>
-						<img class="h-7 w-7" src="{{ mensaje.foto_usuario }}" alt="usuario" />
+						<p class="text-gray-500">Mensaje de: {{ mensaje.nombreUsuario }}</p>
+						<img class="h-7 w-7" src="{{ mensaje.fotoUsuario }}" alt="usuario" />
 					</div>
 					@if (mensaje.respuesta) {
 						<div class="flex">
-							<p class="text-gray-500">En respuesta a: {{ mensaje.respuesta.nombre_usuario }}</p>
-							<img class="h-7 w-7" src="{{ mensaje.respuesta.foto_usuario }}" alt="usuario" />
+							<p class="text-gray-500">En respuesta a: {{ mensaje.respuesta.nombreUsuario }}</p>
+							<img class="h-7 w-7" src="{{ mensaje.respuesta.fotoUsuario }}" alt="usuario" />
 						</div>
 						<p class="text-gray-500">{{ mensaje.respuesta.mensaje }}</p>
 					}
@@ -98,8 +98,8 @@
 			<div class="rounded-t-lg border border-black border-b-transparent p-2 dark:border-gray-400">
 				<div class="flex">
 					<div class="flex">
-						<p class="grow text-gray-500">En respuesta a: {{ respuesta.nombre_usuario }}</p>
-						<img class="h-7 w-7" src="{{ respuesta.foto_usuario }}" alt="usuario" />
+						<p class="grow text-gray-500">En respuesta a: {{ respuesta.nombreUsuario }}</p>
+						<img class="h-7 w-7" src="{{ respuesta.fotoUsuario }}" alt="usuario" />
 					</div>
 					<svg (click)="this.respuesta = null; this.cdr.detectChanges()" (keydown.enter)="this.respuesta = null; this.cdr.detectChanges()" class="h-6 w-6 cursor-pointer dark:text-white" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 						<path d="M20.7457 3.32851C20.3552 2.93798 19.722 2.93798 19.3315 3.32851L12.0371 10.6229L4.74275 3.32851C4.35223 2.93798 3.71906 2.93798 3.32854 3.32851C2.93801 3.71903 2.93801 4.3522 3.32854 4.74272L10.6229 12.0371L3.32856 19.3314C2.93803 19.722 2.93803 20.3551 3.32856 20.7457C3.71908 21.1362 4.35225 21.1362 4.74277 20.7457L12.0371 13.4513L19.3315 20.7457C19.722 21.1362 20.3552 21.1362 20.7457 20.7457C21.1362 20.3551 21.1362 19.722 20.7457 19.3315L13.4513 12.0371L20.7457 4.74272C21.1362 4.3522 21.1362 3.71903 20.7457 3.32851Z" fill="currentColor" />

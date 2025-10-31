@@ -40,7 +40,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
-				this.idCurso = Number(params['id_curso']);
+				this.idCurso = Number(params['idCurso']);
 			}),
 		);
 		this.isBrowser = isPlatformBrowser(platformId);
@@ -82,9 +82,9 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 					}
 
 					this.curso = structuredClone(curso);
-					if (this.curso.clases_curso) {
-						for (const clase of this.curso.clases_curso) {
-							clase.curso_clase = this.curso.id_curso;
+					if (this.curso.clasesCurso) {
+						for (const clase of this.curso.clasesCurso) {
+							clase.cursoClase = this.curso.idCurso;
 						}
 					}
 				})
@@ -136,18 +136,18 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 			return;
 		}
 
-		if (this.curso?.clases_curso) {
-			const draggedIndex = this.curso.clases_curso.findIndex((clase) => clase.id_clase === this.draggedElementId);
-			const targetIndex = this.curso.clases_curso.findIndex((clase) => clase.id_clase === id);
+		if (this.curso?.clasesCurso) {
+			const draggedIndex = this.curso.clasesCurso.findIndex((clase) => clase.idClase === this.draggedElementId);
+			const targetIndex = this.curso.clasesCurso.findIndex((clase) => clase.idClase === id);
 
 			if (draggedIndex > -1 && targetIndex > -1 && draggedIndex !== targetIndex) {
-				const draggedClase = this.curso.clases_curso[draggedIndex];
+				const draggedClase = this.curso.clasesCurso[draggedIndex];
 				this.compruebaCambios();
-				const temp: number = draggedClase.posicion_clase;
-				draggedClase.posicion_clase = this.curso.clases_curso[targetIndex].posicion_clase;
-				this.curso.clases_curso[targetIndex].posicion_clase = temp;
-				this.curso.clases_curso.splice(draggedIndex, 1);
-				this.curso.clases_curso.splice(targetIndex, 0, draggedClase);
+				const temp: number = draggedClase.posicionClase;
+				draggedClase.posicionClase = this.curso.clasesCurso[targetIndex].posicionClase;
+				this.curso.clasesCurso[targetIndex].posicionClase = temp;
+				this.curso.clasesCurso.splice(draggedIndex, 1);
+				this.curso.clasesCurso.splice(targetIndex, 0, draggedClase);
 			}
 		}
 	}
@@ -186,7 +186,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	}
 
 	compruebaCambios() {
-		this.cursoService.getCurso(this.curso.id_curso).then((curso) => {
+		this.cursoService.getCurso(this.curso.idCurso).then((curso) => {
 			console.log('this.curso: ' + JSON.stringify(this.curso));
 			console.log('curso: ' + JSON.stringify(curso));
 			this.editado = JSON.stringify(this.curso) !== JSON.stringify(curso);
@@ -216,13 +216,13 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	}
 
 	async editarClase(clase: Clase) {
-		const curso: Curso | null = await this.cursoService.getCurso(clase.curso_clase, true);
+		const curso: Curso | null = await this.cursoService.getCurso(clase.cursoClase, true);
 		Object.assign(this.curso, curso);
 		if (!curso) {
 			console.error('No se pudo obtener el curso');
 			return;
 		}
-		const actual = curso.clases_curso?.find((c) => c.id_clase === clase.id_clase);
+		const actual = curso.clasesCurso?.find((c) => c.idClase === clase.idClase);
 		if (!actual) {
 			console.error('No se pudo obtener la clase');
 			return;
@@ -231,8 +231,8 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	}
 
 	nuevaClase() {
-		if (this.curso.clases_curso) {
-			this.claseEditar = new Clase(0, '', '', '', 0, '', this.curso.clases_curso?.length + 1, this.idCurso);
+		if (this.curso.clasesCurso) {
+			this.claseEditar = new Clase(0, '', '', '', 0, '', this.curso.clasesCurso?.length + 1, this.idCurso);
 		}
 	}
 
@@ -253,7 +253,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 
 				this.cursoService.addImagenCurso(formData).subscribe({
 					next: (response) => {
-						if (this.curso && response) this.curso.imagen_curso = response;
+						if (this.curso && response) this.curso.imagenCurso = response;
 						this.compruebaCambios();
 					},
 					error: (e: Error) => {
@@ -287,7 +287,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	// metodo para eliminar una clase desde la vista del curso
 	eliminaClase(clase: Clase) {
 		if (confirm('Esto eliminará definitivamente la clase. Estás seguro??')) {
-			this.curso.clases_curso = this.curso.clases_curso?.filter((c) => c.id_clase !== clase.id_clase);
+			this.curso.clasesCurso = this.curso.clasesCurso?.filter((c) => c.idClase !== clase.idClase);
 			this.cursoService.updateCurso(this.curso).subscribe({
 				next: (success: Curso) => {
 					if (!success) {
@@ -311,7 +311,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 				return;
 			}
 			this.cursoService
-				.getCurso(this.curso.id_curso, true)
+				.getCurso(this.curso.idCurso, true)
 				.then((curso) => {
 					if (curso) {
 						this.curso = curso;

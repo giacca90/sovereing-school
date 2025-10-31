@@ -2,30 +2,30 @@ import { Curso } from './Curso';
 import { Plan } from './Plan';
 
 export class Usuario {
-	public id_usuario: number;
+	public idUsuario: number;
 
-	public nombre_usuario: string;
+	public nombreUsuario: string;
 
-	public foto_usuario: string[];
+	public fotoUsuario: string[];
 
 	public presentacion: string;
 
-	public roll_usuario?: string;
+	public rollUsuario?: string;
 
-	public plan_usuario?: Plan;
+	public planUsuario?: Plan;
 
-	public cursos_usuario?: Curso[];
+	public cursosUsuario?: Curso[];
 
-	public fecha_registro_usuario?: Date;
+	public fechaRegistroUsuario?: Date;
 
-	constructor(_id_usuario: number, _nombre_usuario: string, _foto_usuario: string[], _presentacion: string, _roll_usuario?: string, _plan_usuario?: Plan, _cursos_usuario?: Curso[], _fecha_registro_usuario?: Date) {
-		this.id_usuario = _id_usuario;
-		this.nombre_usuario = _nombre_usuario;
-		this.foto_usuario = _foto_usuario;
+	constructor(_idUsuario: number, _nombreUsuario: string, _fotoUsuario: string[], _presentacion: string, _rollUsuario?: string, _planUsuario?: Plan, _cursosUsuario?: Curso[], _fechaRegistroUsuario?: Date) {
+		this.idUsuario = _idUsuario;
+		this.nombreUsuario = _nombreUsuario;
+		this.fotoUsuario = _fotoUsuario;
 		this.presentacion = _presentacion;
-		this.roll_usuario = _roll_usuario;
-		this.plan_usuario = _plan_usuario;
-		this.cursos_usuario = _cursos_usuario;
-		this.fecha_registro_usuario = _fecha_registro_usuario;
+		this.rollUsuario = _rollUsuario;
+		this.planUsuario = _planUsuario;
+		this.cursosUsuario = _cursosUsuario;
+		this.fechaRegistroUsuario = _fechaRegistroUsuario;
 	}
 }

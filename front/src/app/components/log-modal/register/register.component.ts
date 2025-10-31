@@ -81,8 +81,8 @@ export class RegisterComponent implements OnInit, OnDestroy {
 
 		if ((await this.loginService.compruebaCorreo(correo)) === false) {
 			this.fase = 1;
-			this.nuevoUsuario.correo_electronico = correo;
-			this.nuevoUsuario.nombre_usuario = (document.getElementById('nombre2') as HTMLInputElement).value;
+			this.nuevoUsuario.correoElectronico = correo;
+			this.nuevoUsuario.nombreUsuario = (document.getElementById('nombre2') as HTMLInputElement).value;
 			const content: HTMLDivElement = document.getElementById('content2') as HTMLDivElement;
 			content.innerHTML = `
 				<br />
@@ -132,7 +132,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
 		}
 		if (pass == pass2) {
 			this.nuevoUsuario.password = pass;
-			this.nuevoUsuario.fecha_registro_usuario = new Date();
+			this.nuevoUsuario.fechaRegistroUsuario = new Date();
 			this.registerService.registrarNuevoUsuario(this.nuevoUsuario).then((resp: boolean) => {
 				if (resp) {
 					this.fase = 2;

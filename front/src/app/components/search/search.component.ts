@@ -33,7 +33,7 @@ export class SearchComponent {
 					const cortina: HTMLDivElement = document.getElementById('cortina') as HTMLDivElement;
 					cortina.innerHTML = '';
 					const porNombre: Curso[] = this.cursoService.cursos.filter((curso) =>
-						curso.nombre_curso
+						curso.nombreCurso
 							.toString()
 							.toLowerCase()
 							.normalize('NFD')
@@ -46,7 +46,7 @@ export class SearchComponent {
 							),
 					);
 					const porDescriccion: Curso[] = this.cursoService.cursos.filter((curso) =>
-						curso.descriccion_corta
+						curso.descriccionCorta
 							.toString()
 							.toLowerCase()
 							.normalize('NFD')
@@ -71,7 +71,7 @@ export class SearchComponent {
 								this.result = false;
 								this.cdr.detectChanges();
 								this.ngZone.run(() => {
-									this.router.navigate(['/curso/' + curso.id_curso]);
+									this.router.navigate(['/curso/' + curso.idCurso]);
 								});
 							});
 							row.addEventListener('keydown', (event) => {
@@ -79,14 +79,14 @@ export class SearchComponent {
 									this.result = false;
 									this.cdr.detectChanges();
 									this.ngZone.run(() => {
-										this.router.navigate(['/curso/' + curso.id_curso]);
+										this.router.navigate(['/curso/' + curso.idCurso]);
 									});
 								}
 							});
 							row.innerHTML =
-								curso.nombre_curso.substring(
+								curso.nombreCurso.substring(
 									0,
-									curso.nombre_curso
+									curso.nombreCurso
 										.toString()
 										.toLocaleLowerCase()
 										.normalize('NFD')
@@ -99,8 +99,8 @@ export class SearchComponent {
 										),
 								) +
 								'<b>' +
-								curso.nombre_curso.substring(
-									curso.nombre_curso
+								curso.nombreCurso.substring(
+									curso.nombreCurso
 										.toString()
 										.toLowerCase()
 										.normalize('NFD')
@@ -111,7 +111,7 @@ export class SearchComponent {
 												.normalize('NFD')
 												.replace(/[\u0300-\u036f]/g, ''),
 										),
-									curso.nombre_curso
+									curso.nombreCurso
 										.toString()
 										.toLowerCase()
 										.normalize('NFD')
@@ -124,8 +124,8 @@ export class SearchComponent {
 										) + buscador.value.length,
 								) +
 								'</b>' +
-								curso.nombre_curso.substring(
-									curso.nombre_curso
+								curso.nombreCurso.substring(
+									curso.nombreCurso
 										.toString()
 										.toLowerCase()
 										.normalize('NFD')
@@ -138,7 +138,7 @@ export class SearchComponent {
 										) + buscador.value.length,
 								) +
 								' - ' +
-								curso.descriccion_corta;
+								curso.descriccionCorta;
 							cortina.appendChild(row);
 						});
 						if (porDescriccion.length > 0) cortina.appendChild(document.createElement('hr'));
@@ -156,7 +156,7 @@ export class SearchComponent {
 								this.result = false;
 								this.cdr.detectChanges();
 								this.ngZone.run(() => {
-									this.router.navigate(['/curso/' + curso.id_curso]);
+									this.router.navigate(['/curso/' + curso.idCurso]);
 								});
 							});
 							row.addEventListener('keydown', (event) => {
@@ -164,16 +164,16 @@ export class SearchComponent {
 									this.result = false;
 									this.cdr.detectChanges();
 									this.ngZone.run(() => {
-										this.router.navigate(['/curso/' + curso.id_curso]);
+										this.router.navigate(['/curso/' + curso.idCurso]);
 									});
 								}
 							});
 							row.innerHTML =
-								curso.nombre_curso +
+								curso.nombreCurso +
 								' - ' +
-								curso.descriccion_corta.substring(
+								curso.descriccionCorta.substring(
 									0,
-									curso.descriccion_corta
+									curso.descriccionCorta
 										.toString()
 										.toLocaleLowerCase()
 										.normalize('NFD')
@@ -186,8 +186,8 @@ export class SearchComponent {
 										),
 								) +
 								'<b>' +
-								curso.descriccion_corta.substring(
-									curso.descriccion_corta
+								curso.descriccionCorta.substring(
+									curso.descriccionCorta
 										.toString()
 										.toLowerCase()
 										.normalize('NFD')
@@ -198,7 +198,7 @@ export class SearchComponent {
 												.normalize('NFD')
 												.replace(/[\u0300-\u036f]/g, ''),
 										),
-									curso.descriccion_corta
+									curso.descriccionCorta
 										.toString()
 										.toLowerCase()
 										.normalize('NFD')
@@ -211,8 +211,8 @@ export class SearchComponent {
 										) + buscador.value.length,
 								) +
 								'</b>' +
-								curso.descriccion_corta.substring(
-									curso.descriccion_corta
+								curso.descriccionCorta.substring(
+									curso.descriccionCorta
 										.toString()
 										.toLowerCase()
 										.normalize('NFD')

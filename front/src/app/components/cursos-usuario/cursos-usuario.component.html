@@ -2,19 +2,19 @@
 	<h2 class="font-bold text-blue-500">Tus Cursos</h2>
 	<br />
 	@if (this.loginService.usuario) {
-		@if (this.loginService.usuario.roll_usuario && this.loginService.usuario.roll_usuario === 'USER') {
-			@if (this.loginService.usuario.cursos_usuario?.length === 0) {
+		@if (this.loginService.usuario.rollUsuario && this.loginService.usuario.rollUsuario === 'USER') {
+			@if (this.loginService.usuario.cursosUsuario?.length === 0) {
 				<h3 class="font-bold text-red-600">No tienes cursos!!!</h3>
 			} @else {
-				@for (curso of this.loginService.usuario.cursos_usuario; track curso) {
+				@for (curso of this.loginService.usuario.cursosUsuario; track curso) {
 					<div class="flex w-full">
 						<div class="relative m-2 flex grow rounded-lg border border-black p-2 dark:border-gray-400">
-							<div style="background-image: url('{{ curso.imagen_curso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
-							<p>{{ curso.nombre_curso }}</p>
-							<p class="ml-2 grow text-gray-500">{{ curso.descriccion_corta }}</p>
+							<div style="background-image: url('{{ curso.imagenCurso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
+							<p>{{ curso.nombreCurso }}</p>
+							<p class="ml-2 grow text-gray-500">{{ curso.descriccionCorta }}</p>
 						</div>
-						@if (this.loginService.usuario.id_usuario !== null) {
-							<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + curso.id_curso + '/0'])">Ir al curso</button>
+						@if (this.loginService.usuario.idUsuario !== null) {
+							<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + curso.idCurso + '/0'])">Ir al curso</button>
 						}
 					</div>
 				}
@@ -26,17 +26,17 @@
 				@for (curso of this.cursoService.getCursosProfe(this.loginService.usuario); track curso) {
 					<div class="flex w-full">
 						<div class="relative m-2 flex grow items-center rounded-lg border border-black p-2 dark:border-gray-400">
-							<div style="background-image: url('{{ curso.imagen_curso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
-							<p>{{ curso.nombre_curso }}</p>
-							<p class="ml-2 grow text-sm text-gray-500">{{ curso.descriccion_corta }}</p>
+							<div style="background-image: url('{{ curso.imagenCurso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
+							<p>{{ curso.nombreCurso }}</p>
+							<p class="ml-2 grow text-sm text-gray-500">{{ curso.descriccionCorta }}</p>
 						</div>
-						@if (this.loginService.usuario.id_usuario !== null) {
-							<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/editorCurso/' + curso.id_curso])">Editar <span class="hidden md:inline">este curso</span></button>
+						@if (this.loginService.usuario.idUsuario !== null) {
+							<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/editorCurso/' + curso.idCurso])">Editar <span class="hidden md:inline">este curso</span></button>
 						}
 					</div>
 				}
 			}
-			@if (this.loginService.usuario.roll_usuario === 'PROF' || this.loginService.usuario.roll_usuario === 'ADMIN') {
+			@if (this.loginService.usuario.rollUsuario === 'PROF' || this.loginService.usuario.rollUsuario === 'ADMIN') {
 				<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/editorCurso/' + 0])">Crea un nuevo curso</button>
 			}
 		}

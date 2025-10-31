@@ -15,7 +15,7 @@ export const routes: Routes = [
 		canActivate: [GuestGuard],
 	},
 	{
-		path: 'curso/:id_curso',
+		path: 'curso/:idCurso',
 		loadComponent: () => import('./components/curso/curso.component').then((m) => m.CursoComponent),
 	},
 	{
@@ -24,22 +24,22 @@ export const routes: Routes = [
 		canActivate: [GuestGuard],
 	},
 	{
-		path: 'chat/:id_curso',
+		path: 'chat/:idCurso',
 		loadComponent: () => import('./components/chat/chat/chat.component').then((m) => m.ChatComponent),
 		canActivate: [GuestGuard, UserGuard],
 	},
 	{
-		path: 'chat/:id_curso/:id_mensaje',
+		path: 'chat/:idCurso/:id_mensaje',
 		loadComponent: () => import('./components/chat/chat/chat.component').then((m) => m.ChatComponent),
 		canActivate: [GuestGuard, UserGuard],
 	},
 	{
-		path: 'repro/:id_curso/:id_clase',
+		path: 'repro/:idCurso/:idClase',
 		loadComponent: () => import('./components/reproduction/reproduction.component').then((m) => m.ReproductionComponent),
 		canActivate: [GuestGuard, UserGuard],
 	},
 	{
-		path: 'editorCurso/:id_curso',
+		path: 'editorCurso/:idCurso',
 		loadComponent: () => import('./components/editor-curso/editor-curso.component').then((m) => m.EditorCursoComponent),
 		canActivate: [GuestGuard, ProfGuard],
 		canDeactivate: [PendingChangesGuard],

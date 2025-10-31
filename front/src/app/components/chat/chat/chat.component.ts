@@ -32,8 +32,8 @@ export class ChatComponent implements OnInit, OnDestroy {
 	) {
 		if (!this.idCurso) {
 			this.route.paramMap.subscribe((params) => {
-				this.idCurso = params.get('id_curso') as number | null;
-				this.idMensaje = params.get('id_mensaje');
+				this.idCurso = params.get('idCurso') as number | null;
+				this.idMensaje = params.get('idMensaje');
 			});
 		}
 		afterNextRender(() => {
@@ -47,7 +47,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 							this.chat = data;
 							this.cdr.detectChanges();
 							if (this.idMensaje) {
-								if (data.mensajes.filter((mensaje) => mensaje.id_mensaje === this.idMensaje) && data.mensajes.filter((mensaje) => mensaje.id_mensaje === this.idMensaje).length > 0) {
+								if (data.mensajes.filter((mensaje) => mensaje.idMensaje === this.idMensaje) && data.mensajes.filter((mensaje) => mensaje.idMensaje === this.idMensaje).length > 0) {
 									const mexc: HTMLElement | null = document.getElementById('mex-' + this.idMensaje);
 									if (mexc) {
 										mexc.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -55,8 +55,8 @@ export class ChatComponent implements OnInit, OnDestroy {
 									}
 								} else {
 									data.clases.forEach((clase) => {
-										if (clase.mensajes.filter((mex) => mex.id_mensaje === this.idMensaje) && clase.mensajes.filter((mex) => mex.id_mensaje === this.idMensaje).length > 0) {
-											this.abreChatClase(clase.id_clase);
+										if (clase.mensajes.filter((mex) => mex.idMensaje === this.idMensaje) && clase.mensajes.filter((mex) => mex.idMensaje === this.idMensaje).length > 0) {
+											this.abreChatClase(clase.idClase);
 											this.cdr.detectChanges();
 											const mexc = document.getElementById('mex-' + this.idMensaje);
 
@@ -85,7 +85,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 	ngOnInit(): void {
 		if (!this.idCurso) {
 			this.route.paramMap.subscribe((params) => {
-				this.idCurso = params.get('id_curso') as number | null;
+				this.idCurso = params.get('idCurso') as number | null;
 			});
 		}
 	}
@@ -105,7 +105,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 		if (clase) {
 			let resp: string | null = null;
 			if (this.respuestaClase) {
-				resp = this.respuestaClase.id_mensaje;
+				resp = this.respuestaClase.idMensaje;
 			}
 			const input: HTMLInputElement = document.getElementById('mexc-' + clase) as HTMLInputElement;
 			if (input.value) {
@@ -120,7 +120,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 		} else {
 			let resp: string | null = null;
 			if (this.respuesta) {
-				resp = this.respuesta.id_mensaje;
+				resp = this.respuesta.idMensaje;
 			}
 			const input: HTMLInputElement = document.getElementById('mex') as HTMLInputElement;
 			if (input.value) {
@@ -180,11 +180,11 @@ export class ChatComponent implements OnInit, OnDestroy {
 		this.cdr.detectChanges();
 	}
 
-	navegaAlVideo(id_curso: number, id_clase: number, momento?: number) {
+	navegaAlVideo(idCurso: number, idClase: number, momento?: number) {
 		if (momento) {
-			this.router.navigate(['/repro', this.loginService.usuario?.id_usuario, id_curso, id_clase], { queryParams: { momento } });
+			this.router.navigate(['/repro', this.loginService.usuario?.idUsuario, idCurso, idClase], { queryParams: { momento } });
 		} else {
-			this.router.navigate(['/repro', this.loginService.usuario?.id_usuario, id_curso, id_clase]);
+			this.router.navigate(['/repro', this.loginService.usuario?.idUsuario, idCurso, idClase]);
 		}
 	}
 }

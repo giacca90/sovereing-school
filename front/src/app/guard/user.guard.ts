@@ -26,20 +26,20 @@ export class UserGuard implements CanActivate {
 
 		const usuario: Usuario = this.loginService.usuario;
 		// Permitir acceso inmediato a usuarios con roll 0 o 1
-		if (usuario.roll_usuario === 'ADMIN' || usuario.roll_usuario === 'PROF') {
+		if (usuario.rollUsuario === 'ADMIN' || usuario.rollUsuario === 'PROF') {
 			return true;
 		}
 
-		const id_curso = route.params['id_curso'];
+		const idCurso = route.params['idCurso'];
 
 		try {
-			const curso = await this.cursoService.getCurso(id_curso);
-			if (!curso || !usuario.cursos_usuario) {
+			const curso = await this.cursoService.getCurso(idCurso);
+			if (!curso || !usuario.cursosUsuario) {
 				this.router.navigate(['/']);
 				return false;
 			}
 
-			const hasAccess = usuario.cursos_usuario?.some((cursoUs) => cursoUs.id_curso === curso.id_curso);
+			const hasAccess = usuario.cursosUsuario?.some((cursoUs) => cursoUs.idCurso === curso.idCurso);
 			if (!hasAccess) {
 				this.router.navigate(['/']);
 			}

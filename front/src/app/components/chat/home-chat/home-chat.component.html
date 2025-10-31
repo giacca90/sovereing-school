@@ -6,14 +6,14 @@
 			<p class="ml-4">NO TIENES MENSAJES PENDIENTES.</p>
 		} @else {
 			@for (mensaje of this.chats; track $index) {
-				@if (mensaje.id_mensaje) {
+				@if (mensaje.idMensaje) {
 					<div (click)="navegaMensaje(mensaje)" (keydown.enter)="navegaMensaje(mensaje)" class="relative m-2 flex grow cursor-pointer flex-col rounded-lg border border-black p-2 dark:border-gray-400">
-						<div style="background-image: url('{{ mensaje.foto_usuario }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
+						<div style="background-image: url('{{ mensaje.fotoUsuario }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
 
-						<p>{{ mensaje.nombre_usuario }}</p>
-						<p class="font-bold text-green-700">{{ mensaje.nombre_curso }}</p>
-						@if (mensaje.nombre_clase) {
-							<p class="text-gray-500">{{ mensaje.nombre_clase }}</p>
+						<p>{{ mensaje.nombreUsuario }}</p>
+						<p class="font-bold text-green-700">{{ mensaje.nombreCurso }}</p>
+						@if (mensaje.nombreClase) {
+							<p class="text-gray-500">{{ mensaje.nombreClase }}</p>
 						}
 						@if (mensaje.respuesta) {
 							<p class="text-gray-500">En respuesta a: {{ mensaje.respuesta.mensaje }}</p>
@@ -21,7 +21,7 @@
 						@if (mensaje.pregunta) {
 							<p class="text-gray-500">
 								Pregunta en el momento
-								<a class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700" href="repro/{{ mensaje.id_curso }}/{{ mensaje.id_clase }}?momento={{ mensaje.pregunta }}">{{ Math.floor(mensaje.pregunta / 60) }}:{{ (mensaje.pregunta % 60).toString().padStart(2, '0') }}</a>
+								<a class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700" href="repro/{{ mensaje.idCurso }}/{{ mensaje.idClase }}?momento={{ mensaje.pregunta }}">{{ Math.floor(mensaje.pregunta / 60) }}:{{ (mensaje.pregunta % 60).toString().padStart(2, '0') }}</a>
 							</p>
 						}
 						<p>{{ mensaje.mensaje }}</p>
@@ -34,19 +34,19 @@
 		} @else {
 			@for (curso of this.cursos; track $index) {
 				<div (click)="navegaCurso(curso)" (keydown.enter)="navegaCurso(curso)" class="relative m-2 flex grow cursor-pointer flex-col rounded-lg border border-black p-2 dark:border-gray-400">
-					<div style="background-image: url('{{ curso.foto_curso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
-					<p class="font-bold text-green-700">{{ curso.nombre_curso }}</p>
-					@if (curso.mensajes[0].id_clase) {
-						<p class="text-gray-500">{{ curso.mensajes[0].nombre_clase }}</p>
+					<div style="background-image: url('{{ curso.fotoCurso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
+					<p class="font-bold text-green-700">{{ curso.nombreCurso }}</p>
+					@if (curso.mensajes[0].idClase) {
+						<p class="text-gray-500">{{ curso.mensajes[0].nombreClase }}</p>
 					}
-					<p>{{ curso.mensajes[0].nombre_usuario }}</p>
+					<p>{{ curso.mensajes[0].nombreUsuario }}</p>
 					@if (curso.mensajes[0].respuesta) {
 						<p class="text-gray-500">En respuesta a: {{ curso.mensajes[0].respuesta.mensaje }}</p>
 					}
 					@if (curso.mensajes[0].pregunta) {
 						<p class="text-gray-500">
 							Pregunta en el momento
-							<a class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700" href="repro/{{ curso.mensajes[0].id_curso }}/{{ curso.mensajes[0].id_clase }}?momento={{ curso.mensajes[0].pregunta }}">{{ Math.floor(curso.mensajes[0].pregunta / 60) }}:{{ (curso.mensajes[0].pregunta % 60).toString().padStart(2, '0') }}</a>
+							<a class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700" href="repro/{{ curso.mensajes[0].idCurso }}/{{ curso.mensajes[0].idClase }}?momento={{ curso.mensajes[0].pregunta }}">{{ Math.floor(curso.mensajes[0].pregunta / 60) }}:{{ (curso.mensajes[0].pregunta % 60).toString().padStart(2, '0') }}</a>
 						</p>
 					}
 					<p>{{ curso.mensajes[0].mensaje }}</p>

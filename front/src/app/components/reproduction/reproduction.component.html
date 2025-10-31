@@ -8,7 +8,7 @@
 		<video id="video" controls crossorigin="use-credentials" class="video-js vjs-default-skin vjs-big-play-centered vjs-fill dark:border dark:border-gray-400"></video>
 	</div>
 	<div class="relative m-2 flex w-11/12 grow overflow-auto rounded-lg border border-black dark:border-gray-400">
-		<img class="absolute -z-10 h-full w-full object-cover object-center opacity-20" [src]="this.curso?.imagen_curso" alt="curso" />
+		<img class="absolute -z-10 h-full w-full object-cover object-center opacity-20" [src]="this.curso?.imagenCurso" alt="curso" />
 		<div class="absolute -z-30 h-full w-full bg-white object-cover object-center"></div>
 
 		<div class="flex w-3/4 flex-col">
@@ -18,26 +18,26 @@
 			</div>
 			<div id="contenido">
 				@if (this.clase) {
-					<h3 class="text-center font-bold text-green-700">{{ this.clase.nombre_clase }}</h3>
-					<p>{{ this.clase.contenido_clase }}</p>
+					<h3 class="text-center font-bold text-green-700">{{ this.clase.nombreClase }}</h3>
+					<p>{{ this.clase.contenidoClase }}</p>
 				} @else {
 					<h3>NO HAY CLASE CARGADA</h3>
 				}
 			</div>
 			<div id="chat" hidden>
-				<app-chat [idCurso]="this.id_curso" #chatComponent></app-chat>
+				<app-chat [idCurso]="this.idCurso" #chatComponent></app-chat>
 			</div>
 		</div>
 		<div class="m-2 flex w-1/4 flex-col rounded-lg border border-black p-2 dark:border-gray-400">
-			@if (this.curso && this.curso.clases_curso) {
-				@for (class of this.curso.clases_curso; track class) {
-					@if (class.id_clase == this.id_clase) {
+			@if (this.curso && this.curso.clasesCurso) {
+				@for (class of this.curso.clasesCurso; track class) {
+					@if (class.idClase == this.idClase) {
 						<div class="mb-2 cursor-pointer font-bold hover:text-green-700" (click)="this.navega(class)" (keydown.enter)="this.navega(class)">
-							{{ class.nombre_clase }}
+							{{ class.nombreClase }}
 						</div>
 					} @else {
 						<div class="mb-2 cursor-pointer hover:text-green-700" (click)="this.navega(class)" (keydown.enter)="this.navega(class)">
-							{{ class.nombre_clase }}
+							{{ class.nombreClase }}
 						</div>
 					}
 				}

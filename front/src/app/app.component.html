@@ -6,23 +6,23 @@
 		@if (this.loginService.usuario === null) {
 			<button type="button" class="absolute top-2 right-2 mr-2 size-8 cursor-pointer justify-end" href=""><img src="../assets/OiAccountLogin.webp" alt="login" (click)="openModal()" (keydown.enter)="openModal()" /></button>
 		} @else {
-			<button class="absolute top-2 right-1 mr-1 hidden cursor-pointer justify-end rounded-lg border border-black pr-1 pl-1 lg:block dark:border-gray-400" (click)="this.vistaMenu = !this.vistaMenu">Bienvenido {{ this.loginService.usuario.nombre_usuario }}</button>
+			<button class="absolute top-2 right-1 mr-1 hidden cursor-pointer justify-end rounded-lg border border-black pr-1 pl-1 lg:block dark:border-gray-400" (click)="this.vistaMenu = !this.vistaMenu">Bienvenido {{ this.loginService.usuario.nombreUsuario }}</button>
 
-			@if (!this.loginService.usuario.foto_usuario[0].includes('.') && this.loginService.usuario.foto_usuario[0].startsWith('#')) {
+			@if (!this.loginService.usuario.fotoUsuario[0].includes('.') && this.loginService.usuario.fotoUsuario[0].startsWith('#')) {
 				<button class="absolute top-2 right-1 mr-1 block cursor-pointer justify-end rounded-lg border border-black pr-1 pl-1 lg:hidden dark:border-gray-400" (click)="this.vistaMenu = !this.vistaMenu">
-					<svg id="alias" class="mt-1 mb-0 h-8 w-8 rounded-full" [ngStyle]="{ color: this.loginService.usuario.foto_usuario[0] }" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="200" height="200">
+					<svg id="alias" class="mt-1 mb-0 h-8 w-8 rounded-full" [ngStyle]="{ color: this.loginService.usuario.fotoUsuario[0] }" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="200" height="200">
 						<path d="M12 12c2.761 0 5-2.686 5-6s-2.239-6-5-6-5 2.686-5 6 2.239 6 5 6zm0 2c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z" />
 					</svg>
 				</button>
 			} @else {
-				<button class="absolute top-2 right-1 mr-1 block cursor-pointer justify-end rounded-lg border border-black pr-1 pl-1 lg:hidden dark:border-gray-400" (click)="this.vistaMenu = !this.vistaMenu"><img [src]="this.loginService.usuario.foto_usuario[0]" alt="avatar" class="h-8 w-8 rounded-full" /></button>
+				<button class="absolute top-2 right-1 mr-1 block cursor-pointer justify-end rounded-lg border border-black pr-1 pl-1 lg:hidden dark:border-gray-400" (click)="this.vistaMenu = !this.vistaMenu"><img [src]="this.loginService.usuario.fotoUsuario[0]" alt="avatar" class="h-8 w-8 rounded-full" /></button>
 			}
 			@if (this.vistaMenu === true) {
 				<div class="absolute right-2 z-10 mt-2 flex flex-col items-start rounded-lg bg-gray-200 p-4 shadow-lg dark:bg-gray-800">
 					<button class="mb-1 cursor-pointer hover:text-blue-500" (click)="this.router.navigate(['/cursosUsuario']); this.vistaMenu = false">Tus Cursos</button>
 					<button class="mb-1 cursor-pointer hover:text-blue-500" (click)="this.router.navigate(['/tus-chat']); this.vistaMenu = false">Tus Chats</button>
 					<button class="mb-1 cursor-pointer hover:text-blue-500" (click)="this.router.navigate(['/perfil']); this.vistaMenu = false">Tu perfil</button>
-					@if (this.loginService.usuario.roll_usuario === 'ADMIN') {
+					@if (this.loginService.usuario.rollUsuario === 'ADMIN') {
 						<button class="mb-1 cursor-pointer hover:text-blue-500" (click)="this.router.navigate(['/administracion']); this.vistaMenu = false">Administración</button>
 					}
 					<button class="cursor-pointer hover:text-blue-500" (click)="this.salir()">Salir</button>

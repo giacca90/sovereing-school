@@ -1,25 +1,25 @@
 <div class="h-80 w-full overflow-hidden sm:h-64">
 	<div id="swiper" class="swiper">
 		<div class="swiper-wrapper flex h-80 w-full flex-row flex-nowrap sm:h-64">
-			@for (curso of this.cursoService.cursos; track curso.id_curso) {
+			@for (curso of this.cursoService.cursos; track curso.idCurso) {
 				<div #swiperSlide class="swiper-slide w-xs-1/2 w-full flex-shrink-0 sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 2xl:w-1/6">
-					<div class="relative m-2 h-11/12 cursor-pointer border border-black dark:border-gray-400" (click)="router.navigate(['/curso/' + curso.id_curso])" tabindex="0" (keydown.enter)="router.navigate(['/curso/' + curso.id_curso])">
-						@if (curso.imagen_curso) {
-							<img [src]="curso.imagen_curso" alt="Imagen curso" class="absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 hover:opacity-30 dark:opacity-30 dark:hover:opacity-50" loading="lazy" />
+					<div class="relative m-2 h-11/12 cursor-pointer border border-black dark:border-gray-400" (click)="router.navigate(['/curso/' + curso.idCurso])" tabindex="0" (keydown.enter)="router.navigate(['/curso/' + curso.idCurso])">
+						@if (curso.imagenCurso) {
+							<img [src]="curso.imagenCurso" alt="Imagen curso" class="absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 hover:opacity-30 dark:opacity-30 dark:hover:opacity-50" loading="lazy" />
 						}
 
 						<h4 class="text-center font-bold text-blue-700">
-							{{ curso.nombre_curso }}
+							{{ curso.nombreCurso }}
 						</h4>
 
 						<div class="m-3 flex items-center justify-between">
-							@for (profe of curso.profesores_curso; track profe) {
-								<span class="font-bold">Por: {{ profe.nombre_usuario }}</span>
-								<img [src]="profe.foto_usuario[0]" alt="logo" class="h-12 w-12 object-contain" loading="lazy" />
+							@for (profe of curso.profesoresCurso; track profe) {
+								<span class="font-bold">Por: {{ profe.nombreUsuario }}</span>
+								<img [src]="profe.fotoUsuario[0]" alt="logo" class="h-12 w-12 object-contain" loading="lazy" />
 							}
 						</div>
 
-						<p class="adaptive-text mr-3 ml-3">{{ curso.descriccion_corta }}</p>
+						<p class="adaptive-text mr-3 ml-3">{{ curso.descriccionCorta }}</p>
 					</div>
 				</div>
 			}

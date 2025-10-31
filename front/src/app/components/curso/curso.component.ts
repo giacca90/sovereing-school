@@ -16,7 +16,7 @@ import { CompraCursoComponent } from './compra-curso/compra-curso.component';
 	styleUrl: './curso.component.css',
 })
 export class CursoComponent implements OnDestroy {
-	private id_curso: number = 0;
+	private idCurso: number = 0;
 	public curso: Curso | null = null;
 	public nombresProfesores: string | undefined = '';
 	private readonly subscription: Subscription = new Subscription();
@@ -32,18 +32,18 @@ export class CursoComponent implements OnDestroy {
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
-				this.id_curso = Number(params['id_curso']);
+				this.idCurso = Number(params['idCurso']);
 			}),
 		);
 
-		this.cursoService.getCurso(this.id_curso).then((curso) => {
+		this.cursoService.getCurso(this.idCurso).then((curso) => {
 			this.curso = curso;
 			if (this.curso) {
-				if (this.curso.profesores_curso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesores_curso[0].id_usuario);
+				if (this.curso.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0].idUsuario);
 				else {
-					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso.profesores_curso[0].id_usuario)?.toString();
-					for (let i = 1; i < this.curso.profesores_curso.length; i++) {
-						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso.profesores_curso[i].id_usuario);
+					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0].idUsuario)?.toString();
+					for (let i = 1; i < this.curso.profesoresCurso.length; i++) {
+						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso.profesoresCurso[i].idUsuario);
 					}
 					this.nombresProfesores = nombres;
 				}
@@ -52,9 +52,9 @@ export class CursoComponent implements OnDestroy {
 	}
 
 	compruebaPlan(planUsuario: Plan | undefined): Plan | null {
-		if (planUsuario !== undefined && planUsuario !== null && this.curso?.planes_curso) {
-			for (const plan of this.curso.planes_curso) {
-				if (plan.id_plan == planUsuario.id_plan) {
+		if (planUsuario !== undefined && planUsuario !== null && this.curso?.planesCurso) {
+			for (const plan of this.curso.planesCurso) {
+				if (plan.idPlan == planUsuario.idPlan) {
 					return plan;
 				}
 			}
@@ -110,9 +110,9 @@ export class CursoComponent implements OnDestroy {
 	 */
 	hasCurso(curso: Curso): boolean {
 		const usuario = this.loginService.usuario;
-		if (!usuario?.cursos_usuario) {
+		if (!usuario?.cursosUsuario) {
 			return false;
 		}
-		return usuario.cursos_usuario.some((c: any) => c.id_curso === curso.id_curso);
+		return usuario.cursosUsuario.some((c: any) => c.idCurso === curso.idCurso);
 	}
 }

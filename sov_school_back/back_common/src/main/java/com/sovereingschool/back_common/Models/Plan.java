@@ -18,24 +18,24 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "plan")
 public class Plan implements Serializable {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_plan")
     private Long idPlan;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "nombre_plan", unique = true, nullable = false)
     private String nombrePlan;
 
-    @Column(nullable = false)
+    @Column(name = "precio_plan", nullable = false)
     private BigDecimal precioPlan;
 
-    @Column(nullable = false)
     @ManyToMany(mappedBy = "planesCurso", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Curso> cursosPlan;

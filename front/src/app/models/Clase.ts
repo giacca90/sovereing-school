@@ -1,28 +1,28 @@
 export class Clase {
-	public id_clase: number;
+	public idClase: number;
 
-	public nombre_clase: string;
+	public nombreClase: string;
 
-	public descriccion_clase: string;
+	public descriccionClase: string;
 
-	public contenido_clase: string;
+	public contenidoClase: string;
 
-	public tipo_clase: number;
+	public tipoClase: number;
 
-	public direccion_clase: string;
+	public direccionClase: string;
 
-	public posicion_clase: number;
+	public posicionClase: number;
 
-	public curso_clase: number;
+	public cursoClase: number;
 
-	constructor(id_clase: number, nombre_clase: string, descriccion_clase: string, contenido_clase: string, tipo_clase: number, direccion_clase: string, posicion_clase: number, curso_clase: number) {
-		this.id_clase = id_clase;
-		this.nombre_clase = nombre_clase;
-		this.descriccion_clase = descriccion_clase;
-		this.contenido_clase = contenido_clase;
-		this.tipo_clase = tipo_clase;
-		this.direccion_clase = direccion_clase;
-		this.posicion_clase = posicion_clase;
-		this.curso_clase = curso_clase;
+	constructor(idClase: number, nombreClase: string, descriccionClase: string, contenidoClase: string, tipoClase: number, direccionClase: string, posicionClase: number, cursoClase: number) {
+		this.idClase = idClase;
+		this.nombreClase = nombreClase;
+		this.descriccionClase = descriccionClase;
+		this.contenidoClase = contenidoClase;
+		this.tipoClase = tipoClase;
+		this.direccionClase = direccionClase;
+		this.posicionClase = posicionClase;
+		this.cursoClase = cursoClase;
 	}
 }

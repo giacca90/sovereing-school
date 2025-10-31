@@ -63,12 +63,12 @@ export class StreamingService {
 
 	/**
 	 * Función para obtener el video de un curso y clase
-	 * @param id_curso Number: ID del curso
-	 * @param id_clase Number: ID de la clase
+	 * @param idCurso Number: ID del curso
+	 * @param idClase Number: ID de la clase
 	 * @returns Observable<Blob>: Video obtenido
 	 */
-	getVideo(id_curso: number, id_clase: number): Observable<Blob> {
-		return this.http.get(`${this.URL}/${id_curso}/${id_clase}`, { responseType: 'blob', withCredentials: true });
+	getVideo(idCurso: number, idClase: number): Observable<Blob> {
+		return this.http.get(`${this.URL}/${idCurso}/${idClase}`, { responseType: 'blob', withCredentials: true });
 	}
 
 	/**
@@ -480,7 +480,7 @@ export class StreamingService {
 	 * @returns Observable<Map<string, Preset>>: Presets obtenidos
 	 */
 	getPresets() {
-		return this.http.get(`${this.URL}/presets/get/${this.loginService.usuario?.id_usuario}`, { responseType: 'json', withCredentials: true });
+		return this.http.get(`${this.URL}/presets/get/${this.loginService.usuario?.idUsuario}`, { responseType: 'json', withCredentials: true });
 	}
 
 	/**
@@ -491,8 +491,8 @@ export class StreamingService {
 		const presetsObj = Object.fromEntries(presets);
 		console.log('Presets:', presets);
 		console.log('Presets JSON:', JSON.stringify(presetsObj));
-		console.log('URL:', `${this.URL}/presets/save/${this.loginService.usuario?.id_usuario}`);
-		this.http.put(`${this.URL}/presets/save/${this.loginService.usuario?.id_usuario}`, JSON.stringify(presetsObj)).subscribe((response) => {
+		console.log('URL:', `${this.URL}/presets/save/${this.loginService.usuario?.idUsuario}`);
+		this.http.put(`${this.URL}/presets/save/${this.loginService.usuario?.idUsuario}`, JSON.stringify(presetsObj)).subscribe((response) => {
 			console.log('Respuesta:', response);
 		});
 	}

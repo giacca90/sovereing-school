@@ -78,7 +78,7 @@ export class AdministracionComponent {
 		if (value.length === 0) {
 			this.usuariosSel = this.usuarios;
 		} else {
-			this.usuariosSel = this.usuarios.filter((u) => u.nombre_usuario.toLowerCase().includes(value.toLowerCase()) || u.roll_usuario?.toLowerCase().includes(value.toLowerCase()) || u.id_usuario.toString().includes(value));
+			this.usuariosSel = this.usuarios.filter((u) => u.nombreUsuario.toLowerCase().includes(value.toLowerCase()) || u.rollUsuario?.toLowerCase().includes(value.toLowerCase()) || u.idUsuario.toString().includes(value));
 		}
 	}
 
@@ -87,7 +87,7 @@ export class AdministracionComponent {
 		if (value.length === 0) {
 			this.cursosSel = this.cursos;
 		} else {
-			this.cursosSel = this.cursos.filter((c) => c.nombre_curso.toLowerCase().includes(value.toLowerCase()) || c.profesores_curso.toString().toLowerCase().includes(value.toLowerCase()) || c.id_curso.toString().includes(value));
+			this.cursosSel = this.cursos.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.profesoresCurso.toString().toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value));
 		}
 	}
 
@@ -96,7 +96,7 @@ export class AdministracionComponent {
 		if (value.length === 0) {
 			this.chatsSel = this.chats;
 		} else {
-			this.chatsSel = this.chats.filter((c) => c.nombre_curso.toLowerCase().includes(value.toLowerCase()) || c.id_curso.toString().includes(value));
+			this.chatsSel = this.chats.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value));
 		}
 	}
 

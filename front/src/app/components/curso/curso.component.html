@@ -1,33 +1,33 @@
 <div id="contenedor" class="relative m-2 flex w-full cursor-default flex-col items-center rounded-lg border border-black p-2 dark:border-gray-400">
-	@if (this.curso?.imagen_curso) {
-		<img class="absolute -z-10 h-full content-center opacity-20" [src]="this.curso?.imagen_curso" alt="curso" />
+	@if (this.curso?.imagenCurso) {
+		<img class="absolute -z-10 h-full content-center opacity-20" [src]="this.curso?.imagenCurso" alt="curso" />
 	}
-	<h3 class="flex-1 items-center text-center font-bold text-green-700">{{ curso?.nombre_curso }}</h3>
+	<h3 class="flex-1 items-center text-center font-bold text-green-700">{{ curso?.nombreCurso }}</h3>
 	<br />
 	<p class="font-bold">Por: {{ nombresProfesores }}</p>
 	<br />
-	<p>{{ curso?.descriccion_larga }}</p>
+	<p>{{ curso?.descriccionLarga }}</p>
 	<br />
 	<p class="flex-1 items-center font-bold">Este curso tiene las siguientes clases:</p>
 	<br />
-	@for (clase of this.curso?.clases_curso; track clase.id_clase) {
+	@for (clase of this.curso?.clasesCurso; track clase.idClase) {
 		<div class="m-2 grow items-start rounded-lg border border-black p-2 dark:border-gray-400">
-			<p>{{ clase.posicion_clase }}: {{ clase.nombre_clase }}</p>
-			<p>{{ clase.descriccion_clase }}</p>
+			<p>{{ clase.posicionClase }}: {{ clase.nombreClase }}</p>
+			<p>{{ clase.descriccionClase }}</p>
 		</div>
 	}
 
 	<div class="flex items-center justify-center">
-		<span class="font-bold">Precio: {{ curso?.precio_curso }}€</span>
-		@if (this.loginService.usuario && this.loginService.usuario.roll_usuario !== undefined && curso) {
-			@if (loginService.usuario.roll_usuario === 'ADMIN' || loginService.usuario.roll_usuario === 'PROF' || hasCurso(curso) || compruebaPlan(loginService.usuario.plan_usuario) !== null) {
-				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + this.curso.id_curso + '/0'])">Ir al curso</button>
+		<span class="font-bold">Precio: {{ curso?.precioCurso }}€</span>
+		@if (this.loginService.usuario && this.loginService.usuario.rollUsuario !== undefined && curso) {
+			@if (loginService.usuario.rollUsuario === 'ADMIN' || loginService.usuario.rollUsuario === 'PROF' || hasCurso(curso) || compruebaPlan(loginService.usuario.planUsuario) !== null) {
+				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + this.curso.idCurso + '/0'])">Ir al curso</button>
 			} @else {
 				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="compraCurso(curso)">Compra este curso</button>
 			}
 		}
-		@if (compruebaPlan(this.loginService.usuario?.plan_usuario)) {
-			<p class="ml-4 font-bold">Este curso es parte de tu plan {{ compruebaPlan(this.loginService.usuario?.plan_usuario)?.nombre_plan }}</p>
+		@if (compruebaPlan(this.loginService.usuario?.planUsuario)) {
+			<p class="ml-4 font-bold">Este curso es parte de tu plan {{ compruebaPlan(this.loginService.usuario?.planUsuario)?.nombrePlan }}</p>
 		}
 		@if (!this.loginService.usuario) {
 			<p class="ml-4 font-bold">Para comprar este curso debes estar registrado!!</p>
@@ -37,10 +37,10 @@
 
 @if (modalCourse) {
 	<div class="fixed top-0 left-0 z-20 h-full w-full bg-black opacity-70">
-		<h1 class="p-4 text-center text-2xl font-bold text-gray-200">Estás a punto de comprar: {{ modalCourse.nombre_curso }}</h1>
+		<h1 class="p-4 text-center text-2xl font-bold text-gray-200">Estás a punto de comprar: {{ modalCourse.nombreCurso }}</h1>
 
-		@if (modalCourse.precio_curso !== null && modalCourse.precio_curso !== undefined) {
-			@if (modalCourse.precio_curso > 0) {
+		@if (modalCourse.precioCurso !== null && modalCourse.precioCurso !== undefined) {
+			@if (modalCourse.precioCurso > 0) {
 				<app-compra-curso></app-compra-curso>
 			} @else {
 				<div class="flex flex-col items-center justify-center">

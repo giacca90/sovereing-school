@@ -30,7 +30,7 @@ export class HomeChatComponent {
 			if (this.loginService.usuario) {
 				this.chatService.initSubject.subscribe({
 					next: (init: InitChatUsuario | null) => {
-						if (init?.mensajes && init.cursos && init.idUsuario === this.loginService.usuario?.id_usuario) {
+						if (init?.mensajes && init.cursos && init.idUsuario === this.loginService.usuario?.idUsuario) {
 							this.chats = init.mensajes;
 							this.cursos = init.cursos;
 							this.cargando = false;
@@ -53,13 +53,13 @@ export class HomeChatComponent {
 
 	navegaMensaje(mensaje: MensajeChat) {
 		this.ngZone.run(() => {
-			this.router.navigate(['/chat/', mensaje.id_curso?.toString(), mensaje.id_mensaje]);
+			this.router.navigate(['/chat/', mensaje.idCurso?.toString(), mensaje.idMensaje]);
 		});
 	}
 
 	navegaCurso(curso: CursoChat) {
 		this.ngZone.run(() => {
-			this.router.navigate(['/chat/', curso.id_curso.toString()]);
+			this.router.navigate(['/chat/', curso.idCurso.toString()]);
 		});
 	}
 }

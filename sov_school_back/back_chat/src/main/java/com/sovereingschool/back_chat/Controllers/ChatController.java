@@ -26,6 +26,7 @@ import com.sovereingschool.back_chat.DTOs.CursoChatDTO;
 import com.sovereingschool.back_chat.Services.CursoChatService;
 import com.sovereingschool.back_chat.Services.InitChatService;
 import com.sovereingschool.back_common.Models.Curso;
+import com.sovereingschool.back_common.Models.Usuario;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -225,4 +226,11 @@ public class ChatController {
             return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @PostMapping("/nuevoUsuarioChat")
+    public Boolean addUsuarioChat(@RequestBody Usuario usuario) {
+
+        return true;
+    }
+
 }

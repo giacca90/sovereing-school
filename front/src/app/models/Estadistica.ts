@@ -1,13 +1,13 @@
 export class Estadistica {
-	profesores: number;
-	alumnos: number;
-	cursos: number;
-	clases: number;
+	public profesores: number;
+	public alumnos: number;
+	public cursos: number;
+	public clases: number;
 
-	constructor(_profesores: number, _alumnos: number, _cursos: number, _clases: number) {
+	constructor(_profesores: number, _alumnos: number, Cursos: number, Clases: number) {
 		this.profesores = _profesores;
 		this.alumnos = _alumnos;
-		this.cursos = _cursos;
-		this.clases = _clases;
+		this.cursos = Cursos;
+		this.clases = Clases;
 	}
 }

@@ -33,29 +33,29 @@ export class PerfilUsuarioComponent implements OnDestroy {
 		if (!input.files) {
 			return;
 		}
-		if (this.usuario?.foto_usuario[0].startsWith('#')) {
-			this.usuario.foto_usuario = [];
+		if (this.usuario?.fotoUsuario[0].startsWith('#')) {
+			this.usuario.fotoUsuario = [];
 		}
 		// Procesa cada archivo seleccionado
 		Array.from(input.files).forEach((file, index) => {
 			// Genera una URL temporal para previsualizar el archivo
 			const objectURL = URL.createObjectURL(file);
-			if (index === 0 && this.usuario?.foto_usuario.length === 0) {
+			if (index === 0 && this.usuario?.fotoUsuario.length === 0) {
 				(document.getElementById('fotoPrincipal') as HTMLImageElement).src = objectURL;
 			}
 			this.fotos.set(objectURL, file);
-			this.usuario?.foto_usuario.push(objectURL); // Guarda la URL temporal para previsualizar
+			this.usuario?.fotoUsuario.push(objectURL); // Guarda la URL temporal para previsualizar
 		});
 	}
 
 	async save() {
 		// Verifica si hay cambios en el usuario o la foto principal
-		if (JSON.stringify(this.usuario) !== JSON.stringify(this.loginService.usuario) || (document.getElementById('fotoPrincipal') as HTMLImageElement).src !== this.usuario?.foto_usuario[0]) {
+		if (JSON.stringify(this.usuario) !== JSON.stringify(this.loginService.usuario) || (document.getElementById('fotoPrincipal') as HTMLImageElement).src !== this.usuario?.fotoUsuario[0]) {
 			const savePromises: Promise<void>[] = []; // Almacena las promesas de guardado
 			// Si hay fotos para procesar
 			if (this.fotos.size > 0) {
 				const fotoPrincipal: string = (document.getElementById('fotoPrincipal') as HTMLImageElement).src;
-				this.usuario?.foto_usuario.forEach((foto, index) => {
+				this.usuario?.fotoUsuario.forEach((foto, index) => {
 					if (foto.startsWith('blob:')) {
 						const formData = new FormData();
 						const file = this.fotos.get(foto);
@@ -64,9 +64,9 @@ export class PerfilUsuarioComponent implements OnDestroy {
 							// Convierte la suscripción a una promesa y la almacena en savePromises
 							const savePromise = lastValueFrom(this.usuarioService.save(formData))
 								.then((response) => {
-									if (this.usuario?.foto_usuario && response) {
+									if (this.usuario?.fotoUsuario && response) {
 										// Actualiza la foto en la posición correcta
-										this.usuario.foto_usuario[index] = response[0];
+										this.usuario.fotoUsuario[index] = response[0];
 										if (fotoPrincipal === foto) {
 											(document.getElementById('fotoPrincipal') as HTMLImageElement).src = response[0];
 										}
@@ -94,41 +94,41 @@ export class PerfilUsuarioComponent implements OnDestroy {
 
 	actualizaUsuario() {
 		const temp: Usuario = JSON.parse(JSON.stringify(this.loginService.usuario));
-		if (this.usuario?.foto_usuario && this.loginService.usuario?.foto_usuario !== undefined) {
+		if (this.usuario?.fotoUsuario && this.loginService.usuario?.fotoUsuario !== undefined) {
 			let fotoPrincipal: string = (document.getElementById('fotoPrincipal') as HTMLImageElement).src;
 			if (fotoPrincipal === undefined) {
-				fotoPrincipal = this.usuario.foto_usuario[0];
+				fotoPrincipal = this.usuario.fotoUsuario[0];
 			}
-			if (fotoPrincipal !== this.usuario.foto_usuario[0]) {
+			if (fotoPrincipal !== this.usuario.fotoUsuario[0]) {
 				const f: string[] = [];
 				f.push(fotoPrincipal);
-				this.usuario.foto_usuario.forEach((foto: string) => {
+				this.usuario.fotoUsuario.forEach((foto: string) => {
 					if (foto !== fotoPrincipal && !foto.startsWith('#')) {
 						f.push(foto);
 					}
 				});
-				this.usuario.foto_usuario = f;
+				this.usuario.fotoUsuario = f;
 			}
-			temp.foto_usuario = this.usuario.foto_usuario;
-			temp.nombre_usuario = this.usuario.nombre_usuario;
+			temp.fotoUsuario = this.usuario.fotoUsuario;
+			temp.nombreUsuario = this.usuario.nombreUsuario;
 			temp.presentacion = this.usuario.presentacion;
-			temp.cursos_usuario?.forEach((curso) => {
-				curso.clases_curso = undefined;
-				curso.planes_curso = undefined;
-				curso.precio_curso = undefined;
-				curso.profesores_curso.forEach((profe) => {
-					profe.fecha_registro_usuario = undefined;
-					profe.cursos_usuario = undefined;
-					profe.plan_usuario = undefined;
-					profe.roll_usuario = undefined;
-					if (profe.id_usuario === this.usuario?.id_usuario) {
-						profe.foto_usuario = temp.foto_usuario;
+			temp.cursosUsuario?.forEach((curso) => {
+				curso.clasesCurso = undefined;
+				curso.planesCurso = undefined;
+				curso.precioCurso = undefined;
+				curso.profesoresCurso.forEach((profe) => {
+					profe.fechaRegistroUsuario = undefined;
+					profe.cursosUsuario = undefined;
+					profe.planUsuario = undefined;
+					profe.rollUsuario = undefined;
+					if (profe.idUsuario === this.usuario?.idUsuario) {
+						profe.fotoUsuario = temp.fotoUsuario;
 					}
 				});
 			});
 
-			if (temp.plan_usuario?.nombre_plan) temp.plan_usuario.nombre_plan = undefined;
-			if (temp.plan_usuario?.precio_plan) temp.plan_usuario.precio_plan = undefined;
+			if (temp.planUsuario?.nombrePlan) temp.planUsuario.nombrePlan = undefined;
+			if (temp.planUsuario?.precioPlan) temp.planUsuario.precioPlan = undefined;
 			this.subscription.add(
 				this.usuarioService.actualizaUsuario(temp).subscribe({
 					next: () => {
@@ -143,10 +143,10 @@ export class PerfilUsuarioComponent implements OnDestroy {
 	}
 
 	cambiaFoto(index: number) {
-		if (this.usuario?.foto_usuario) {
-			(document.getElementById('fotoPrincipal') as HTMLImageElement).src = this.usuario.foto_usuario[index];
+		if (this.usuario?.fotoUsuario) {
+			(document.getElementById('fotoPrincipal') as HTMLImageElement).src = this.usuario.fotoUsuario[index];
 			if (this.editable) {
-				for (let i = 0; i < this.usuario?.foto_usuario.length; i++) {
+				for (let i = 0; i < this.usuario?.fotoUsuario.length; i++) {
 					document.getElementById('foto-' + i)?.classList.remove('border', 'border-black');
 				}
 				(document.getElementById('foto-' + index) as HTMLImageElement).classList.add('border', 'border-black');

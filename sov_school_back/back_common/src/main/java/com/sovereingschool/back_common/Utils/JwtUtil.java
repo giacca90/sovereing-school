@@ -75,11 +75,11 @@ public class JwtUtil {
      * 
      * @param authentication Objecto Authentication del usuario
      * @param tokenType      String del tipo de token. Puede ser "server" o "access"
-     * @param id_usuario     Long del id del usuario
+     * @param idUsuario      Long del id del usuario
      * @return String con el token JWT
      */
 
-    public String generateToken(Authentication authentication, String tokenType, Long id_usuario) {
+    public String generateToken(Authentication authentication, String tokenType, Long idUsuario) {
 
         Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
 
@@ -94,7 +94,7 @@ public class JwtUtil {
                 .withIssuer(this.userGenerator)
                 .withSubject(username)
                 .withClaim("rol", roles)
-                .withClaim("id_usuario", id_usuario)
+                .withClaim("idUsuario", idUsuario)
                 .withIssuedAt(new Date())
                 .withExpiresAt(tokenType.equals("access") ? getExpiredForAccessToken()
                         : tokenType.equals("server") ? getExpiredForServer() : getExpiredForRefreshToken()) // 1 hour
@@ -129,7 +129,7 @@ public class JwtUtil {
                     .withIssuer(this.userGenerator)
                     .withSubject(newUsuario.getCorreoElectronico())
                     .withClaim("rol", "ROLE_USER")
-                    .withClaim("new_usuario", convertirObjetoABase64(newUsuario))
+                    .withClaim("newUsuario", convertirObjetoABase64(newUsuario))
                     .withIssuedAt(new Date())
                     .withExpiresAt(getExpiredForInitToken())
                     .withJWTId(UUID.randomUUID().toString())
@@ -201,7 +201,7 @@ public class JwtUtil {
 
         try {
             DecodedJWT decodedJWT = decodeToken(token);
-            Claim idClaim = decodedJWT.getClaim("id_usuario");
+            Claim idClaim = decodedJWT.getClaim("idUsuario");
             return idClaim.asLong();
         } catch (AuthenticationException e) {
             throw e;

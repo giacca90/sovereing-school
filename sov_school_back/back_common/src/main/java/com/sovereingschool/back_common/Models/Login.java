@@ -13,23 +13,25 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "login")
 public class Login implements Serializable {
+
     @Id
+    @Column(name = "id_usuario")
     private Long idUsuario;
 
-    @MapsId
     @OneToOne
+    @MapsId
     @JoinColumn(name = "id_usuario", referencedColumnName = "id_usuario")
     private Usuario usuario;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "correo_electronico", unique = true, nullable = false)
     private String correoElectronico;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 }

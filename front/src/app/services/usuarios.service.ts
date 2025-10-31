@@ -23,8 +23,8 @@ export class UsuariosService {
 		return '';
 	}
 
-	getUsuario(id_usuario: number) {
-		const sub = this.http.get<Usuario>(this.apiUrl + id_usuario, { observe: 'response' }).subscribe({
+	getUsuario(idUsuario: number) {
+		const sub = this.http.get<Usuario>(this.apiUrl + idUsuario, { observe: 'response' }).subscribe({
 			next: (response: HttpResponse<Usuario>) => {
 				if (response.ok && response.body) {
 					sub.unsubscribe();
@@ -41,7 +41,7 @@ export class UsuariosService {
 	}
 
 	getNombreProfe(id: number): string | undefined {
-		return this.profes.find((profe: Usuario) => profe.id_usuario === id)?.nombre_usuario.toString();
+		return this.profes.find((profe: Usuario) => profe.idUsuario === id)?.nombreUsuario.toString();
 	}
 
 	save(formData: FormData): Observable<string[] | null> {
@@ -90,7 +90,7 @@ export class UsuariosService {
 	}
 
 	eliminaUsuario(usuario: Usuario): Observable<boolean> {
-		return this.http.delete<string>(this.apiUrl + 'delete/' + usuario.id_usuario, { observe: 'response', responseType: 'text' as 'json' }).pipe(
+		return this.http.delete<string>(this.apiUrl + 'delete/' + usuario.idUsuario, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
 				if (response.ok) {
 					this.getAllUsuarios();
@@ -112,17 +112,17 @@ export class UsuariosService {
 			return of(false);
 		}
 
-		usuario.cursos_usuario ??= [];
+		usuario.cursosUsuario ??= [];
 
 		// Si el curso ya está comprado
-		if (usuario.cursos_usuario.some((cur: Curso) => cur.id_curso === curso.id_curso)) {
+		if (usuario.cursosUsuario.some((cur: Curso) => cur.idCurso === curso.idCurso)) {
 			return of(true);
 		}
 
 		// Si no estaba comprado → añadir y enviar al backend
-		usuario.cursos_usuario.push(curso);
+		usuario.cursosUsuario.push(curso);
 
-		const cursosUsuario: { id_usuario: number; ids_cursos: number[] } = { id_usuario: usuario.id_usuario, ids_cursos: usuario.cursos_usuario.map((cur: Curso) => cur.id_curso) };
+		const cursosUsuario: { idUsuario: number; idsCursos: number[] } = { idUsuario: usuario.idUsuario, idsCursos: usuario.cursosUsuario.map((cur: Curso) => cur.idCurso) };
 
 		return this.http
 			.put<string>(this.apiUrl + 'cursos', cursosUsuario, {

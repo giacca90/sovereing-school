@@ -14,23 +14,23 @@ export const serverRoutes: ServerRoute[] = [
 		renderMode: RenderMode.Prerender,
 	},
 	{
-		path: 'curso/:id_curso',
+		path: 'curso/:idCurso',
 		renderMode: RenderMode.Client,
 	},
 	{
-		path: 'chat/:id_curso',
+		path: 'chat/:idCurso',
 		renderMode: RenderMode.Client,
 	},
 	{
-		path: 'chat/:id_curso/:id_mensaje',
+		path: 'chat/:idCurso/:id_mensaje',
 		renderMode: RenderMode.Client,
 	},
 	{
-		path: 'repro/:id_curso/:id_clase',
+		path: 'repro/:idCurso/:idClase',
 		renderMode: RenderMode.Client,
 	},
 	{
-		path: 'editorCurso/:id_curso',
+		path: 'editorCurso/:idCurso',
 		renderMode: RenderMode.Client,
 	},
 	{

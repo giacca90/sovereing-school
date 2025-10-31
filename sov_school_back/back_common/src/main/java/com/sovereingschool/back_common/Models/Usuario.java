@@ -26,28 +26,30 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @Entity
 @Table(name = "usuario")
 public class Usuario implements Serializable {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_usuario")
     private Long idUsuario;
 
-    @Column(nullable = false)
+    @Column(name = "nombre_usuario", nullable = false)
     private String nombreUsuario;
 
-    @Column(unique = true, columnDefinition = "text[]")
+    @Column(name = "foto_usuario", columnDefinition = "text[]")
     private List<String> fotoUsuario;
 
     @Column(length = 1500)
     private String presentacion;
 
-    @Column(nullable = false, name = "roll_usuario")
-    @Enumerated(EnumType.STRING) // Esto es importante
+    @Enumerated(EnumType.STRING)
+    @Column(name = "roll_usuario", nullable = false)
     private RoleEnum rollUsuario;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -56,10 +58,11 @@ public class Usuario implements Serializable {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "usuario_curso", joinColumns = @JoinColumn(name = "id_usuario"), inverseJoinColumns = @JoinColumn(name = "id_curso"))
-    @JsonIgnoreProperties({ "clases_curso", "planes_curso", "precio_curso" })
+    @JsonIgnoreProperties({ "clasesCurso", "planesCurso", "precioCurso" })
     private List<Curso> cursosUsuario;
 
     @Temporal(TemporalType.DATE)
+    @Column(name = "fecha_registro_usuario")
     private Date fechaRegistroUsuario;
 
     @Column(name = "is_enabled")

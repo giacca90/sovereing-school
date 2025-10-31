@@ -12,7 +12,7 @@ import { Usuario } from './app/models/Usuario';
 import { setGlobalInitCache } from './init-cache';
 import { crearJwt, verificarJwt } from './jwt.util';
 
-const URL = process.env['FRONT_URL'] || 'https://localhost:4200';
+const URL = process.env['FRONTURL'] || 'https://localhost:4200';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 
@@ -50,8 +50,8 @@ app.use(
 			const payload = verificarJwt(token);
 			if (payload) {
 				try {
-					if (!payload.id_usuario) return;
-					const usuario = await fetchUsuario(payload.id_usuario);
+					if (!payload.idUsuario) return;
+					const usuario = await fetchUsuario(payload.idUsuario);
 					res.locals['usuario'] = usuario || null;
 					(globalThis as any).ssrUsuario = usuario || null;
 
@@ -86,17 +86,17 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 /**
  * Función para obtener usuario desde backend
- * @param id_usuario Number
+ * @param idUsuario Number
  * @returns  Promise<Usuario | null>
  */
-async function fetchUsuario(id_usuario: number): Promise<Usuario | null> {
+async function fetchUsuario(idUsuario: number): Promise<Usuario | null> {
 	const BACK_BASE = process.env['BACK_BASE_DOCKER'] || 'https://localhost:8080';
 	try {
 		const headers: Record<string, string> = {};
-		const ssrToken = crearJwt({ id_usuario });
+		const ssrToken = crearJwt({ idUsuario });
 		headers['Authorization'] = `Bearer ${ssrToken}`;
 
-		const resp = await fetch(`${BACK_BASE}/usuario/${id_usuario}`, { method: 'GET', headers });
+		const resp = await fetch(`${BACK_BASE}/usuario/${idUsuario}`, { method: 'GET', headers });
 		if (!resp.ok) {
 			console.error(`[SSR] Backend devolvió ${resp.status}:`, await resp.text());
 			return null;
@@ -136,12 +136,12 @@ app.post(
 		}
 
 		const payloadFront = verificarJwt(token);
-		if (!payloadFront?.id_usuario) {
+		if (!payloadFront?.idUsuario) {
 			res.status(401).json({ ok: false, message: 'Token inválido' });
 			return;
 		}
 
-		const ssrToken = crearJwt({ id_usuario: payloadFront.id_usuario });
+		const ssrToken = crearJwt({ idUsuario: payloadFront.idUsuario });
 		res.cookie('ssrUserToken', ssrToken, {
 			httpOnly: true,
 			secure: true,

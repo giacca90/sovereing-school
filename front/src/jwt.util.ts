@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 const SECRET_KEY = process.env['JWT_KEY'] || 'clave-secreta-temporal';
 
 interface JwtPayloadSSR {
-	id_usuario: number;
+	idUsuario: number;
 }
 
 /**
@@ -17,7 +17,7 @@ export function crearJwt(payload: JwtPayloadSSR): string {
 	// payload siguiendo lo que hace el back en Java
 	const claims = {
 		rol: 'ROLE_ADMIN',
-		id_usuario: payload.id_usuario,
+		idUsuario: payload.idUsuario,
 	};
 
 	const options: SignOptions = {
@@ -34,11 +34,11 @@ export function crearJwt(payload: JwtPayloadSSR): string {
  * Verificar y decodificar un token
  *
  * @param token String
- * @returns (JwtPayload & { id_usuario?: number })
+ * @returns (JwtPayload & { idUsuario?: number })
  */
-export function verificarJwt(token: string): (JwtPayload & { id_usuario?: number }) | null {
+export function verificarJwt(token: string): (JwtPayload & { idUsuario?: number }) | null {
 	try {
-		const decoded = jwt.verify(token, SECRET_KEY) as JwtPayload & { id_usuario?: number };
+		const decoded = jwt.verify(token, SECRET_KEY) as JwtPayload & { idUsuario?: number };
 		return decoded;
 	} catch (err: any) {
 		if (err.name === 'TokenExpiredError') {
