@@ -28,7 +28,7 @@
 		"@angular/ssr": "20.3.7",
 		"@stomp/stompjs": "7.2.1",
 		"@videojs/http-streaming": "3.17.2",
-		"axios": "1.13.0",
+		"axios": "1.13.1",
 		"compression": "1.8.1",
 		"cookie-parser": "1.4.7",
 		"express": "5.1.0",
