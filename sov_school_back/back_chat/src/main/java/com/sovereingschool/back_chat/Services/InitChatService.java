@@ -87,7 +87,7 @@ public class InitChatService {
         List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
         if (usuarioChat.getMensajes() != null && !usuarioChat.getMensajes().isEmpty()) {
             List<MensajeChat> mensajes = this.mensajeChatRepo.findAllById(usuarioChat.getMensajes());
-            if (mensajes != null && !mensajes.isEmpty()) {
+            if (!mensajes.isEmpty()) {
                 mensajesDTO = getMensajesDTO(mensajes);
             }
         }
@@ -96,7 +96,7 @@ public class InitChatService {
         List<CursoChatDTO> cursosChatDTO = new ArrayList<>();
         if (usuarioChat.getCursos() != null && !usuarioChat.getCursos().isEmpty()) {
             List<CursoChat> cursosChat = this.cursoChatRepo.findAllById(usuarioChat.getCursos());
-            if (cursosChat != null && !cursosChat.isEmpty()) {
+            if (!cursosChat.isEmpty()) {
                 for (CursoChat cursoChat : cursosChat) {
                     Curso curso = cursoRepo.findById(cursoChat.getIdCurso()).orElseThrow(() -> {
                         logger.error("InitChatService: initChat: Error en obtener el curso con ID {}",

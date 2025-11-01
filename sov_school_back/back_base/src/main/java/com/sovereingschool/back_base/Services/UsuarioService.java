@@ -600,8 +600,7 @@ public class UsuarioService implements IUsuarioService {
     private void addUsuarioChat(Usuario usuario) {
         try {
             WebClient webClientStream = webClientConfig.createSecureWebClient(backChatURL);
-            // TODO: implementar en el servicio de chat
-            webClientStream.put().uri("/nuevoUsuarioChat")
+            webClientStream.put().uri("/crea_usuario_chat")
                     .body(Mono.just(usuario), Usuario.class)
                     .retrieve()
                     .onStatus(
@@ -631,6 +630,29 @@ public class UsuarioService implements IUsuarioService {
     }
 
     private void deleteUsuarioChat(Long id) {
-        // TODO: Auto-generated method stub
+        try {
+            WebClient webClientStream = webClientConfig.createSecureWebClient(backChatURL);
+            webClientStream.delete().uri("/delete_usuario_chat/" + id)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::isError,
+                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
+                            }))
+                    .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
+                        return Mono.empty(); // Continuar sin interrumpir la aplicación
+                    }).subscribe(res -> {
+                        // Maneja el resultado cuando esté disponible
+                        if (res == null || !res.equals("Usuario chat borrado con exito!!!")) {
+                            logger.error("Error en borrar el chat del usuario");
+                            logger.error(res);
+                        }
+                    });
+        } catch (Exception e) {
+            logger.error("Error en borrar el chat del usuario: {}", e.getMessage());
+        }
     }
 }

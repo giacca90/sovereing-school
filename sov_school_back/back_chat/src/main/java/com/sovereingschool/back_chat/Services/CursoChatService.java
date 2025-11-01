@@ -52,13 +52,24 @@ public class CursoChatService {
 
     private Logger logger = LoggerFactory.getLogger(CursoChatService.class);
 
-    public CursoChatService(CursoChatRepository cursoChatRepo, MensajeChatRepository mensajeChatRepo,
-            UsuarioChatRepository usuarioChatRepo, InitChatService initChatService, ClaseRepository claseRepo) {
+    public CursoChatService(
+
+            CursoChatRepository cursoChatRepo,
+            InitChatService initChatService,
+            CursoRepository cursoRepo,
+            ClaseRepository claseRepo,
+            UsuarioRepository usuarioRepo,
+            MensajeChatRepository mensajeChatRepo,
+            UsuarioChatRepository usuarioChatRepo,
+            JwtUtil jwtUtil) {
         this.cursoChatRepo = cursoChatRepo;
+        this.initChatService = initChatService;
+        this.cursoRepo = cursoRepo;
+        this.claseRepo = claseRepo;
+        this.usuarioRepo = usuarioRepo;
         this.mensajeChatRepo = mensajeChatRepo;
         this.usuarioChatRepo = usuarioChatRepo;
-        this.initChatService = initChatService;
-        this.claseRepo = claseRepo;
+        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -391,6 +402,14 @@ public class CursoChatService {
             throw new EntityNotFoundException("Error en obtener el curso del chat");
         });
         this.cursoChatRepo.delete(cursoChat);
+    }
+
+    public void borrarUsuarioChat(Long idUsuario) {
+        UsuarioChat usuarioChat = this.usuarioChatRepo.findByIdUsuario(idUsuario).orElseThrow(() -> {
+            logger.error("Error en obtener el usuario del chat");
+            throw new EntityNotFoundException("Error en obtener el usuario del chat");
+        });
+        this.usuarioChatRepo.delete(usuarioChat);
     }
 
     public void refreshTokenInOpenWebsocket(String sessionId, String newToken) {

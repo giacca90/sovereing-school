@@ -1,6 +1,5 @@
 package com.sovereingschool.back_chat.Controllers;
 
-import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.slf4j.Logger;
@@ -26,7 +25,6 @@ import com.sovereingschool.back_chat.DTOs.CursoChatDTO;
 import com.sovereingschool.back_chat.Services.CursoChatService;
 import com.sovereingschool.back_chat.Services.InitChatService;
 import com.sovereingschool.back_common.Models.Curso;
-import com.sovereingschool.back_common.Models.Usuario;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -121,7 +119,7 @@ public class ChatController {
     public ResponseEntity<?> creaUsuarioChat(@RequestBody String message) {
         try {
             this.cursoChatService.creaUsuarioChat(message);
-            return new ResponseEntity<String>("Usuario chat creado con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Usuario chat creado con exito!!!", HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
@@ -134,7 +132,7 @@ public class ChatController {
     public ResponseEntity<?> creaCursoChat(@RequestBody String message) {
         try {
             this.cursoChatService.creaCursoChat(message);
-            return new ResponseEntity<String>("Curso chat creado con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Curso chat creado con exito!!!", HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
@@ -147,7 +145,7 @@ public class ChatController {
     public ResponseEntity<?> creaClaseChat(@RequestBody String message) {
         try {
             this.cursoChatService.creaClaseChat(message);
-            return new ResponseEntity<String>("Clase chat creado con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Clase chat creado con exito!!!", HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
@@ -160,7 +158,7 @@ public class ChatController {
     public ResponseEntity<?> borrarClaseChat(@PathVariable Long idCurso, @PathVariable Long idClase) {
         try {
             this.cursoChatService.borrarClaseChat(idCurso, idClase);
-            return new ResponseEntity<String>("Clase chat borrado con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Clase chat borrado con exito!!!", HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
@@ -173,11 +171,24 @@ public class ChatController {
     public ResponseEntity<?> borrarCursoChat(@PathVariable Long idCurso) {
         try {
             this.cursoChatService.borrarCursoChat(idCurso);
-            return new ResponseEntity<String>("Curso chat borrado con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Curso chat borrado con exito!!!", HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             return new ResponseEntity<>("Error en borrar el chat del curso: " + e.getMessage(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @DeleteMapping("/delete_usuario_chat/{idUsuario}")
+    public ResponseEntity<?> borrarUsuarioChat(@PathVariable Long idUsuario) {
+        try {
+            this.cursoChatService.borrarUsuarioChat(idUsuario);
+            return new ResponseEntity<>("Usuario chat borrado con exito!!!", HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error en borrar el chat del usuario: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -193,7 +204,7 @@ public class ChatController {
     public ResponseEntity<?> actualizarCursoChat(@RequestBody Curso curso) {
         try {
             this.cursoChatService.actualizarCursoChat(curso);
-            return new ResponseEntity<String>("Curso chat actualizado con éxito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Curso chat actualizado con éxito!!!", HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
@@ -205,7 +216,7 @@ public class ChatController {
     @GetMapping("/getAll")
     public ResponseEntity<?> getAllCursosChat() {
         try {
-            return new ResponseEntity<List<CursoChatDTO>>(this.cursoChatService.getAllCursosChat(), HttpStatus.OK);
+            return new ResponseEntity<>(this.cursoChatService.getAllCursosChat(), HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
@@ -221,16 +232,9 @@ public class ChatController {
     public ResponseEntity<?> init() {
         try {
             this.cursoChatService.init();
-            return new ResponseEntity<String>("Iniciado chat con exito!!!", HttpStatus.OK);
+            return new ResponseEntity<>("Iniciado chat con exito!!!", HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-    @PostMapping("/nuevoUsuarioChat")
-    public Boolean addUsuarioChat(@RequestBody Usuario usuario) {
-
-        return true;
-    }
-
 }

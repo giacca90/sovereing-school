@@ -54,8 +54,8 @@ export class ChatComponent implements OnInit, OnDestroy {
 										mexc.focus();
 									}
 								} else {
-									data.clases.forEach((clase) => {
-										if (clase.mensajes.filter((mex) => mex.idMensaje === this.idMensaje) && clase.mensajes.filter((mex) => mex.idMensaje === this.idMensaje).length > 0) {
+									for (const clase of data.clases) {
+										if (clase.mensajes.some((mex) => mex.idMensaje === this.idMensaje)) {
 											this.abreChatClase(clase.idClase);
 											this.cdr.detectChanges();
 											const mexc = document.getElementById('mex-' + this.idMensaje);
@@ -66,7 +66,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 												return;
 											}
 										}
-									});
+									}
 								}
 							}
 							this.cdr.detectChanges();
@@ -144,16 +144,16 @@ export class ChatComponent implements OnInit, OnDestroy {
 			flechaElement?.classList.remove('rotate-180');
 		} else {
 			// Oculta todas las cortinas y resetea las flechas
-			const clases: NodeListOf<Element> = document.querySelectorAll('.clases');
-			const flechas: NodeListOf<Element> = document.querySelectorAll('.arrow');
+			const clases = Array.from(document.querySelectorAll('.mi-clase'));
+			const flechas = Array.from(document.querySelectorAll('.arrow'));
 
-			clases.forEach((clase) => {
+			for (const clase of clases) {
 				clase.classList.add('hidden');
-			});
+			}
 
-			flechas.forEach((flecha) => {
+			for (const flecha of flechas) {
 				flecha.classList.remove('rotate-180');
-			});
+			}
 
 			// Muestra la cortina actual y rota su flecha
 			claseElement?.classList.remove('hidden');
