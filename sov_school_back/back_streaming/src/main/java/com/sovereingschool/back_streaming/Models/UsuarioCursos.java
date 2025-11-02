@@ -9,16 +9,14 @@ import com.sovereingschool.back_common.Models.RoleEnum;
 
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
 
-@AllArgsConstructor
+@Data
 @NoArgsConstructor
-@Getter
-@Setter
-@ToString
+@AllArgsConstructor
+@Builder
 @Document(collection = "user_courses")
 public class UsuarioCursos implements Serializable {
     @Id

@@ -305,6 +305,19 @@ public class StreamingController {
         }
     }
 
+    @PostMapping("/actualizar_curso_stream")
+    public ResponseEntity<?> actualizarCursoStream(@RequestBody Curso curso) {
+        try {
+            this.usuarioCursosService.actualizarCursoStream(curso);
+            return new ResponseEntity<>("Curso stream actualizado con éxito!!!", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error en actualizar el stream del curso: " + e.getCause(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @PutMapping("/addClase/{idCurso}")
     public ResponseEntity<?> add(@PathVariable Long idCurso, @RequestBody Clase clase) {
         try {
@@ -334,23 +347,19 @@ public class StreamingController {
     @DeleteMapping("/deleteCurso/{id}")
     public ResponseEntity<?> deleteCurso(@PathVariable Long id) {
         try {
-
             return new ResponseEntity<>(this.usuarioCursosService.deleteCurso(id), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @PostMapping("/actualizar_curso_stream")
-    public ResponseEntity<?> actualizarCursoStream(@RequestBody Curso curso) {
+    @DeleteMapping("/deleteUsuarioCursos/{id}")
+    public ResponseEntity<?> deleteUsuarioCursos(@PathVariable Long id) {
+
         try {
-            this.usuarioCursosService.actualizarCursoStream(curso);
-            return new ResponseEntity<>("Curso stream actualizado con éxito!!!", HttpStatus.OK);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(this.usuarioCursosService.deleteUsuarioCursos(id), HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error en actualizar el stream del curso: " + e.getCause(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

@@ -492,6 +492,7 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
+    @Override
     public List<Usuario> getAllUsuarios() {
         try {
             return this.usuarioRepo.findAll();
@@ -626,7 +627,30 @@ public class UsuarioService implements IUsuarioService {
     }
 
     private void deleteUsuarioStream(Long id) {
-        // TODO: Auto-generated method stub
+        try {
+            WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
+            webClientStream.delete().uri("/deleteUsuarioStream/" + id)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::isError,
+                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
+                            }))
+                    .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
+                        return Mono.empty(); // Continuar sin interrumpir la aplicación
+                    }).subscribe(res -> {
+                        // Maneja el resultado cuando esté disponible
+                        if (res == null || !res.equals("Usuario stream borrado con exito!!!")) {
+                            logger.error("Error en borrar el usuario del stream");
+                            logger.error(res);
+                        }
+                    });
+        } catch (Exception e) {
+            logger.error("Error en eliminar el usuario del stream: {}", e.getMessage());
+        }
     }
 
     private void deleteUsuarioChat(Long id) {

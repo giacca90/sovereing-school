@@ -1,14 +1,14 @@
 package com.sovereingschool.back_base.DTOs;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Builder;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@AllArgsConstructor
+@Data
 @NoArgsConstructor
-@Getter
-@Setter
+@AllArgsConstructor
+@Builder
 public class ChangePassword {
 	private Long idUsuario;
 	private String oldPassword;

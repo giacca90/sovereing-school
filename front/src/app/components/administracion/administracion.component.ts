@@ -116,12 +116,11 @@ export class AdministracionComponent {
 		});
 	}
 
-	// TODO: activar la eliminación de cursos
 	eliminaCurso(curso: Curso) {
 		if (!confirm('¿Estás seguro que deseas eliminar este curso?\n Esto eliminará también el chat de este curso')) {
 			return;
 		}
-		/* this.cursosService.deleteCurso(curso).subscribe((data: boolean) => {
+		this.cursosService.deleteCurso(curso).subscribe((data: boolean) => {
 			if (data) {
 				this.cursosService.getAllCursos().subscribe((data: Curso[] | null) => {
 					if (data) {
@@ -130,14 +129,14 @@ export class AdministracionComponent {
 					}
 				});
 			}
-		}); */
+		});
 	}
 
 	eliminaChat(chat: CursoChat) {
 		if (!confirm('¿Estás seguro que deseas eliminar este chat?\n Esto no eliminará el curso de este chat')) {
 			return;
 		}
-		/* this.chatsService.deleteChat(chat).subscribe((data: boolean) => {
+		this.chatsService.deleteChat(chat).subscribe((data: boolean) => {
 			if (data) {
 				this.chatsService.getAllChats().subscribe((data: CursoChat[] | null) => {
 					if (data) {
@@ -146,7 +145,7 @@ export class AdministracionComponent {
 					}
 				});
 			}
-		}); */
+		});
 	}
 
 	mostrarUsuario(idUsuario: number) {

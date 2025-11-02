@@ -252,30 +252,6 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         return 0L;
     }
 
-    public boolean deleteCurso(Long id) {
-        // Encuentra el documento que contiene el curso específico
-        Query query = new Query();
-        query.addCriteria(Criteria.where("cursos.id_curso").is(id));
-        List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
-
-        if (usuarioCursos == null || usuarioCursos.isEmpty()) {
-            logger.error("No se encontró el documento.");
-            return false;
-        }
-
-        for (UsuarioCursos usrCursos : usuarioCursos) {
-            List<StatusCurso> statusCurso = usrCursos.getCursos();
-            for (int i = 0; i < statusCurso.size(); i++) {
-                if (statusCurso.get(i).getIdCurso().equals(id)) {
-                    statusCurso.remove(i);
-                    this.usuarioCursosRepository.save(usrCursos);
-                    break;
-                }
-            }
-        }
-        return true;
-    }
-
     public void actualizarCursoStream(Curso curso) {
         List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getIdCurso());
         if (usuarios != null && !usuarios.isEmpty()) {
@@ -307,5 +283,39 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             logger.error("Error en convertir los videos del curso: {}", e.getMessage());
             throw new RuntimeException("Error en convertir los videos del curso: " + e.getMessage());
         }
+    }
+
+    public boolean deleteUsuarioCursos(Long idUsuario) {
+        UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
+            logger.error("Error en obtener el usuario del chat");
+            throw new EntityNotFoundException("Error en obtener el usuario del chat");
+        });
+
+        this.usuarioCursosRepository.delete(usuarioCursos);
+        return true;
+    }
+
+    public boolean deleteCurso(Long id) {
+        // Encuentra el documento que contiene el curso específico
+        Query query = new Query();
+        query.addCriteria(Criteria.where("cursos.id_curso").is(id));
+        List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
+
+        if (usuarioCursos == null || usuarioCursos.isEmpty()) {
+            logger.error("No se encontró el documento.");
+            return false;
+        }
+
+        for (UsuarioCursos usrCursos : usuarioCursos) {
+            List<StatusCurso> statusCurso = usrCursos.getCursos();
+            for (int i = 0; i < statusCurso.size(); i++) {
+                if (statusCurso.get(i).getIdCurso().equals(id)) {
+                    statusCurso.remove(i);
+                    this.usuarioCursosRepository.save(usrCursos);
+                    break;
+                }
+            }
+        }
+        return true;
     }
 }

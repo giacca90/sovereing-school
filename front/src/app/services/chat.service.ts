@@ -251,4 +251,20 @@ export class ChatService {
 			}),
 		);
 	}
+
+	deleteChat(cursoChat: CursoChat) {
+		return this.http.delete<string>(this.url + '/delete_curso_chat/' + cursoChat.idCurso).pipe(
+			map((response) => {
+				if (response === 'Curso chat borrado con exito!!!') {
+					return true;
+				}
+				console.error('Error al borrar el chat: ' + response);
+				return false;
+			}),
+			catchError((e: Error) => {
+				console.error('Error en eliminar el chat: ' + e.message);
+				return of(false);
+			}),
+		);
+	}
 }
