@@ -20,6 +20,8 @@ import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.Services.LoginService;
 import com.sovereingschool.back_base.Services.UsuarioService;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
+import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
+import com.sovereingschool.back_common.Exceptions.RepositoryException;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -68,7 +70,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             return;
         }
 
-        AuthResponse authResponse;
+        AuthResponse authResponse = null;
         Long id = loginService.compruebaCorreo(email);
 
         if (id == 0L) {
@@ -89,12 +91,19 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                     name, email, UUID.randomUUID().toString(),
                     fotos, null, new ArrayList<>(), new Date());
 
-            authResponse = usuarioService.createUsuario(newUser);
+            try {
+                authResponse = usuarioService.createUsuario(newUser);
+            } catch (RepositoryException | InternalComunicationException e) {
+                throw new RuntimeException("Error al crear el usuario: " + e.getMessage());
+            }
         } else {
             String password = loginService.getPasswordLogin(id);
 
             authResponse = loginService.loginUser(id, password);
         }
+
+        if (authResponse == null)
+            return;
 
         String json = objectMapper.writeValueAsString(authResponse);
         String script = "<script>" +

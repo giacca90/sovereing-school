@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -32,6 +30,7 @@ import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
 
 @Component
 public class JwtUtil {
@@ -51,8 +50,6 @@ public class JwtUtil {
 
     @Value("${security.jwt.user.generator}")
     private String userGenerator;
-
-    private Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 
     public Date getExpiredForServer() {
         return new Date(System.currentTimeMillis() + 60 * 60 * 1000); // 1 hour
@@ -90,14 +87,22 @@ public class JwtUtil {
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.joining(","));
 
+        Date expiration;
+        if (tokenType.equals("access")) {
+            expiration = getExpiredForAccessToken();
+        } else if (tokenType.equals("server")) {
+            expiration = getExpiredForServer();
+        } else {
+            expiration = getExpiredForRefreshToken();
+        }
+
         return JWT.create()
                 .withIssuer(this.userGenerator)
                 .withSubject(username)
                 .withClaim("rol", roles)
                 .withClaim("idUsuario", idUsuario)
                 .withIssuedAt(new Date())
-                .withExpiresAt(tokenType.equals("access") ? getExpiredForAccessToken()
-                        : tokenType.equals("server") ? getExpiredForServer() : getExpiredForRefreshToken()) // 1 hour
+                .withExpiresAt(expiration)
                 .withJWTId(UUID.randomUUID().toString())
                 .withNotBefore(new Date(System.currentTimeMillis())) //
                 .sign(algorithm);
@@ -122,22 +127,22 @@ public class JwtUtil {
                 .sign(algorithm);
     }
 
-    public String generateRegistrationToken(NewUsuario newUsuario) {
+    public String generateRegistrationToken(NewUsuario newUsuario) throws InternalServerException {
+        Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
         try {
-            Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
+            String newUserString = convertirObjetoABase64(newUsuario);
             return JWT.create()
                     .withIssuer(this.userGenerator)
                     .withSubject(newUsuario.getCorreoElectronico())
                     .withClaim("rol", "ROLE_USER")
-                    .withClaim("newUsuario", convertirObjetoABase64(newUsuario))
+                    .withClaim("newUsuario", newUserString)
                     .withIssuedAt(new Date())
                     .withExpiresAt(getExpiredForInitToken())
                     .withJWTId(UUID.randomUUID().toString())
                     .withNotBefore(new Date(System.currentTimeMillis())) //
                     .sign(algorithm);
-        } catch (Exception e) {
-            logger.error("Error al generar el token de registro: {}", e.getMessage());
-            throw new RuntimeException("Error al generar el token de registro: " + e.getMessage());
+        } catch (IOException e) {
+            throw new InternalServerException("Error al generar el token de registro: " + e.getMessage());
         }
     }
 
@@ -148,20 +153,17 @@ public class JwtUtil {
      * @return String con el nombre de usuario
      */
 
-    public String getUsername(String token) {
+    public String getUsername(String token) throws AuthenticationException {
         if (token == null || token.isEmpty()) {
             throw new BadCredentialsException("El token no puede estar vacío");
         }
-        try {
-            DecodedJWT decodedJWT = decodeToken(token);
-            String username = decodedJWT.getSubject();
-            if (username == null || username.isEmpty()) {
-                throw new BadCredentialsException("El token no contiene un nombre de usuario válido");
-            }
-            return username;
-        } catch (AuthenticationException e) {
-            throw e;
+
+        DecodedJWT decodedJWT = decodeToken(token);
+        String username = decodedJWT.getSubject();
+        if (username == null || username.isEmpty()) {
+            throw new BadCredentialsException("El token no contiene un nombre de usuario válido");
         }
+        return username;
     }
 
     /**
@@ -171,20 +173,17 @@ public class JwtUtil {
      * @return String con los roles separados lo ','
      */
 
-    public String getRoles(String token) {
+    public String getRoles(String token) throws AuthenticationException {
         if (token == null || token.isEmpty()) {
             throw new BadCredentialsException("El token no puede estar vacío");
         }
-        try {
-            DecodedJWT decodedJWT = decodeToken(token);
-            String roles = decodedJWT.getClaim("rol").asString();
-            if (roles == null || roles.isEmpty()) {
-                throw new BadCredentialsException("El token no contiene roles válidos");
-            }
-            return roles;
-        } catch (AuthenticationException e) {
-            throw e;
+
+        DecodedJWT decodedJWT = decodeToken(token);
+        String roles = decodedJWT.getClaim("rol").asString();
+        if (roles == null || roles.isEmpty()) {
+            throw new BadCredentialsException("El token no contiene roles válidos");
         }
+        return roles;
     }
 
     /**
@@ -194,18 +193,13 @@ public class JwtUtil {
      * @return Long con el ID de usuario
      */
 
-    public Long getIdUsuario(String token) {
+    public Long getIdUsuario(String token) throws AuthenticationException {
         if (token == null || token.isEmpty()) {
             throw new BadCredentialsException("El token no puede estar vacío");
         }
-
-        try {
-            DecodedJWT decodedJWT = decodeToken(token);
-            Claim idClaim = decodedJWT.getClaim("idUsuario");
-            return idClaim.asLong();
-        } catch (AuthenticationException e) {
-            throw e;
-        }
+        DecodedJWT decodedJWT = decodeToken(token);
+        Claim idClaim = decodedJWT.getClaim("idUsuario");
+        return idClaim.asLong();
     }
 
     /**
@@ -216,20 +210,16 @@ public class JwtUtil {
      * @return String con el valor del claim
      */
 
-    public String getSpecificClaim(String token, String claim) {
+    public String getSpecificClaim(String token, String claim) throws AuthenticationException {
         if (token == null || claim == null || claim.isEmpty()) {
             throw new BadCredentialsException("El JWT decodificado y el claim no pueden ser nulos o vacíos");
         }
-        try {
-            DecodedJWT decodedJWT = decodeToken(token);
-            String claimValue = decodedJWT.getClaim(claim).asString();
-            if (claimValue == null) {
-                throw new BadCredentialsException("El claim solicitado no existe en el token");
-            }
-            return claimValue;
-        } catch (AuthenticationException e) {
-            throw e;
+        DecodedJWT decodedJWT = decodeToken(token);
+        String claimValue = decodedJWT.getClaim(claim).asString();
+        if (claimValue == null) {
+            throw new BadCredentialsException("El claim solicitado no existe en el token");
         }
+        return claimValue;
     }
 
     /**
@@ -239,16 +229,12 @@ public class JwtUtil {
      * @return Map<String, Claim> con todos los claims del token
      */
 
-    public Map<String, Claim> getAllClaims(String token) {
+    public Map<String, Claim> getAllClaims(String token) throws AuthenticationException {
         if (token == null || token.isEmpty()) {
             throw new BadCredentialsException("El token no puede estar vacío");
         }
-        try {
-            DecodedJWT decodedJWT = decodeToken(token);
-            return decodedJWT.getClaims();
-        } catch (AuthenticationException e) {
-            throw e;
-        }
+        DecodedJWT decodedJWT = decodeToken(token);
+        return decodedJWT.getClaims();
     }
 
     /**
@@ -258,35 +244,31 @@ public class JwtUtil {
      * @return Objecto Authentication del token
      */
 
-    public Authentication createAuthenticationFromToken(String token) {
+    public Authentication createAuthenticationFromToken(String token) throws AuthenticationException {
         if (token == null || token.isEmpty()) {
             throw new BadCredentialsException("El token no puede estar vacío");
         }
-        try {
-            String username = null;
-            if (getIdUsuario(token) != null) {
-                username = getIdUsuario(token).toString();
-            } else {
-                username = getUsername(token);
-            }
-            String rolesString = getRoles(token);
-            Long idUsuario = null;
-            if (username != null && !username.equals("server") && !username.equals("Visitante")) {
-                idUsuario = getIdUsuario(token);
-            }
-
-            List<SimpleGrantedAuthority> authorities = Arrays.stream(rolesString.split(","))
-                    .map(SimpleGrantedAuthority::new).toList();
-
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, token,
-                    authorities);
-
-            auth.setDetails(idUsuario);
-
-            return auth;
-        } catch (AuthenticationException e) {
-            throw e;
+        String username = null;
+        if (getIdUsuario(token) != null) {
+            username = getIdUsuario(token).toString();
+        } else {
+            username = getUsername(token);
         }
+        String rolesString = getRoles(token);
+        Long idUsuario = null;
+        if (username != null && !username.equals("server") && !username.equals("Visitante")) {
+            idUsuario = getIdUsuario(token);
+        }
+
+        List<SimpleGrantedAuthority> authorities = Arrays.stream(rolesString.split(","))
+                .map(SimpleGrantedAuthority::new).toList();
+
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, token,
+                authorities);
+
+        auth.setDetails(idUsuario);
+
+        return auth;
     }
 
     /**
@@ -296,13 +278,9 @@ public class JwtUtil {
      * @return boolean con el resultado de la verificación
      */
 
-    public boolean isTokenValid(String token) {
-        try {
-            decodeToken(token);
-            return true;
-        } catch (AuthenticationException e) {
-            throw e;
-        }
+    public boolean isTokenValid(String token) throws AuthenticationException {
+        decodeToken(token);
+        return true;
     }
 
     /**

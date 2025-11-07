@@ -11,6 +11,8 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
+import com.sovereingschool.back_common.Exceptions.NotFoundException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Usuario;
@@ -252,7 +254,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         return 0L;
     }
 
-    public void actualizarCursoStream(Curso curso) {
+    public void actualizarCursoStream(Curso curso) throws InternalServerException {
         List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getIdCurso());
         if (usuarios != null && !usuarios.isEmpty()) {
             for (UsuarioCursos usuario : usuarios) {
@@ -280,7 +282,8 @@ public class UsuarioCursosService implements IUsuarioCursosService {
                 this.streamingService.convertVideos(curso);
             }
         } catch (IOException | InterruptedException e) {
-            logger.error("Error en convertir los videos del curso: {}", e.getMessage());
+            throw new InternalServerException("Error en convertir los videos del curso: " + e.getMessage());
+        } catch (NotFoundException e) {
             throw new RuntimeException("Error en convertir los videos del curso: " + e.getMessage());
         }
     }

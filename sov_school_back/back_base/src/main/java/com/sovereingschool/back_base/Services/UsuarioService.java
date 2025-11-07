@@ -39,6 +39,9 @@ import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.CursosUsuario;
 import com.sovereingschool.back_base.Interfaces.IUsuarioService;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
+import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
+import com.sovereingschool.back_common.Exceptions.RepositoryException;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Login;
 import com.sovereingschool.back_common.Models.Plan;
@@ -120,6 +123,8 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param new_usuario Objeto NewUsuario con los datos del usuario
      * @return Objeto AuthResponse con los datos del usuario
+     * @throws RepositoryException
+     * @throws InternalComunicationException
      * @throws DataIntegrityViolationException si el usuario ya existe
      * @throws IOException                     si ocurre un error al subir la foto
      * @throws MessagingException              si ocurre un error al enviar el
@@ -128,7 +133,7 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public AuthResponse createUsuario(NewUsuario newUsuario) {
+    public AuthResponse createUsuario(NewUsuario newUsuario) throws RepositoryException, InternalComunicationException {
         Usuario usuario = new Usuario(
                 null, // Long id_usuario
                 newUsuario.getNombreUsuario(), // String nombre_usuario
@@ -147,7 +152,7 @@ public class UsuarioService implements IUsuarioService {
         try {
             Usuario usuarioInsertado = this.usuarioRepo.save(usuario);
             if (usuarioInsertado.getIdUsuario() == null) {
-                throw new RuntimeException("Error al crear el usuario");
+                throw new RepositoryException("Error al crear el usuario");
             }
             Login login = new Login();
             login.setUsuario(usuarioInsertado);
@@ -302,6 +307,7 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param usuario Objeto Usuario con los datos del usuario
      * @return Usuario con los datos actualizados
+     * @throws InternalServerException
      * @throws EntityNotFoundException  si el usuario no existe
      * @throws RuntimeException         si ocurre un error en el servidor
      * @throws IllegalArgumentException si el ID no es válido
@@ -311,7 +317,7 @@ public class UsuarioService implements IUsuarioService {
      *
      */
     @Override
-    public Usuario updateUsuario(Usuario usuario) {
+    public Usuario updateUsuario(Usuario usuario) throws InternalServerException {
         Usuario usuarioOld = this.getUsuario(usuario.getIdUsuario());
 
         for (String foto : usuarioOld.getFotoUsuario()) {
@@ -329,8 +335,7 @@ public class UsuarioService implements IUsuarioService {
                         logger.error("La foto no existe: {}", photoPath.toString());
                     }
                 } catch (IOException e) {
-                    logger.error("Error al eliminar la foto: {}: {}", photoPath.toString(), e.getMessage());
-                    throw new RuntimeException(
+                    throw new InternalServerException(
                             "Error al eliminar la foto: " + photoPath.toString() + ": " + e.getMessage());
                 }
             }
@@ -400,13 +405,14 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param id ID del usuario
      * @return String con el resultado de la operación
+     * @throws RepositoryException
      * @throws EntityNotFoundException  si el usuario no existe
      * @throws RuntimeException         si ocurre un error en el servidor
      * @throws IllegalArgumentException si el ID no es válido
      * 
      */
     @Override
-    public String deleteUsuario(Long id) {
+    public String deleteUsuario(Long id) throws RepositoryException {
         this.usuarioRepo.findUsuarioForId(id).orElseThrow(() -> {
             logger.error("Error en obtener el usuario con ID {}", id);
             return new EntityNotFoundException("Error en obtener el usuario con ID " + id);
@@ -422,7 +428,7 @@ public class UsuarioService implements IUsuarioService {
             throw new IllegalArgumentException("Error en eliminar el usuario con ID " + id);
         } catch (Exception e) {
             logger.error("Error en eliminar el usuario con ID {}", id);
-            throw new RuntimeException("Error en eliminar el usuario con ID " + id);
+            throw new RepositoryException("Error en eliminar el usuario con ID " + id);
         }
 
         // Eliminamos el usuario del chat
@@ -451,7 +457,7 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public boolean sendConfirmationEmail(NewUsuario newUsuario) {
+    public boolean sendConfirmationEmail(NewUsuario newUsuario) throws InternalServerException {
         Context context = new Context();
         String token = jwtUtil.generateRegistrationToken(newUsuario);
         context.setVariable("nombre", newUsuario.getNombreUsuario());
@@ -471,34 +477,28 @@ public class UsuarioService implements IUsuarioService {
             return true;
         } catch (MailAuthenticationException e) {
             // Error de autenticación con el servidor SMTP
-            logger.error("Error de autenticación al enviar el correo: {}", e.getMessage());
-            throw new RuntimeException("Error de autenticación al enviar el correo: " + e.getMessage());
+            throw new InternalServerException("Error de autenticación al enviar el correo: " + e.getMessage());
         } catch (MailSendException e) {
             // Error al enviar el mensaje
-            logger.error("Error al enviar el correo: {}", e.getMessage());
-            throw new RuntimeException("Error al enviar el correo: " + e.getMessage());
+            throw new InternalServerException("Error al enviar el correo: " + e.getMessage());
         } catch (MailException e) {
             // Otros errores relacionados con el envío de correos
-            logger.error("Error general al enviar el correo: {}", e.getMessage());
-            throw new RuntimeException("Error general al enviar el correo: " + e.getMessage());
+            throw new InternalServerException("Error general al enviar el correo: " + e.getMessage());
         } catch (MessagingException e) {
             // Error al construir el mensaje MIME
-            logger.error("Error al construir el mensaje de correo: {}", e.getMessage());
-            throw new RuntimeException("Error al construir el mensaje de correo: " + e.getMessage());
+            throw new InternalServerException("Error al construir el mensaje de correo: " + e.getMessage());
         } catch (Exception e) {
             // Cualquier otro error inesperado
-            logger.error("Error inesperado al enviar el correo: {}", e.getMessage());
-            throw new RuntimeException("Error inesperado al enviar el correo: " + e.getMessage());
+            throw new InternalServerException("Error inesperado al enviar el correo: " + e.getMessage());
         }
     }
 
     @Override
-    public List<Usuario> getAllUsuarios() {
+    public List<Usuario> getAllUsuarios() throws RepositoryException {
         try {
             return this.usuarioRepo.findAll();
         } catch (Exception e) {
-            logger.error("Error al obtener todos los usuarios: {}", e.getMessage());
-            throw new RuntimeException("Error al obtener todos los usuarios: " + e.getMessage());
+            throw new RepositoryException("Error al obtener todos los usuarios: " + e.getMessage());
         }
     }
 
@@ -560,12 +560,11 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
-    private void updateSSR() {
+    private void updateSSR() throws InternalComunicationException {
         try {
             this.initAppService.refreshSSR();
         } catch (Exception e) {
-            logger.error("Error en actualizar el SSR: {}", e.getMessage());
-            throw new RuntimeException("Error en actualizar el SSR: " + e.getMessage());
+            throw new InternalComunicationException("Error en actualizar el SSR: " + e.getMessage());
         }
     }
 

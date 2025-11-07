@@ -2,6 +2,7 @@ package com.sovereingschool.back_base.Services;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.hibernate.Hibernate;
@@ -106,14 +107,20 @@ public class LoginService implements UserDetailsService, ILoginService {
     }
 
     public Integer changePasswordLogin(ChangePassword changepassword) {
-        if (changepassword.getNewPassword().length() < 1 || changepassword.getOldPassword().length() < 1)
+        if (changepassword.getNewPassword().isEmpty() || changepassword.getOldPassword().isEmpty())
             return null;
-        if (this.loginRepository.findPasswordLoginForId(changepassword.getIdUsuario())
-                .equals(changepassword.getOldPassword())) {
+
+        // Desempaquetar Optional<String>
+        String oldPasswordDB = this.loginRepository
+                .findPasswordLoginForId(changepassword.getIdUsuario())
+                .orElse(null);
+
+        if (Objects.equals(oldPasswordDB, changepassword.getOldPassword())) {
             this.loginRepository.changePasswordLoginForId(changepassword.getIdUsuario(),
                     changepassword.getNewPassword());
             return 1;
         }
+
         return 0;
     }
 
@@ -188,10 +195,9 @@ public class LoginService implements UserDetailsService, ILoginService {
             throw new BadCredentialsException("Usuario o password incorrecto");
         }
 
-        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
-            if (!password.equals(userDetails.getPassword())) {
-                throw new BadCredentialsException("Password incorrecta");
-            }
+        if (!passwordEncoder.matches(password, userDetails.getPassword())
+                && !password.equals(userDetails.getPassword())) {
+            throw new BadCredentialsException("Password incorrecta");
         }
 
         Authentication auth = new UsernamePasswordAuthenticationToken(correo, userDetails.getPassword(),
@@ -268,8 +274,7 @@ public class LoginService implements UserDetailsService, ILoginService {
                 logger.error("Usuario no encontrado en loginWithToken: id_usuario: {}", idUsuario);
                 throw new BadCredentialsException("Usuario no encontrado");
             }
-            Usuario usuario = opUsuario.get();
-            return usuario;
+            return opUsuario.get();
         } catch (JWTVerificationException | InsufficientAuthenticationException | BadCredentialsException e) {
             logger.error("Error en hacer login con token: {}", e.getMessage());
             throw new JWTVerificationException("Error en hacer login con token: " + e.getMessage());

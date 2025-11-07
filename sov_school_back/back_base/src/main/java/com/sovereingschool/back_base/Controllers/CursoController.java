@@ -21,6 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.sovereingschool.back_base.Interfaces.ICursoService;
+import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
+import com.sovereingschool.back_common.Exceptions.NotFoundException;
+import com.sovereingschool.back_common.Exceptions.RepositoryException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
@@ -171,14 +175,14 @@ public class CursoController {
 		try {
 			response = this.cursoService.updateCurso(curso);
 			return new ResponseEntity<>(response, HttpStatus.OK);
-		} catch (EntityNotFoundException e) {
+		} catch (NotFoundException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-		} catch (IllegalArgumentException | IllegalStateException e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-		} catch (AccessDeniedException e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.FORBIDDEN);
-		} catch (RuntimeException e) {
+		} catch (InternalComunicationException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.FAILED_DEPENDENCY);
+		} catch (InternalServerException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		} catch (RepositoryException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_MODIFIED);
 		}
 	}
 

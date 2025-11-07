@@ -97,7 +97,7 @@ public class CursoChatService {
                 List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
                 if (mensajesId != null && !mensajesId.isEmpty()) {
                     List<MensajeChat> mensajesChat = mensajeChatRepo.findAllById(mensajesId);
-                    if (mensajesChat != null && !mensajesChat.isEmpty()) {
+                    if (!mensajesChat.isEmpty()) {
                         mensajesDTO = initChatService.getMensajesDTO(mensajesChat);
                     }
                 }
@@ -120,7 +120,7 @@ public class CursoChatService {
         List<MensajeChatDTO> mensajesChatDTO = new ArrayList<>();
         if (mensajesId != null && !mensajesId.isEmpty()) {
             List<MensajeChat> mensajesChat = mensajeChatRepo.findAllById(mensajesId);
-            if (mensajesChat != null && !mensajesChat.isEmpty()) {
+            if (!mensajesChat.isEmpty()) {
                 mensajesChatDTO = initChatService.getMensajesDTO(mensajesChat);
             }
         }
@@ -201,7 +201,6 @@ public class CursoChatService {
                 usuarioChat.getCursos().add(cursoChat.getId());
                 usuarioChatRepo.save(usuarioChat);
             }
-            // usuarioChat.getMensajes().add(savedId);
 
             // Notificar profesores si es pregunta
             if (mensajeChatDTO.getPregunta() != null) {

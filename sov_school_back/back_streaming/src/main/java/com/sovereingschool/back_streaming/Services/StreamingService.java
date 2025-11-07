@@ -24,6 +24,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sovereingschool.back_common.Exceptions.NotFoundException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
@@ -54,12 +55,13 @@ public class StreamingService {
      * @param curso
      * @throws IOException
      * @throws InterruptedException
+     * @throws NotFoundException
      */
     @Async
     // TODO: Modificar para trabajar solo con clases concretas
-    public void convertVideos(Curso curso) throws IOException, InterruptedException {
+    public void convertVideos(Curso curso) throws IOException, InterruptedException, NotFoundException {
         if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
-            throw new RuntimeException("Curso sin clases");
+            throw new NotFoundException("Curso sin clases");
         }
         Path baseUploadDir = Paths.get(uploadDir);
         for (Clase clase : curso.getClasesCurso()) {

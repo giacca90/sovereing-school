@@ -4,3 +4,4 @@ keystore.p12
 cert.pem
 key.pem
 */.env*
+*/target

@@ -57,6 +57,13 @@ public class StreamingController {
                 return -1;
             }
         }
+
+        @Override
+        public void close() throws IOException {
+            file.close();
+            super.close();
+        }
+
     }
 
     private UsuarioCursosService usuarioCursosService;
@@ -112,11 +119,7 @@ public class StreamingController {
         String contentType = Files.probeContentType(videoPath);
 
         // Configurar las cabeceras de la respuesta
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.setContentType(MediaType.parseMediaType(contentType));
-        responseHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "inline");
-        responseHeaders.add(HttpHeaders.CACHE_CONTROL, "no-store");
-        responseHeaders.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION);
+        HttpHeaders responseHeaders = this.createHeaders(contentType);
 
         long fileLength = Files.size(videoPath);
         return ResponseEntity.ok()
@@ -162,11 +165,7 @@ public class StreamingController {
         String contentType = Files.probeContentType(videoPath);
 
         // Configurar las cabeceras de la respuesta
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.setContentType(MediaType.parseMediaType(contentType));
-        responseHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "inline");
-        responseHeaders.add(HttpHeaders.CACHE_CONTROL, "no-store");
-        responseHeaders.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION);
+        HttpHeaders responseHeaders = this.createHeaders(contentType);
 
         Long fileLength = Files.size(videoPath);
         List<HttpRange> ranges = headers.getRange();
@@ -239,11 +238,7 @@ public class StreamingController {
             String contentType = Files.probeContentType(previewPath);
 
             // Configurar las cabeceras de la respuesta
-            HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.setContentType(MediaType.parseMediaType(contentType));
-            responseHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "inline");
-            responseHeaders.add(HttpHeaders.CACHE_CONTROL, "no-store");
-            responseHeaders.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION);
+            HttpHeaders responseHeaders = this.createHeaders(contentType);
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
@@ -268,12 +263,7 @@ public class StreamingController {
             String contentType = Files.probeContentType(partPath);
 
             // Configurar las cabeceras de la respuesta
-            HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.setContentType(MediaType.parseMediaType(contentType));
-            responseHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "inline");
-            responseHeaders.add(HttpHeaders.CACHE_CONTROL, "no-store");
-            responseHeaders.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION);
-
+            HttpHeaders responseHeaders = this.createHeaders(contentType);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .headers(responseHeaders)
@@ -361,5 +351,14 @@ public class StreamingController {
         } catch (Exception e) {
             return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private HttpHeaders createHeaders(String contentType) {
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.parseMediaType(contentType));
+        responseHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "inline");
+        responseHeaders.add(HttpHeaders.CACHE_CONTROL, "no-store");
+        responseHeaders.add(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION);
+        return responseHeaders;
     }
 }
