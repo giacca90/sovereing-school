@@ -24,7 +24,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Exceptions.NotFoundException;
+import com.sovereingschool.back_common.Exceptions.RepositoryException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
@@ -39,13 +41,18 @@ public class StreamingService {
 
     private Logger logger = LoggerFactory.getLogger(StreamingService.class);
 
-    @Value("${variable.rtmp}")
-    private String rtmp;
-
-    @Value("${variable.VIDEOS_DIR}")
     private String uploadDir;
 
-    public StreamingService(ClaseRepository claseRepo) {
+    /**
+     * Constructor de StreamingService
+     *
+     * @param uploadDir Ruta de carga de archivos
+     * @param claseRepo Repositorio de clases
+     */
+    public StreamingService(
+            @Value("${variable.VIDEOS_DIR}") String uploadDir,
+            ClaseRepository claseRepo) {
+        this.uploadDir = uploadDir;
         this.claseRepo = claseRepo;
     }
 
@@ -56,10 +63,12 @@ public class StreamingService {
      * @throws IOException
      * @throws InterruptedException
      * @throws NotFoundException
+     * @throws InternalServerException
      */
     @Async
     // TODO: Modificar para trabajar solo con clases concretas
-    public void convertVideos(Curso curso) throws IOException, InterruptedException, NotFoundException {
+    public void convertVideos(Curso curso)
+            throws IOException, InterruptedException, NotFoundException, InternalServerException {
         if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
             throw new NotFoundException("Curso sin clases");
         }
@@ -71,10 +80,11 @@ public class StreamingService {
             // Verificar que la dirección de la clase no esté vacía y que sea diferente de
             // la
             // base
-            if (!clase.getDireccionClase().isEmpty()
-                    && !clase.getDireccionClase().contains(destinationPath.toString())
-                    && !clase.getDireccionClase().endsWith(".m3u8")
-                    && clase.getDireccionClase().contains(".")) {
+            String direccion = clase.getDireccionClase();
+            if (!direccion.isEmpty()
+                    && !direccion.contains(destinationPath.toString())
+                    && !direccion.endsWith(".m3u8")
+                    && direccion.contains(".")) {
 
                 // Extraer el directorio y el nombre del archivo de entrada
                 Path inputPath = Paths.get(clase.getDireccionClase());
@@ -88,7 +98,7 @@ public class StreamingService {
                     continue;
                 }
                 List<String> ffmpegCommand = null;
-                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null, null);
+                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null);
                 if (ffmpegCommand != null) {
                     // Ejecutar el comando FFmpeg
                     ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
@@ -103,12 +113,11 @@ public class StreamingService {
                     try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                         String line;
                         while ((line = reader.readLine()) != null) {
-                            System.err.println("FFmpeg: " + line);
+                            System.out.println("FFmpeg: " + line);
                         }
                     } catch (IOException e) {
-                        logger.error("Error leyendo salida de FFmpeg: {}", e.getMessage());
                         process.destroy();
-                        throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
+                        throw new InternalServerException("Error leyendo salida de FFmpeg: " + e.getMessage());
                     }
 
                     int exitCode = process.waitFor();
@@ -133,13 +142,14 @@ public class StreamingService {
      * @param videoSetting String[]: configuración del video (ancho, alto, fps)
      * @throws IOException
      * @throws InterruptedException
+     * @throws RepositoryException
      * @throws Exception
      */
     public void startLiveStreamingFromStream(String streamId, Object inputStream, String[] videoSetting)
-            throws IOException, InterruptedException, RuntimeException, IllegalArgumentException {
+            throws IOException, InterruptedException, RuntimeException, IllegalArgumentException, RepositoryException {
         Optional<Clase> claseOpt = claseRepo.findByDireccionClase(streamId);
         if (!claseOpt.isPresent())
-            throw new RuntimeException("No se encuentra la clase con la dirección " + streamId);
+            throw new RepositoryException("No se encuentra la clase con la dirección " + streamId);
         Clase clase = claseOpt.get();
         Long idCurso = clase.getCursoClase().getIdCurso();
         Long idClase = clase.getIdClase();
@@ -155,10 +165,10 @@ public class StreamingService {
 
         // Comando FFmpeg para procesar el streaming
         List<String> ffmpegCommand;
-        if (inputStream instanceof String) {
-            ffmpegCommand = this.creaComandoFFmpeg((String) inputStream, true, streamId, videoSetting);
+        if (inputStream instanceof String str) {
+            ffmpegCommand = this.creaComandoFFmpeg(str, true, videoSetting);
         } else if (inputStream instanceof InputStream) {
-            ffmpegCommand = this.creaComandoFFmpeg("pipe:0", true, streamId, videoSetting);
+            ffmpegCommand = this.creaComandoFFmpeg("pipe:0", true, videoSetting);
         } else {
             logger.error("Tipo de entrada no soportado");
             return;
@@ -183,29 +193,11 @@ public class StreamingService {
                     System.err.println("FFmpeg: " + line);
 
                     // Enviar SDP a FFmpeg (solo para WebRTC)
-                    if (!sdpSent && inputStream instanceof InputStream && line.contains("ffmpeg version")) {
-                        try {
-                            logger.info("➡️ Enviando SDP a FFmpeg...");
-                            OutputStream os = process.getOutputStream();
-                            InputStream sdpStream = (InputStream) inputStream;
-
-                            byte[] buffer = new byte[8192];
-                            int bytesRead;
-                            while ((bytesRead = sdpStream.read(buffer)) != -1) {
-                                os.write(buffer, 0, bytesRead);
-                            }
-                            os.flush();
-                            os.close(); // cerramos stdin, el SDP ya está completo
-
-                            sdpSent = true;
-                            logger.info("✅ SDP enviado y stdin cerrado");
-                        } catch (IOException e) {
-                            logger.error("Error al enviar SDP a FFmpeg: {}", e.getMessage());
-                        }
+                    if (!sdpSent && inputStream instanceof InputStream sdpStream && line.contains("ffmpeg version")) {
+                        this.sendSDP(process, sdpStream, sdpSent);
                     }
                 }
             } catch (IOException e) {
-                logger.error("Error leyendo salida de FFmpeg: {}", e.getMessage());
                 throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
             }
         });
@@ -213,7 +205,15 @@ public class StreamingService {
         // logReader.join(); // Esperar a que se terminen de leer los logs
     }
 
-    public void stopFFmpegProcessForUser(String streamId) throws IOException, RuntimeException {
+    /**
+     * Función para detener el proceso FFmpeg para un usuario
+     * 
+     * @param streamId ID del streaming
+     * @throws RuntimeException
+     * @throws InternalServerException
+     */
+    public void stopFFmpegProcessForUser(String streamId)
+            throws RuntimeException, InternalServerException {
         String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         Process process = ffmpegProcesses.remove(sessionId);
 
@@ -240,11 +240,18 @@ public class StreamingService {
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("El proceso fue interrumpido: " + e.getMessage(), e);
+            throw new InternalServerException("El proceso fue interrumpido: " + e.getMessage(), e);
         }
     }
 
-    public Path getPreview(String idPreview) {
+    /**
+     * Función para obtener el preview del streaming
+     * 
+     * @param idPreview ID del preview
+     * @return Path con la ruta del preview
+     * @throws InternalServerException
+     */
+    public Path getPreview(String idPreview) throws InternalServerException {
         Path baseUploadDir = Paths.get(uploadDir);
         Path previewDir = baseUploadDir.resolve("previews");
         Path m3u8 = previewDir.resolve(idPreview + ".m3u8");
@@ -254,9 +261,8 @@ public class StreamingService {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-                logger.error("Error al esperar a que se genere el preview: {}", e.getMessage());
                 Thread.currentThread().interrupt();
-                throw new RuntimeException("Error al esperar a que se genere el preview: " + e.getMessage());
+                throw new InternalServerException("Error al esperar a que se genere el preview: " + e.getMessage());
             }
         }
         return m3u8;
@@ -275,7 +281,7 @@ public class StreamingService {
      * @throws IOException
      * @throws InterruptedException
      */
-    private List<String> creaComandoFFmpeg(String inputFilePath, Boolean live, String streamId, String[] videoSetting)
+    protected List<String> creaComandoFFmpeg(String inputFilePath, boolean live, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException {
         String hlsPlaylistType = live ? "event" : "vod";
         String hlsFlags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
@@ -288,45 +294,12 @@ public class StreamingService {
             height = videoSetting[1];
             fps = videoSetting[2];
         }
-        // Obtener la resolución del video
+        // Obtener la resolución del video con ffprobe
         if (width == null || height == null || fps == null) {
-            logger.info("Obteniendo la resolución del video con ffprobe");
-            ProcessBuilder processBuilder = new ProcessBuilder("ffprobe",
-                    "-v", "error",
-                    "-select_streams", "v:0",
-                    "-show_entries", "stream=width,height,r_frame_rate",
-                    "-of", "csv=p=0", inputFilePath);
-            processBuilder.redirectErrorStream(true);
-            Process process = processBuilder.start();
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                logger.info("FFProbe: {}", line);
-                String[] parts = line.split(",");
-                width = parts[0];
-                height = parts[1];
-
-                // Para calcular los fps, "r_frame_rate" devuelve un formato como"30000/1001"
-                String[] frameRateParts = parts[2].split("/");
-                if (frameRateParts.length == 2) {
-                    // Redondear el fps a entero
-                    fps = String.valueOf((int) Math.round(Double.parseDouble(frameRateParts[0]) /
-                            Double.parseDouble(frameRateParts[1])));
-                }
-            }
-
-            process.waitFor();
-            if (width.equals("0") || height.equals("0") || fps.equals("0")) {
-                logger.error("La resolución es 0");
-                throw new RuntimeException("No se pudo obtener la resolución del streaming");
-            }
-            if (width == null || height == null || fps == null) {
-                logger.error("La resolución es null, reintentando con ffprobe");
-                this.creaComandoFFmpeg(inputFilePath, live, streamId, videoSetting);
-            }
-            logger.info("Resolución: {}x{}@{}", width, height, fps);
+            videoSetting = this.ffprobe(inputFilePath);
+            width = videoSetting[0];
+            height = videoSetting[1];
+            fps = videoSetting[2];
         }
 
         int inputWidth = Integer.parseInt(width);
@@ -336,22 +309,8 @@ public class StreamingService {
 
         // Filtra todos los perfiles cuya área sea ≤ la del input
         // y cuyo fps sea 30 (fallback) o menor o igual al input
-        List<ResolutionProfile> resolutionPairs = Arrays.stream(ResolutionProfile.values())
-                .filter(r -> r.getWidth() * r.getHeight() <= totalPixels &&
-                        (r.getFps() == 30 || r.getFps() <= inputFps))
-                // Ordena de mayor a menor resolución
-                .sorted((a, b) -> Integer.compare(
-                        b.getWidth() * b.getHeight(),
-                        a.getWidth() * a.getHeight()))
-                // Elimina duplicados si los hubiera
-                .distinct().toList();
+        List<ResolutionProfile> resolutionPairs = this.calculateResolutionPairs(totalPixels, inputFps);
 
-        // Debug
-        /*
-         * resolutionPairs.forEach(r -> System.out.println("Perfil: " +
-         * r.getWidth() + "x" + r.getHeight() +
-         * "@" + r.getFps() + "fps → br=" + r.getBitrate() + "kbps"));
-         */
         // Crear los filtros
         List<String> filters = new ArrayList<>();
 
@@ -359,19 +318,7 @@ public class StreamingService {
         for (int i = 0; i < resolutionPairs.size(); i++) {
             filtro += "[v" + (i + 1) + "]";
         }
-        /*
-         * versión sin VAAPI
-         * 
-         * for (int i = 0; i < resolutionPairs.size(); i++) {
-         * if (i == 0) {
-         * filtro += " [v1]copy[v1out]";
-         * } else {
-         * filtro += "; [v" + (i + 1) + "]scale=w=" +
-         * resolutionPairs.get(i).split(",")[0] + ":h="
-         * + resolutionPairs.get(i).split(",")[1] + "[v" + (i + 1) + "out]";
-         * }
-         * }
-         */
+
         for (int i = 0; i < resolutionPairs.size(); i++) {
             filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).getWidth() + ":h="
                     + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
@@ -402,8 +349,7 @@ public class StreamingService {
         }
 
         // Crea el comando FFmpeg
-        List<String> ffmpegCommand = new ArrayList<>();
-        ffmpegCommand = new ArrayList<>(List.of(
+        List<String> ffmpegCommand = new ArrayList<>(List.of(
                 "ffmpeg", "-loglevel", "info",
                 "-vaapi_device", "/dev/dri/renderD128" // Dispositivo VAAPI
         // "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para
@@ -455,5 +401,125 @@ public class StreamingService {
 
         logger.info("Comando FFmpeg: {}", String.join(" ", ffmpegCommand));
         return ffmpegCommand;
+    }
+
+    /**
+     * Función para enviar el SDP a FFmpeg
+     * 
+     * @param process   Proceso de FFmpeg
+     * @param sdpStream Flujo de entrada del SDP
+     * @param sdpSent   Booleano para indicar si se ha enviado el SDP
+     * @throws IOException
+     */
+    protected void sendSDP(Process process, InputStream sdpStream, Boolean sdpSent) throws IOException {
+        try {
+            logger.info("➡️ Enviando SDP a FFmpeg...");
+            OutputStream os = process.getOutputStream();
+
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = sdpStream.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            os.flush();
+            os.close(); // cerramos stdin, el SDP ya está completo
+
+            sdpSent = true;
+            logger.info("✅ SDP enviado y stdin cerrado");
+        } catch (IOException e) {
+            logger.error("Error al enviar SDP a FFmpeg: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Función para obtener la resolución del video con ffprobe
+     * 
+     * @param inputFilePath String: dirección del video original
+     * @return String[] con la resolución del video
+     * @throws IOException
+     * @throws RuntimeException
+     * @throws InterruptedException
+     */
+    protected String[] ffprobe(String inputFilePath) throws IOException, RuntimeException, InterruptedException {
+        String width = null;
+        String height = null;
+        String fps = null;
+        logger.info("Obteniendo la resolución del video con ffprobe");
+        ProcessBuilder processBuilder = new ProcessBuilder("ffprobe",
+                "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=width,height,r_frame_rate",
+                "-of", "csv=p=0", inputFilePath);
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            logger.info("FFProbe: {}", line);
+            String[] parts = line.split(",");
+            width = parts[0];
+            height = parts[1];
+
+            // Para calcular los fps, "r_frame_rate" devuelve un formato como"30000/1001"
+            String[] frameRateParts = parts[2].split("/");
+            if (frameRateParts.length == 2) {
+                // Redondear el fps a entero
+                fps = String.valueOf((int) Math.round(Double.parseDouble(frameRateParts[0]) /
+                        Double.parseDouble(frameRateParts[1])));
+            }
+        }
+
+        process.waitFor();
+        if (width == null || height == null || fps == null) {
+            logger.error("La resolución es null, reintentando con ffprobe");
+            this.ffprobe(inputFilePath);
+        } else if (width.equals("0") || height.equals("0") || fps.equals("0")) {
+            logger.error("La resolución es 0");
+            throw new RuntimeException("No se pudo obtener la resolución del streaming");
+        }
+
+        logger.info("Resolución: {}x{}@{}", width, height, fps);
+        return new String[] { width, height, fps };
+    }
+
+    /**
+     * Función para calcular los perfiles de resolución
+     * 
+     * @param totalPixels Número total de píxeles
+     * @param inputFps    FPS del video
+     * @return Lista de ResolutionProfile
+     */
+    protected List<ResolutionProfile> calculateResolutionPairs(int totalPixels, int inputFps) {
+        return Arrays.stream(ResolutionProfile.values())
+                .filter(r -> r.getWidth() * r.getHeight() <= totalPixels &&
+                        (r.getFps() == 30 || r.getFps() <= inputFps))
+                // Ordena de mayor a menor resolución
+                .sorted((a, b) -> Integer.compare(
+                        b.getWidth() * b.getHeight(),
+                        a.getWidth() * a.getHeight()))
+                // Elimina duplicados si los hubiera
+                .distinct().toList();
+    }
+
+    /**
+     * Función para crear el filtro de CPU
+     * 
+     * @param resolutionPairs Lista de ResolutionProfile
+     * @return String con el filtro de CPU
+     */
+    protected String createCPUFilter(List<ResolutionProfile> resolutionPairs) {
+        String filtro = "";
+        for (int i = 0; i < resolutionPairs.size(); i++) {
+            if (i == 0) {
+                filtro += " [v1]copy[v1out]";
+            } else {
+                filtro += "; [v" + (i + 1) + "]scale=w=" +
+                        resolutionPairs.get(i).getWidth() + ":h="
+                        + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
+            }
+        }
+        return filtro;
     }
 }

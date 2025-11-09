@@ -44,18 +44,42 @@ public class LoginService implements UserDetailsService, ILoginService {
 
     private Logger logger = LoggerFactory.getLogger(LoginService.class);
 
-    public LoginService(LoginRepository loginRepository, UsuarioRepository usuarioRepository,
-            PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    /**
+     * Constructor de LoginService
+     *
+     * @param loginRepository   Repositorio de logins
+     * @param usuarioRepository Repositorio de usuarios
+     * @param passwordEncoder   Encriptador de contraseñas
+     * @param jwtUtil           Utilidad de JWT
+     */
+    public LoginService(LoginRepository loginRepository,
+            UsuarioRepository usuarioRepository,
+            PasswordEncoder passwordEncoder,
+            JwtUtil jwtUtil) {
         this.loginRepository = loginRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
 
+    /**
+     * Función para comprobar si el correo existe
+     * 
+     * @param correo Correo electrónico del usuario
+     * @return Long con el ID del usuario
+     */
+    @Override
     public Long compruebaCorreo(String correo) {
         return this.loginRepository.compruebaCorreo(correo).orElse(0L);
     }
 
+    /**
+     * Función para crear un nuevo login
+     * 
+     * @param login Objeto Login con los datos del usuario
+     * @return String con el mensaje de creación de login
+     */
+    @Override
     public String createNuevoLogin(Login login) {
         this.loginRepository.save(login);
         return "Nuevo Usuario creado con éxito!!!";
@@ -68,6 +92,7 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @return String con el correo electrónico del usuario
      * @throws EntityNotFoundException si el usuario no existe
      */
+    @Override
     public String getCorreoLogin(Long idUsuario) {
         return this.loginRepository.findCorreoLoginForId(idUsuario).orElseThrow(
                 () -> {
@@ -84,7 +109,7 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @return String con la contraseña del usuario
      * @throws EntityNotFoundException si el usuario no existe
      */
-
+    @Override
     public String getPasswordLogin(Long idUsuario) {
         return this.loginRepository.findPasswordLoginForId(idUsuario).orElseThrow(
                 () -> {
@@ -101,11 +126,19 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @return String con el mensaje de cambio de correo electrónico
      * @throws EntityNotFoundException si el usuario no existe
      */
+    @Override
     public String changeCorreoLogin(Login login) {
         this.loginRepository.changeCorreoLoginForId(login.getIdUsuario(), login.getCorreoElectronico());
         return "Correo cambiado con éxito!!!";
     }
 
+    /**
+     * Función para cambiar la contraseña del login
+     * 
+     * @param changepassword Objeto ChangePassword con los datos del usuario
+     * @return Integer con el resultado de la operación
+     */
+    @Override
     public Integer changePasswordLogin(ChangePassword changepassword) {
         if (changepassword.getNewPassword().isEmpty() || changepassword.getOldPassword().isEmpty())
             return null;
@@ -124,6 +157,13 @@ public class LoginService implements UserDetailsService, ILoginService {
         return 0;
     }
 
+    /**
+     * Función para eliminar un login
+     * 
+     * @param idUsuario ID del usuario
+     * @return String con el mensaje de eliminación de login
+     */
+    @Override
     public String deleteLogin(Long idUsuario) {
         this.loginRepository.deleteById(idUsuario);
         return "Login eliminado con éxito!!!";
@@ -182,6 +222,7 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @throws BadCredentialsException si el usuario o contraseña son incorrectos
      * @throws EntityNotFoundException si el usuario no existe
      */
+    @Override
     @Transactional
     public AuthResponse loginUser(Long id, String password) {
         String correo = this.loginRepository.findCorreoLoginForId(id)
@@ -234,6 +275,7 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @throws BadCredentialsException si el usuario o contraseña son incorrectos
      * @throws EntityNotFoundException si el usuario no existe
      */
+    @Override
     @Transactional
     public AuthResponse refreshAccessToken(Long id) {
         String correo = this.loginRepository.findCorreoLoginForId(id)
@@ -265,6 +307,7 @@ public class LoginService implements UserDetailsService, ILoginService {
      * @throws BadCredentialsException si el token no es válido
      * @throws EntityNotFoundException si el usuario no existe
      */
+    @Override
     @Transactional
     public Usuario loginWithToken(String token) {
         try {

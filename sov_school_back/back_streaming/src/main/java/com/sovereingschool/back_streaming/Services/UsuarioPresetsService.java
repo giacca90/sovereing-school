@@ -22,11 +22,22 @@ public class UsuarioPresetsService {
 
     private Logger logger = LoggerFactory.getLogger(UsuarioPresetsService.class);
 
+    /**
+     * Constructor de UsuarioPresetsService
+     *
+     * @param presetRepository  Repositorio de presets
+     * @param usuarioRepository Repositorio de usuarios
+     */
     public UsuarioPresetsService(PresetRepository presetRepository, UsuarioRepository usuarioRepository) {
         this.presetRepository = presetRepository;
         this.usuarioRepository = usuarioRepository;
     }
 
+    /**
+     * Función para crear los presets para los usuarios elegibles
+     * 
+     * @return Booleano con el resultado de la operación
+     */
     public boolean createPresetsForEligibleUsers() {
         try {
             this.usuarioRepository.findAll().forEach((Usuario user) -> {
@@ -42,15 +53,32 @@ public class UsuarioPresetsService {
         }
     }
 
+    /**
+     * Función para obtener los presets del usuario
+     * 
+     * @param idUsuario ID del usuario
+     * @return Preset con los datos del usuario
+     */
     public Preset getPresetsForUser(Long idUsuario) {
         return this.presetRepository.findByIdUsuario(idUsuario).orElse(null);
     }
 
+    /**
+     * Función para guardar los presets del usuario
+     * 
+     * @param idUsuario ID del usuario
+     * @param presets   Mapa de PresetValue
+     */
     public void savePresetsForUser(Long idUsuario, Map<String, Preset.PresetValue> presets) {
         this.deletePresetsForUser(idUsuario);
         this.presetRepository.save(new Preset(idUsuario, presets));
     }
 
+    /**
+     * Función para eliminar los presets del usuario
+     * 
+     * @param idUsuario ID del usuario
+     */
     public void deletePresetsForUser(Long idUsuario) {
         this.presetRepository.deleteByIdUsuario(idUsuario);
     }

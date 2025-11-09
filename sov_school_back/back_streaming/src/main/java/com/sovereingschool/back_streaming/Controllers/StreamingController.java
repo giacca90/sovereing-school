@@ -28,10 +28,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Usuario;
-import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_streaming.Services.StreamingService;
 import com.sovereingschool.back_streaming.Services.UsuarioCursosService;
 
@@ -68,22 +68,37 @@ public class StreamingController {
 
     private UsuarioCursosService usuarioCursosService;
     private StreamingService streamingService;
-    private ClaseRepository claseRepo;
 
     private Logger logger = LoggerFactory.getLogger(StreamingController.class);
 
-    public StreamingController(UsuarioCursosService usuarioCursosService, StreamingService streamingService,
-            ClaseRepository claseRepo) {
+    /**
+     * Constructor de StreamingController
+     *
+     * @param usuarioCursosService Servicio de usuarios de cursos
+     * @param streamingService     Servicio de streaming
+     */
+    public StreamingController(UsuarioCursosService usuarioCursosService,
+            StreamingService streamingService) {
         this.usuarioCursosService = usuarioCursosService;
         this.streamingService = streamingService;
-        this.claseRepo = claseRepo;
     }
 
+    /**
+     * Función para obtener las listas de un curso
+     * 
+     * @param idCurso ID del curso
+     * @param idClase ID de la clase
+     * @param lista   String con la lista a obtener
+     * @param headers HttpHeaders con las cabeceras del request
+     * @return ResponseEntity<String> con el resultado de la operación
+     * @throws IOException
+     * @throws InternalServerException
+     */
     @GetMapping("/{idCurso}/{idClase}/{lista}")
     public ResponseEntity<?> getListas(@PathVariable Long idCurso,
             @PathVariable Long idClase,
             @PathVariable String lista,
-            @RequestHeader HttpHeaders headers) throws IOException {
+            @RequestHeader HttpHeaders headers) throws IOException, InternalServerException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -130,12 +145,24 @@ public class StreamingController {
 
     }
 
+    /**
+     * Función para obtener el video de una lista
+     * 
+     * @param idCurso ID del curso
+     * @param idClase ID de la clase
+     * @param lista   String con la lista a obtener
+     * @param video   String con el nombre del video
+     * @param headers HttpHeaders con las cabeceras del request
+     * @return ResponseEntity<InputStreamResource> con el resultado de la operación
+     * @throws IOException
+     * @throws InternalServerException
+     */
     @GetMapping("/{idCurso}/{idClase}/{lista}/{video}")
     public ResponseEntity<InputStreamResource> streamVideo(@PathVariable Long idCurso,
             @PathVariable Long idClase,
             @PathVariable String lista,
             @PathVariable String video,
-            @RequestHeader HttpHeaders headers) throws IOException {
+            @RequestHeader HttpHeaders headers) throws IOException, InternalServerException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -200,6 +227,8 @@ public class StreamingController {
 
     /**
      * Función para rellenar la base de datos
+     * 
+     * @return ResponseEntity<String> con el resultado de la operación
      */
     @GetMapping("/init")
     public ResponseEntity<?> get() {
@@ -211,6 +240,12 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para obtener el estado del curso
+     * 
+     * @param idCurso ID del curso
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @GetMapping("/status/{idCurso}")
     public ResponseEntity<?> getStatus(@PathVariable Long idCurso) {
         try {
@@ -225,7 +260,12 @@ public class StreamingController {
         }
     }
 
-    // Obtener lista para la previsualización
+    /**
+     * Función para obtener la lista de la previsualización
+     * 
+     * @param idPreview String con el ID de la previsualización
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @GetMapping("/getPreview/{idPreview}")
     public ResponseEntity<?> getPreviewList(@PathVariable String idPreview) {
         try {
@@ -249,7 +289,13 @@ public class StreamingController {
         }
     }
 
-    // Obtener partes de la previsualización
+    /**
+     * Función para obtener las partes de la previsualización
+     * 
+     * @param idPreview String con el ID de la previsualización
+     * @param part      String con el nombre de la parte
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @GetMapping("/getPreview/{idPreview}/{part}")
     public ResponseEntity<?> getPreviewParts(@PathVariable String idPreview, @PathVariable String part) {
         try {
@@ -273,6 +319,12 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para añadir un usuario
+     * 
+     * @param usuario Usuario a añadir
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @PutMapping("/nuevoUsuario")
     public ResponseEntity<?> create(@RequestBody Usuario usuario) {
         try {
@@ -282,19 +334,30 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para convertir los videos de un curso
+     * 
+     * @param curso Curso a convertir
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @PostMapping("/convertir_videos")
     public ResponseEntity<?> convertirVideos(@RequestBody Curso curso) {
         try {
-            StreamingService streamingService = new StreamingService(claseRepo);
+            // StreamingService streamingService = new StreamingService(claseRepo);
             streamingService.convertVideos(curso);
             // ResponseEntity
             return new ResponseEntity<>("Videos convertidos con éxito!!!", HttpStatus.OK);
         } catch (Exception e) {
-            e.printStackTrace(); // Usar un logger como SLF4J en entornos reales
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
+    /**
+     * Función para actualizar el streaming del curso
+     * 
+     * @param curso Curso a actualizar
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @PostMapping("/actualizar_curso_stream")
     public ResponseEntity<?> actualizarCursoStream(@RequestBody Curso curso) {
         try {
@@ -308,6 +371,13 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para añadir una clase al curso
+     * 
+     * @param idCurso ID del curso
+     * @param clase   Clase a añadir
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @PutMapping("/addClase/{idCurso}")
     public ResponseEntity<?> add(@PathVariable Long idCurso, @RequestBody Clase clase) {
         try {
@@ -321,6 +391,13 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para eliminar una clase del curso
+     * 
+     * @param idCurso ID del curso
+     * @param idClase ID de la clase
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @DeleteMapping("/deleteClase/{idCurso}/{idClase}")
     public ResponseEntity<?> update(@PathVariable Long idCurso, @PathVariable Long idClase) {
         try {
@@ -334,6 +411,12 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para eliminar el curso
+     * 
+     * @param id ID del curso
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @DeleteMapping("/deleteCurso/{id}")
     public ResponseEntity<?> deleteCurso(@PathVariable Long id) {
         try {
@@ -343,9 +426,14 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para eliminar el curso del usuario
+     * 
+     * @param id ID del usuario
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @DeleteMapping("/deleteUsuarioCursos/{id}")
     public ResponseEntity<?> deleteUsuarioCursos(@PathVariable Long id) {
-
         try {
             return new ResponseEntity<>(this.usuarioCursosService.deleteUsuarioCursos(id), HttpStatus.OK);
         } catch (Exception e) {
@@ -353,7 +441,13 @@ public class StreamingController {
         }
     }
 
-    private HttpHeaders createHeaders(String contentType) {
+    /**
+     * Función para crear las cabeceras de la respuesta
+     * 
+     * @param contentType String con el tipo de contenido
+     * @return HttpHeaders con las cabeceras de la respuesta
+     */
+    protected HttpHeaders createHeaders(String contentType) {
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.setContentType(MediaType.parseMediaType(contentType));
         responseHeaders.add(HttpHeaders.CONTENT_DISPOSITION, "inline");

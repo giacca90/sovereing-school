@@ -47,12 +47,23 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
 
     private Logger logger = LoggerFactory.getLogger(WebRTCSignalingHandler.class);
 
-    // Constructor modificado para aceptar Executor y StreamingService
-    public WebRTCSignalingHandler(Executor executor, StreamingService streamingService) {
+    /**
+     * Constructor de WebRTCSignalingHandler
+     *
+     * @param executor         Ejecutor de tareas
+     * @param streamingService Servicio de streaming
+     */
+    public WebRTCSignalingHandler(Executor executor,
+            StreamingService streamingService) {
         this.executor = executor;
         this.streamingService = streamingService;
     }
 
+    /**
+     * Función para establecer la conexión
+     * 
+     * @param session WebSocketSession con la conexión
+     */
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
         try {
@@ -84,6 +95,13 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         }
     }
 
+    /**
+     * Función para cerrar la conexión
+     * 
+     * @param session WebSocketSession con la conexión
+     * @param status  CloseStatus con el estado de la conexión
+     * @throws Exception
+     */
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
         String userId = session.getId();
@@ -115,6 +133,13 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         logger.info("Conexión cerrada: {} Razón: {}", userId, status.getReason());
     }
 
+    /**
+     * Función para manejar los mensajes de texto
+     * 
+     * @param session WebSocketSession con la conexión
+     * @param message TextMessage con el mensaje
+     * @throws Exception
+     */
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
         try {
@@ -268,7 +293,13 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         }
     }
 
-    private boolean isAuthorized(Authentication auth) {
+    /**
+     * Función para verificar si el usuario está autorizado
+     * 
+     * @param auth Authentication con los datos del usuario
+     * @return Booleano con el resultado de la verificación
+     */
+    protected boolean isAuthorized(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
             logger.error("No autenticado");
             return false;
@@ -279,7 +310,14 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
                 .anyMatch(role -> role.equals("ROLE_PROF") || role.equals("ROLE_ADMIN"));
     }
 
-    private boolean compruebaSesion(String streamId, WebSocketSession session) {
+    /**
+     * Función para comprobar si la sesión coincide con el streamId
+     * 
+     * @param streamId String con el streamId
+     * @param session  WebSocketSession con la sesión
+     * @return Booleano con el resultado de la comprobación de sesión
+     */
+    protected boolean compruebaSesion(String streamId, WebSocketSession session) {
         if (!streamId.contains(session.getId())) {
             logger.error("El streamId no coincide con el sessionId");
             try {
@@ -298,7 +336,10 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
         return true;
     }
 
-    private void startPion() {
+    /**
+     * Función para iniciar el proceso Pion
+     */
+    protected void startPion() {
         if (pionProcess != null && pionProcess.isAlive()) {
             return; // Ya está corriendo
         }

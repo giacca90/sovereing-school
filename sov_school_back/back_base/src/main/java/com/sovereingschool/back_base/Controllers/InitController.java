@@ -22,10 +22,20 @@ public class InitController {
 
     private IInitAppService initAppService;
 
+    /**
+     * Constructor de InitController
+     *
+     * @param initAppService Servicio de inicialización
+     */
     public InitController(IInitAppService initAppService) {
         this.initAppService = initAppService;
     }
 
+    /**
+     * Función para obtener la información inicial
+     * 
+     * @return ResponseEntity<Object> con el resultado de la operación
+     */
     @GetMapping()
     public ResponseEntity<?> getInit() {
         // System.out.println("Llegada solicitud de inicialización");
@@ -50,6 +60,11 @@ public class InitController {
         }
     }
 
+    /**
+     * Función para obtener el token de inicialización
+     * 
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @GetMapping("/auth")
     public ResponseEntity<?> auth(@CookieValue(required = false) String refreshToken) {
         String initToken = this.initAppService.getInitToken();
@@ -64,5 +79,4 @@ public class InitController {
                 .header("Set-Cookie", initTokenCookie.toString())
                 .body("OK");
     }
-
 }

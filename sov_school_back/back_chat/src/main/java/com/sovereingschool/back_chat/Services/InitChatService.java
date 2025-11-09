@@ -51,6 +51,18 @@ public class InitChatService {
 
     private Logger logger = LoggerFactory.getLogger(InitChatService.class);
 
+    /**
+     * Constructor de InitChatService
+     *
+     * @param cursoChatRepo   Repositorio de cursos de chat
+     * @param initAppService  Servicio de inicialización
+     * @param cursoRepo       Repositorio de cursos
+     * @param claseRepo       Repositorio de clases
+     * @param usuarioRepo     Repositorio de usuarios
+     * @param mensajeChatRepo Repositorio de mensajes de chat
+     * @param usuarioChatRepo Repositorio de usuarios de chat
+     * @param jwtUtil         Utilidad de JWT
+     */
     public InitChatService(CursoChatRepository cursoChatRepo, ClaseRepository claseRepo,
             UsuarioChatRepository usuarioChatRepo, MensajeChatRepository mensajeChatRepo,
             UsuarioRepository usuarioRepo, CursoRepository cursoRepo, SimpMessagingTemplate simpMessagingTemplate,
@@ -84,56 +96,11 @@ public class InitChatService {
         });
 
         // Obtiene los mensajes del usuario
-        List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
-        if (usuarioChat.getMensajes() != null && !usuarioChat.getMensajes().isEmpty()) {
-            List<MensajeChat> mensajes = this.mensajeChatRepo.findAllById(usuarioChat.getMensajes());
-            if (!mensajes.isEmpty()) {
-                mensajesDTO = getMensajesDTO(mensajes);
-            }
-        }
+        List<MensajeChatDTO> mensajesDTO = this.getMessageUser(usuarioChat);
 
         // Obtiene los cursos del usuario
-        List<CursoChatDTO> cursosChatDTO = new ArrayList<>();
-        if (usuarioChat.getCursos() != null && !usuarioChat.getCursos().isEmpty()) {
-            List<CursoChat> cursosChat = this.cursoChatRepo.findAllById(usuarioChat.getCursos());
-            if (!cursosChat.isEmpty()) {
-                for (CursoChat cursoChat : cursosChat) {
-                    Curso curso = cursoRepo.findById(cursoChat.getIdCurso()).orElseThrow(() -> {
-                        logger.error("InitChatService: initChat: Error en obtener el curso con ID {}",
-                                cursoChat.getIdCurso());
-                        throw new EntityNotFoundException("Error en obtener el curso con ID " + cursoChat.getIdCurso());
-                    });
-                    CursoChatDTO cursoChatDTO = new CursoChatDTO();
-                    cursoChatDTO.setIdCurso(cursoChat.getIdCurso());
-                    cursoChatDTO.setNombreCurso(curso.getNombreCurso());
-                    cursoChatDTO.setFotoCurso(curso.getImagenCurso());
-                    if (cursoChat.getUltimo() != null) {
-                        Optional<MensajeChat> ultimoMensaje = this.mensajeChatRepo.findById(cursoChat.getUltimo());
-                        if (ultimoMensaje.isPresent()) {
-                            List<MensajeChatDTO> ultimoDTO = this.getMensajesDTO(Arrays.asList(ultimoMensaje.get()));
-                            cursoChatDTO.setMensajes(ultimoDTO);
-                        } else {
-                            MensajeChatDTO noMessage = new MensajeChatDTO();
-                            noMessage.setIdCurso(cursoChat.getIdCurso());
-                            noMessage.setNombreCurso(curso.getNombreCurso());
-                            noMessage.setFotoCurso(curso.getImagenCurso());
-                            noMessage.setMensaje("No hay mensajes en este curso");
+        List<CursoChatDTO> cursosChatDTO = this.getCursosUser(usuarioChat);
 
-                            cursoChatDTO.setMensajes(Arrays.asList(noMessage));
-                        }
-                    } else {
-                        MensajeChatDTO noMessage = new MensajeChatDTO();
-                        noMessage.setIdCurso(cursoChat.getIdCurso());
-                        noMessage.setNombreCurso(curso.getNombreCurso());
-                        noMessage.setFotoCurso(curso.getImagenCurso());
-                        noMessage.setMensaje("No hay mensajes en este curso");
-
-                        cursoChatDTO.setMensajes(Arrays.asList(noMessage));
-                    }
-                    cursosChatDTO.add(cursoChatDTO);
-                }
-            }
-        }
         return new InitChatDTO(usuarioChat.getIdUsuario(), mensajesDTO, cursosChatDTO);
     }
 
@@ -144,7 +111,7 @@ public class InitChatService {
      * @param mensajes Lista de mensajes
      * @return Lista de MensajesDTO
      */
-    List<MensajeChatDTO> getMensajesDTO(List<MensajeChat> mensajes) {
+    public List<MensajeChatDTO> getMensajesDTO(List<MensajeChat> mensajes) {
         List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
         for (MensajeChat mensaje : mensajes) {
             MensajeChat respuesta = null;
@@ -223,7 +190,7 @@ public class InitChatService {
      * Función para observar los cambios en las colecciones de MongoDB
      */
     @PostConstruct
-    private void observeMultipleCollections() {
+    protected void observeMultipleCollections() {
         ChangeStreamOptions options = ChangeStreamOptions.builder().build();
 
         Flux<Document> userChatFlux = reactiveMongoTemplate
@@ -277,7 +244,7 @@ public class InitChatService {
      * @param document Documento que contiene los cambios
      *                 El documento tiene que ser de tipo CursoChat
      */
-    private void notifyCoursesChat(Document document) {
+    protected void notifyCoursesChat(Document document) {
         Long idCurso = document.getLong("idCurso");
         List<ClaseChatDTO> clases = new ArrayList<>();
         List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
@@ -328,7 +295,7 @@ public class InitChatService {
      * 
      * @param document Documento de chat del usuario
      */
-    private void notifyUsersChat(Document document) {
+    protected void notifyUsersChat(Document document) {
         Long idUsuario = document.getLong("idUsuario");
         List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
         List<CursoChatDTO> cursosDTO = new ArrayList<>();
@@ -389,5 +356,79 @@ public class InitChatService {
 
         InitChatDTO updateDTO = new InitChatDTO(idUsuario, mensajesDTO, cursosDTO);
         simpMessagingTemplate.convertAndSendToUser(idUsuario.toString(), "/init_chat/result", updateDTO);
+    }
+
+    /**
+     * Función para obtener los mensajes del usuario
+     * 
+     * @param usuarioChat UsuarioChat del usuario
+     * @return Lista de MensajeChatDTO
+     */
+    protected List<MensajeChatDTO> getMessageUser(UsuarioChat usuarioChat) {
+        List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
+        if (usuarioChat.getMensajes() != null && !usuarioChat.getMensajes().isEmpty()) {
+            List<MensajeChat> mensajes = this.mensajeChatRepo.findAllById(usuarioChat.getMensajes());
+            if (!mensajes.isEmpty()) {
+                mensajesDTO = getMensajesDTO(mensajes);
+            }
+        }
+        return mensajesDTO;
+    }
+
+    /**
+     * Función para obtener los cursos del usuario
+     * 
+     * @param usuarioChat UsuarioChat del usuario
+     * @return Lista de CursoChatDTO
+     */
+    protected List<CursoChatDTO> getCursosUser(UsuarioChat usuarioChat) {
+        List<CursoChatDTO> cursosChatDTO = new ArrayList<>();
+        if (usuarioChat.getCursos() != null && !usuarioChat.getCursos().isEmpty()) {
+            List<CursoChat> cursosChat = this.cursoChatRepo.findAllById(usuarioChat.getCursos());
+            if (cursosChat.isEmpty()) {
+                for (CursoChat cursoChat : cursosChat) {
+                    Curso curso = cursoRepo.findById(cursoChat.getIdCurso()).orElseThrow(() -> {
+                        logger.error("InitChatService: initChat: Error en obtener el curso con ID {}",
+                                cursoChat.getIdCurso());
+                        throw new EntityNotFoundException("Error en obtener el curso con ID " + cursoChat.getIdCurso());
+                    });
+                    CursoChatDTO cursoChatDTO = new CursoChatDTO();
+                    cursoChatDTO.setIdCurso(cursoChat.getIdCurso());
+                    cursoChatDTO.setNombreCurso(curso.getNombreCurso());
+                    cursoChatDTO.setFotoCurso(curso.getImagenCurso());
+                    if (cursoChat.getUltimo() != null) {
+                        Optional<MensajeChat> ultimoMensaje = this.mensajeChatRepo.findById(cursoChat.getUltimo());
+                        if (ultimoMensaje.isPresent()) {
+                            List<MensajeChatDTO> ultimoDTO = this.getMensajesDTO(Arrays.asList(ultimoMensaje.get()));
+                            cursoChatDTO.setMensajes(ultimoDTO);
+                        } else {
+                            MensajeChatDTO noMessage = this.generateNoMessage(cursoChat, curso);
+                            cursoChatDTO.setMensajes(Arrays.asList(noMessage));
+                        }
+                    } else {
+                        MensajeChatDTO noMessage = this.generateNoMessage(cursoChat, curso);
+                        cursoChatDTO.setMensajes(Arrays.asList(noMessage));
+                    }
+                    cursosChatDTO.add(cursoChatDTO);
+                }
+            }
+        }
+        return cursosChatDTO;
+    }
+
+    /**
+     * Función para generar un mensaje vacío
+     * 
+     * @param cursoChat CursoChat del curso
+     * @param curso     Curso del curso
+     * @return MensajeChatDTO con los datos del mensaje
+     */
+    protected MensajeChatDTO generateNoMessage(CursoChat cursoChat, Curso curso) {
+        return MensajeChatDTO.builder()
+                .idCurso(cursoChat.getIdCurso())
+                .nombreCurso(curso.getNombreCurso())
+                .fotoCurso(curso.getImagenCurso())
+                .mensaje("No hay mensajes en este curso")
+                .build();
     }
 }

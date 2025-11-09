@@ -54,9 +54,7 @@ import com.sovereingschool.back_common.Utils.JwtUtil;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import reactor.core.publisher.Mono;
 
@@ -79,35 +77,54 @@ public class UsuarioService implements IUsuarioService {
     }
 
     private final PasswordEncoder passwordEncoder;
-    private UsuarioRepository usuarioRepo;
-    private CursoRepository cursoRepo;
-    private LoginRepository loginRepo;
-    private JwtUtil jwtUtil;
-    private WebClientConfig webClientConfig;
-    private JavaMailSender mailSender;
-    private InitAppService initAppService;
-    private SpringTemplateEngine templateEngine;
+    private final UsuarioRepository usuarioRepo;
+    private final CursoRepository cursoRepo;
+    private final LoginRepository loginRepo;
+    private final JwtUtil jwtUtil;
+    private final WebClientConfig webClientConfig;
+    private final JavaMailSender mailSender;
+    private final InitAppService initAppService;
+    private final SpringTemplateEngine templateEngine;
 
-    private Logger logger = LoggerFactory.getLogger(UsuarioService.class);
+    private final Logger logger = LoggerFactory.getLogger(UsuarioService.class);
 
-    @Value("${variable.BACK_CHAT_DOCKER}")
-    private String backChatURL;
+    private final String backChatURL;
+    private final String backStreamURL;
+    private final String frontURL;
+    private final String uploadDir;
 
-    @Value("${variable.BACK_STREAM_DOCKER}")
-    private String backStreamURL;
+    /**
+     * Constructor de UsuarioService
+     *
+     * @param passwordEncoder PasswordEncoder
+     * @param usuarioRepo     Repositorio de usuarios
+     * @param cursoRepo       Repositorio de cursos
+     * @param loginRepo       Repositorio de logins
+     * @param jwtUtil         Utilidad de JWT
+     * @param webClientConfig Configuración de WebClient
+     * @param mailSender      Envío de correos
+     * @param initAppService  Servicio de inicialización
+     * @param templateEngine  Motor de plantillas
+     * @param backChatURL     URL del microservicio de chat
+     * @param backStreamURL   URL del microservicio de streaming
+     * @param frontURL        URL del microservicio de front
+     * @param uploadDir       Ruta de carga de archivos
+     */
+    public UsuarioService(
+            PasswordEncoder passwordEncoder,
+            UsuarioRepository usuarioRepo,
+            CursoRepository cursoRepo,
+            LoginRepository loginRepo,
+            JwtUtil jwtUtil,
+            WebClientConfig webClientConfig,
+            JavaMailSender mailSender,
+            InitAppService initAppService,
+            SpringTemplateEngine templateEngine,
+            @Value("${variable.BACK_CHAT_DOCKER}") String backChatURL,
+            @Value("${variable.BACK_STREAM_DOCKER}") String backStreamURL,
+            @Value("${variable.FRONT}") String frontURL,
+            @Value("${variable.FOTOS_DIR}") String uploadDir) {
 
-    @Value("${variable.FRONT}")
-    private String frontURL;
-
-    @Value("${variable.FOTOS_DIR}")
-    private String uploadDir;
-
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    public UsuarioService(PasswordEncoder passwordEncoder, UsuarioRepository usuarioRepo,
-            CursoRepository cursoRepo, LoginRepository loginRepo, JwtUtil jwtUtil,
-            WebClientConfig webClientConfig, JavaMailSender mailSender, InitAppService initAppService) {
         this.passwordEncoder = passwordEncoder;
         this.usuarioRepo = usuarioRepo;
         this.cursoRepo = cursoRepo;
@@ -116,6 +133,12 @@ public class UsuarioService implements IUsuarioService {
         this.webClientConfig = webClientConfig;
         this.mailSender = mailSender;
         this.initAppService = initAppService;
+        this.templateEngine = templateEngine;
+
+        this.backChatURL = backChatURL;
+        this.backStreamURL = backStreamURL;
+        this.frontURL = frontURL;
+        this.uploadDir = uploadDir;
     }
 
     /**
@@ -440,6 +463,11 @@ public class UsuarioService implements IUsuarioService {
         return "Usuario eliminado con éxito!!!";
     }
 
+    /**
+     * Función para obtener los profesores
+     * 
+     * @return Lista de Usuarios
+     */
     @Override
     public List<Usuario> getProfes() {
         return this.usuarioRepo.findProfes();
@@ -493,6 +521,12 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
+    /**
+     * Función para obtener todos los usuarios
+     * 
+     * @return Lista de Usuarios
+     * @throws RepositoryException
+     */
     @Override
     public List<Usuario> getAllUsuarios() throws RepositoryException {
         try {
@@ -502,7 +536,44 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
-    private void createUsuarioChat(Usuario usuarioInsertado) {
+    /**
+     * Función para eliminar el chat del usuario
+     * 
+     * @param id ID del usuario
+     */
+    protected void deleteUsuarioChat(Long id) {
+        try {
+            WebClient webClientStream = webClientConfig.createSecureWebClient(backChatURL);
+            webClientStream.delete().uri("/delete_usuario_chat/" + id)
+                    .retrieve()
+                    .onStatus(
+                            HttpStatusCode::isError,
+                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
+                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
+                            }))
+                    .bodyToMono(String.class)
+                    .onErrorResume(e -> {
+                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
+                        return Mono.empty(); // Continuar sin interrumpir la aplicación
+                    }).subscribe(res -> {
+                        // Maneja el resultado cuando esté disponible
+                        if (res == null || !res.equals("Usuario chat borrado con exito!!!")) {
+                            logger.error("Error en borrar el chat del usuario");
+                            logger.error(res);
+                        }
+                    });
+        } catch (Exception e) {
+            logger.error("Error en borrar el chat del usuario: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Función para crear el chat del usuario
+     * 
+     * @param usuarioInsertado Usuario a crear el chat
+     */
+    protected void createUsuarioChat(Usuario usuarioInsertado) {
         try {
             WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
             webClient.post().uri("/crea_usuario_chat")
@@ -530,7 +601,12 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
-    private void createUsuarioStream(Usuario usuarioInsertado) {
+    /**
+     * Función para crear el streaming del usuario
+     * 
+     * @param usuarioInsertado Usuario a crear el streaming
+     */
+    protected void createUsuarioStream(Usuario usuarioInsertado) {
         try {
             WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
             webClientStream.put()
@@ -560,7 +636,12 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
-    private void updateSSR() throws InternalComunicationException {
+    /**
+     * Función para actualizar el SSR
+     * 
+     * @throws InternalComunicationException
+     */
+    protected void updateSSR() throws InternalComunicationException {
         try {
             this.initAppService.refreshSSR();
         } catch (Exception e) {
@@ -568,7 +649,12 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
-    private void addUsuarioStream(Usuario usuario) {
+    /**
+     * Función para añadir el usuario al streaming
+     * 
+     * @param usuario Usuario a añadir al streaming
+     */
+    protected void addUsuarioStream(Usuario usuario) {
         try {
             WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
             webClientStream.put().uri("/nuevoCursoUsuario")
@@ -597,7 +683,12 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
-    private void addUsuarioChat(Usuario usuario) {
+    /**
+     * Función para añadir el usuario al chat
+     * 
+     * @param usuario Usuario a añadir al chat
+     */
+    protected void addUsuarioChat(Usuario usuario) {
         try {
             WebClient webClientStream = webClientConfig.createSecureWebClient(backChatURL);
             webClientStream.put().uri("/crea_usuario_chat")
@@ -625,7 +716,12 @@ public class UsuarioService implements IUsuarioService {
         }
     }
 
-    private void deleteUsuarioStream(Long id) {
+    /**
+     * Función para eliminar el streaming del usuario
+     * 
+     * @param id ID del usuario
+     */
+    protected void deleteUsuarioStream(Long id) {
         try {
             WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
             webClientStream.delete().uri("/deleteUsuarioStream/" + id)
@@ -649,33 +745,6 @@ public class UsuarioService implements IUsuarioService {
                     });
         } catch (Exception e) {
             logger.error("Error en eliminar el usuario del stream: {}", e.getMessage());
-        }
-    }
-
-    private void deleteUsuarioChat(Long id) {
-        try {
-            WebClient webClientStream = webClientConfig.createSecureWebClient(backChatURL);
-            webClientStream.delete().uri("/delete_usuario_chat/" + id)
-                    .retrieve()
-                    .onStatus(
-                            HttpStatusCode::isError,
-                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
-                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
-                            }))
-                    .bodyToMono(String.class)
-                    .onErrorResume(e -> {
-                        logger.error("Error al conectar con el microservicio de stream: {}", e.getMessage());
-                        return Mono.empty(); // Continuar sin interrumpir la aplicación
-                    }).subscribe(res -> {
-                        // Maneja el resultado cuando esté disponible
-                        if (res == null || !res.equals("Usuario chat borrado con exito!!!")) {
-                            logger.error("Error en borrar el chat del usuario");
-                            logger.error(res);
-                        }
-                    });
-        } catch (Exception e) {
-            logger.error("Error en borrar el chat del usuario: {}", e.getMessage());
         }
     }
 }

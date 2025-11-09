@@ -38,11 +38,23 @@ public class LoginController {
 
 	private JwtUtil jwtUtil;
 
+	/**
+	 * Constructor de LoginController
+	 *
+	 * @param loginService Servicio de logins
+	 * @param jwtUtil      Utilidad de JWT
+	 */
 	public LoginController(ILoginService loginService, JwtUtil jwtUtil) {
 		this.loginService = loginService;
 		this.jwtUtil = jwtUtil;
 	}
 
+	/**
+	 * Función para comprobar si el correo existe
+	 * 
+	 * @param correo Correo electrónico del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/{correo}")
 	public ResponseEntity<?> conpruebaCorreo(@PathVariable String correo) {
 		Object response = new Object();
@@ -55,6 +67,13 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para obtener el login del usuario
+	 * 
+	 * @param id       ID del usuario
+	 * @param password Contraseña del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/{id}/{password}")
 	public ResponseEntity<?> getUsuario(@PathVariable Long id, @PathVariable String password) {
 		Object response = new Object();
@@ -87,6 +106,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para obtener el correo electrónico del usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/correo/{id}")
 	public ResponseEntity<?> getCorreoLogin(@PathVariable Long id) {
 		Object response = new Object();
@@ -104,6 +129,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para obtener la contraseña del usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/password/{id}")
 	public ResponseEntity<?> getPasswordLogin(@PathVariable Long id) {
 		Object response = new Object();
@@ -121,6 +152,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para crear un nuevo login
+	 * 
+	 * @param login Objeto Login con los datos del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PostMapping("/new")
 	public ResponseEntity<?> createNuevoLogin(@RequestBody Login login) {
 		Object response = new Object();
@@ -133,6 +170,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para cambiar el correo electrónico del login
+	 * 
+	 * @param login Objeto Login con los datos del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PutMapping("/cambiaCorreo")
 	public ResponseEntity<?> changeCorreoLogin(@RequestBody Login login) {
 		Object response = new Object();
@@ -153,6 +196,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para cambiar la contraseña del login
+	 * 
+	 * @param changepassword Objeto ChangePassword con los datos del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PutMapping("/cambiaPassword")
 	public ResponseEntity<?> changePasswordLogin(@RequestBody ChangePassword changepassword) {
 		Object response = new Object();
@@ -174,6 +223,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para eliminar un login
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@DeleteMapping("/delete/{id}")
 	public ResponseEntity<?> deleteLogin(@PathVariable Long id) {
 		Object response = new Object();
@@ -186,6 +241,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para refrescar el token de acceso
+	 * 
+	 * @param refreshToken Token de refresco
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PostMapping("/refresh")
 	public ResponseEntity<?> refreshAccessToken(
 			@CookieValue(required = false) String refreshToken) {
@@ -226,6 +287,12 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para realizar login con un token
+	 * 
+	 * @param token Token JWT
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PostMapping("/loginWithToken")
 	public ResponseEntity<?> loginWithToken(@RequestBody String token) {
 		Object response = new Object();
@@ -259,6 +326,11 @@ public class LoginController {
 		}
 	}
 
+	/**
+	 * Función para realizar logout
+	 * 
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/logout")
 	public ResponseEntity<?> logout() {
 		try {

@@ -15,6 +15,7 @@ import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Exceptions.NotFoundException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
+import com.sovereingschool.back_common.Models.RoleEnum;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_common.Repositories.CursoRepository;
@@ -41,6 +42,16 @@ public class UsuarioCursosService implements IUsuarioCursosService {
 
     private Logger logger = LoggerFactory.getLogger(UsuarioCursosService.class);
 
+    /**
+     * Constructor de UsuarioCursosService
+     *
+     * @param streamingService        Servicio de streaming
+     * @param usuarioRepository       Repositorio de usuarios
+     * @param cursoRepository         Repositorio de cursos
+     * @param claseRepository         Repositorio de clases
+     * @param usuarioCursosRepository Repositorio de usuarios de cursos
+     * @param mongoTemplate           Template de MongoDB
+     */
     public UsuarioCursosService(StreamingService streamingService, UsuarioRepository usuarioRepository,
             CursoRepository cursoRepository,
             ClaseRepository claseRepository, UsuarioCursosRepository usuarioCursosRepository,
@@ -53,6 +64,9 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         this.streamingService = streamingService;
     }
 
+    /**
+     * Función para sincronizar los cursos de los usuarios
+     */
     @Override
     public void syncUserCourses() {
         List<Usuario> users = usuarioRepository.findAll();
@@ -84,10 +98,17 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         }
     }
 
+    /**
+     * Función para añadir un nuevo usuario
+     * 
+     * @param usuario Usuario a añadir
+     * @return String con el mensaje de añadido
+     * @throws InternalServerException
+     */
     @Override
-    public String addNuevoUsuario(Usuario usuario) {
+    public String addNuevoUsuario(Usuario usuario) throws InternalServerException {
         if (usuarioCursosRepository.findByIdUsuario(usuario.getIdUsuario()).isPresent()) {
-            throw new RuntimeException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
+            throw new InternalServerException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
         }
         List<Curso> courses = usuario.getCursosUsuario();
         List<StatusCurso> courseStatuses = new ArrayList<>();
@@ -118,28 +139,46 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         return "Nuevo Usuario Insertado con Exito!!!";
     }
 
+    /**
+     * Función para obtener la clase del usuario
+     * 
+     * @param idUsuario ID del usuario
+     * @param idCurso   ID del curso
+     * @param idClase   ID de la clase
+     * @return String con la dirección de la clase
+     * @throws InternalServerException
+     */
     @Override
-    public String getClase(Long idUsuario, Long idCurso, Long idClase) {
+    public String getClase(Long idUsuario, Long idCurso, Long idClase) throws InternalServerException {
         UsuarioCursos usuario = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
             logger.error("Error en obtener el usuario del streaming. id_usuario: {}", idUsuario);
             throw new EntityNotFoundException("Error en obtener el usuario del streaming");
         });
 
-        if (idClase == 0) {
-            if (usuario.getRolUsuario().name().equals("PROFESOR") || usuario.getRolUsuario().name().equals("ADMIN")) {
-                idClase = this.cursoRepository.findById(idCurso).get().getClasesCurso().get(0).getIdClase();
+        if (idClase == 0 && usuario.getRolUsuario().name().equals(RoleEnum.PROF.name())
+                || usuario.getRolUsuario().name().equals(RoleEnum.ADMIN.name())) {
+            Curso curso = cursoRepository.findById(idCurso)
+                    .orElseThrow(() -> new EntityNotFoundException("Curso no encontrado con id " + idCurso));
+
+            if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
+                throw new InternalServerException("El curso no tiene clases registradas");
             }
+
+            idClase = curso.getClasesCurso().get(0).getIdClase();
         }
 
-        if (usuario.getRolUsuario().name().equals("PROFESOR") || usuario.getRolUsuario().name().equals("ADMIN")) {
+        if (usuario.getRolUsuario().name().equals(RoleEnum.PROF.name())
+                || usuario.getRolUsuario().name().equals(RoleEnum.ADMIN.name())) {
             try {
-
-                String direccion = this.claseRepository.findById(idClase).get().getDireccionClase();
+                Long id = idClase;
+                Clase clase = claseRepository.findById(idClase).orElseThrow(
+                        () -> new EntityNotFoundException("Clase no encontrada con id " + id));
+                String direccion = clase.getDireccionClase();
                 if (direccion == null) {
-                    logger.error("Clase no encontrada");
+                    logger.error("Clase sin direccion");
                     return null;
                 }
-                return this.claseRepository.findById(idClase).get().getDireccionClase();
+                return direccion;
             } catch (Exception e) {
                 logger.error("Error en obtener la clase: {}", e.getMessage());
             }
@@ -149,16 +188,22 @@ public class UsuarioCursosService implements IUsuarioCursosService {
 
         for (StatusCurso curso : cursos) {
             if (curso.getIdCurso().equals(idCurso)) {
-                List<StatusClase> clases = curso.getClases();
-                for (StatusClase clase : clases) {
+                List<StatusClase> sClases = curso.getClases();
+                for (StatusClase sClase : sClases) {
                     if (idClase == 0) {
-                        if (!clase.isCompleted()) {
-                            return this.claseRepository.findById(clase.getIdClase()).get().getDireccionClase();
+                        if (!sClase.isCompleted()) {
+                            Clase clase = claseRepository.findById(sClase.getIdClase()).orElseThrow(
+                                    () -> new EntityNotFoundException(
+                                            "Clase no encontrada con id " + sClase.getIdClase()));
+                            return clase.getDireccionClase();
                         }
                         continue;
                     }
-                    if (clase.getIdClase().equals(idClase)) {
-                        return this.claseRepository.findById(idClase).get().getDireccionClase();
+                    if (sClase.getIdClase().equals(idClase)) {
+                        Long id = idClase;
+                        Clase clase = claseRepository.findById(idClase).orElseThrow(
+                                () -> new EntityNotFoundException("Clase no encontrada con id " + id));
+                        return clase.getDireccionClase();
                     }
                 }
             }
@@ -166,6 +211,13 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         return null;
     }
 
+    /**
+     * Función para añadir una clase al usuario
+     * 
+     * @param idCurso ID del curso
+     * @param clase   Clase a añadir
+     * @return Booleano con el resultado de la operación
+     */
     @Override
     public boolean addClase(Long idCurso, Clase clase) {
         try {
@@ -196,6 +248,14 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         }
     }
 
+    /**
+     * Función para eliminar una clase del usuario
+     * 
+     * @param idCurso ID del curso
+     * @param idClase ID de la clase
+     * @return Booleano con el resultado de la operación
+     */
+    @Override
     public boolean deleteClase(Long idCurso, Long idClase) {
         try {
             // Encuentra el documento que contiene el curso específico
@@ -203,7 +263,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             query.addCriteria(Criteria.where("cursos.id_curso").is(idCurso));
             List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
-            if (usuarioCursos == null || usuarioCursos.isEmpty()) {
+            if (usuarioCursos.isEmpty()) {
                 logger.error("No se encontró el documento.");
                 return false;
             }
@@ -229,14 +289,29 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         }
     }
 
-    public Long getStatus(Long idUsuario, Long idCurso) {
+    /**
+     * Función para obtener el estado del curso
+     * 
+     * @param idUsuario ID del usuario
+     * @param idCurso   ID del curso
+     * @return Long con el estado del curso
+     * @throws InternalServerException
+     */
+    @Override
+    public Long getStatus(Long idUsuario, Long idCurso) throws InternalServerException {
         UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
             logger.error("Error en obtener el usuario del chat");
             throw new EntityNotFoundException("Error en obtener el usuario del chat");
         });
         if (usuarioCursos.getRolUsuario().name().equals("PROFESOR")
                 || usuarioCursos.getRolUsuario().name().equals("ADMIN")) {
-            return this.cursoRepository.findById(idCurso).get().getClasesCurso().get(0).getIdClase();
+            Curso curso = cursoRepository.findById(idCurso)
+                    .orElseThrow(() -> new EntityNotFoundException("Curso no encontrado con id " + idCurso));
+
+            if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
+                throw new InternalServerException("El curso no tiene clases registradas");
+            }
+            return curso.getClasesCurso().get(0).getIdClase();
         } else {
             List<StatusCurso> lst = usuarioCursos.getCursos();
             for (StatusCurso sc : lst) {
@@ -254,6 +329,13 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         return 0L;
     }
 
+    /**
+     * Función para actualizar el streaming del curso
+     * 
+     * @param curso Curso a actualizar
+     * @throws InternalServerException
+     */
+    @Override
     public void actualizarCursoStream(Curso curso) throws InternalServerException {
         List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getIdCurso());
         if (usuarios != null && !usuarios.isEmpty()) {
@@ -288,6 +370,13 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         }
     }
 
+    /**
+     * Función para eliminar el curso del usuario
+     * 
+     * @param idUsuario ID del usuario
+     * @return Booleano con el resultado de la operación
+     */
+    @Override
     public boolean deleteUsuarioCursos(Long idUsuario) {
         UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
             logger.error("Error en obtener el usuario del chat");
@@ -298,6 +387,13 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         return true;
     }
 
+    /**
+     * Función para eliminar el curso
+     * 
+     * @param id ID del curso
+     * @return Booleano con el resultado de la operación
+     */
+    @Override
     public boolean deleteCurso(Long id) {
         // Encuentra el documento que contiene el curso específico
         Query query = new Query();

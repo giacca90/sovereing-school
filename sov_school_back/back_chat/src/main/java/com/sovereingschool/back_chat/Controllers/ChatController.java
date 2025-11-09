@@ -38,7 +38,15 @@ public class ChatController {
 
     private Logger logger = LoggerFactory.getLogger(ChatController.class);
 
-    public ChatController(SimpMessagingTemplate messagingTemplate, InitChatService initChatService,
+    /**
+     * Constructor de ChatController
+     *
+     * @param messagingTemplate Template de websocket
+     * @param initChatService   Servicio de inicialización de chat
+     * @param cursoChatService  Servicio de chat
+     */
+    public ChatController(SimpMessagingTemplate messagingTemplate,
+            InitChatService initChatService,
             CursoChatService cursoChatService) {
         this.messagingTemplate = messagingTemplate;
         this.initChatService = initChatService;
@@ -46,6 +54,12 @@ public class ChatController {
     }
 
     /* Sección para el websocket */
+
+    /**
+     * Función para iniciar el chat
+     * 
+     * @return Object con el resultado de la operación
+     */
     @MessageMapping("/init")
     @SendToUser("/init_chat/result")
     public Object handleInitChat() {
@@ -65,6 +79,11 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para obtener el chat del curso
+     * 
+     * @param message String con el ID del curso
+     */
     @MessageMapping("/curso")
     public void getCursoChat(String message) {
         Long idCurso = Long.parseLong(message);
@@ -80,6 +99,11 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para guardar un mensaje en el chat
+     * 
+     * @param message String con el mensaje
+     */
     @MessageMapping("/chat")
     public void guardaMensaje(String message) {
         try {
@@ -92,6 +116,11 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para marcar un mensaje como leido
+     * 
+     * @param message String con el mensaje
+     */
     @MessageMapping("/leido")
     public void mensajeLeido(String message) {
         try {
@@ -103,6 +132,12 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para refrescar el token en el websocket abierto
+     * 
+     * @param sessionId String con el ID de la sesión
+     * @param newToken  String con el nuevo token
+     */
     @MessageMapping("/refresh-token")
     public void refreshToken(@Header("simpSessionId") String sessionId, String newToken) {
         try {
@@ -115,6 +150,13 @@ public class ChatController {
     }
 
     /* Sección para REST */
+
+    /**
+     * Función para crear el chat del usuario
+     * 
+     * @param message String con el mensaje
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @PostMapping("/crea_usuario_chat")
     public ResponseEntity<?> creaUsuarioChat(@RequestBody String message) {
         try {
@@ -128,6 +170,12 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para crear el chat del curso
+     * 
+     * @param message String con el mensaje
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @PostMapping("/crea_curso_chat")
     public ResponseEntity<?> creaCursoChat(@RequestBody String message) {
         try {
@@ -141,6 +189,12 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para crear la clase del chat
+     * 
+     * @param message String con el mensaje
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @PostMapping("/crea_clase_chat")
     public ResponseEntity<?> creaClaseChat(@RequestBody String message) {
         try {
@@ -154,6 +208,13 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para eliminar la clase del chat
+     * 
+     * @param idCurso ID del curso
+     * @param idClase ID de la clase
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @DeleteMapping("/delete_clase_chat/{idCurso}/{idClase}")
     public ResponseEntity<?> borrarClaseChat(@PathVariable Long idCurso, @PathVariable Long idClase) {
         try {
@@ -167,6 +228,12 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para eliminar el chat del curso
+     * 
+     * @param idCurso ID del curso
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @DeleteMapping("/delete_curso_chat/{idCurso}")
     public ResponseEntity<?> borrarCursoChat(@PathVariable Long idCurso) {
         try {
@@ -180,6 +247,12 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para eliminar el chat del usuario
+     * 
+     * @param idUsuario ID del usuario
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @DeleteMapping("/delete_usuario_chat/{idUsuario}")
     public ResponseEntity<?> borrarUsuarioChat(@PathVariable Long idUsuario) {
         try {
@@ -195,11 +268,10 @@ public class ChatController {
 
     /**
      * Función para actualizar el chat del curso
-     * Si el chat no existe, se crea
      * 
-     * @return
+     * @param curso Curso a actualizar
+     * @return ResponseEntity<String> con el resultado de la operación
      */
-
     @PostMapping("/actualizar_curso_chat")
     public ResponseEntity<?> actualizarCursoChat(@RequestBody Curso curso) {
         try {
@@ -213,6 +285,11 @@ public class ChatController {
         }
     }
 
+    /**
+     * Función para obtener todos los cursos del chat
+     * 
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
     @GetMapping("/getAll")
     public ResponseEntity<?> getAllCursosChat() {
         try {

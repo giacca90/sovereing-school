@@ -29,6 +29,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_streaming.Services.StreamingService;
 
 public class OBSWebSocketHandler extends TextWebSocketHandler {
@@ -44,7 +45,18 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
     private final String RTMP_DOCKER;
     private final String uploadDir;
 
-    public OBSWebSocketHandler(Executor executor, StreamingService streamingService, String RTMP_URL,
+    /**
+     * Constructor de OBSWebSocketHandler
+     *
+     * @param executor         Ejecutor de tareas
+     * @param streamingService Servicio de streaming
+     * @param RTMP_URL         URL del servidor RTMP
+     * @param RTMP_DOCKER      URL del microservicio de streaming
+     * @param uploadDir        Ruta de carga de archivos
+     */
+    public OBSWebSocketHandler(Executor executor,
+            StreamingService streamingService,
+            String RTMP_URL,
             String RTMP_DOCKER,
             String uploadDir) {
         this.streamingService = streamingService;
@@ -54,6 +66,11 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         this.uploadDir = uploadDir;
     }
 
+    /**
+     * Función para establecer la conexión
+     * 
+     * @param session WebSocketSession con la conexión
+     */
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
         try {
@@ -88,6 +105,13 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * Función para cerrar la conexión
+     * 
+     * @param session WebSocketSession con la conexión
+     * @param status  CloseStatus con el estado de la conexión
+     * @throws Exception
+     */
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) throws Exception {
         String sessionId = session.getId();
@@ -129,52 +153,12 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                     }
                 }
             } catch (InterruptedException e) {
-                logger.error("El proceso fue interrumpido: {}", e.getMessage());
                 Thread.currentThread().interrupt(); // Restaurar el estado de interrupción
                 throw new RuntimeException("El proceso fue interrumpido: " + e.getMessage());
             }
 
             // Elimina la carpeta de la preview
-            Path baseUploadDir = Paths.get(uploadDir);
-            Path previewsDir = baseUploadDir.resolve("previews");
-            try (Stream<Path> paths = Files.walk(previewsDir, 1)) {
-                Optional<Path> matchingDir = paths
-                        .filter(Files::isDirectory)
-                        .filter(path -> path.getFileName().toString().endsWith("_" + sessionId))
-                        .findFirst();
-
-                if (matchingDir.isPresent()) {
-                    Path previewDir = baseUploadDir.resolve("previews");
-                    String streamId = previewDir.getFileName().toString();
-                    if (!Files.exists(previewDir) || !Files.isDirectory(previewDir)) {
-                        // Si la carpeta no existe, buscar la carpeta con el mismo nombre
-                        String temp = streamId;
-                        streamId = Files.walk(previewDir.getParent())
-                                .sorted(Comparator.reverseOrder())
-                                .filter(path -> path.getFileName().toString().contains(temp))
-                                .findFirst().get().toString();
-                        previewDir = baseUploadDir.resolve("previews").resolve(streamId);
-                    }
-                    try {
-                        Files.walk(previewDir)
-                                .sorted(Comparator.reverseOrder())
-                                .map(Path::toFile)
-                                .forEach(File::delete);
-                    } catch (IOException e) {
-                        logger.error("Error al eliminar la carpeta de la previsualización: {}", e.getMessage());
-                        throw new RuntimeException(
-                                "Error al eliminar la carpeta de la previsualización: " + e.getMessage());
-                    }
-                    Path m3u8 = baseUploadDir.resolve("previews").resolve(streamId + ".m3u8");
-                    if (Files.exists(m3u8)) {
-                        Files.delete(m3u8);
-                    }
-                } else {
-                    logger.info("No se encontró una carpeta para el sessionId: {}", sessionId);
-                }
-            } catch (IOException e) {
-                logger.error("Error al buscar la carpeta: {}", e.getMessage());
-            }
+            this.removePreview(sessionId);
         }
     }
 
@@ -244,6 +228,13 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         logReader.join(); // Esperar a que se terminen de leer los logs
     }
 
+    /**
+     * Función para manejar los mensajes de texto
+     * 
+     * @param session WebSocketSession con la conexión
+     * @param message TextMessage con el mensaje
+     * @throws Exception
+     */
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
         try {
@@ -271,7 +262,12 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
 
     // -------------------- Helpers --------------------
 
-    private void handleRequestRtmpUrl(@NonNull WebSocketSession session) {
+    /**
+     * Función para obtener el RTMP URL
+     * 
+     * @param session WebSocketSession con la conexión
+     */
+    protected void handleRequestRtmpUrl(@NonNull WebSocketSession session) {
         Long userId = (Long) session.getAttributes().get("idUsuario");
         if (userId == null) {
             sendMessage(session, "error", "userId no proporcionado");
@@ -298,7 +294,13 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         sendMessage(session, "rtmp_url", rtmpUrl);
     }
 
-    private void handleEmitirOBS(@NonNull WebSocketSession session, String payload) {
+    /**
+     * Función para emitir el streaming
+     * 
+     * @param session WebSocketSession con la conexión
+     * @param payload String con el payload
+     */
+    protected void handleEmitirOBS(@NonNull WebSocketSession session, String payload) {
         String streamId = extractStreamId(payload);
         if (streamId == null) {
             sendMessage(session, "error", "rtmpUrl no proporcionada");
@@ -313,18 +315,31 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void handleDetenerStreamOBS(@NonNull WebSocketSession session, String payload) {
+    /**
+     * Función para detener el streaming
+     * 
+     * @param session WebSocketSession con la conexión
+     * @param payload String con el payload
+     */
+    protected void handleDetenerStreamOBS(@NonNull WebSocketSession session, String payload) {
         String streamId = extractStreamId(payload);
         if (streamId != null) {
             try {
                 this.streamingService.stopFFmpegProcessForUser(streamId);
-            } catch (IOException | RuntimeException e) {
+            } catch (RuntimeException | InternalServerException e) {
                 sendMessage(session, "error", e.getMessage());
             }
         }
     }
 
-    private void sendMessage(@NonNull WebSocketSession session, String type, String message) {
+    /**
+     * Función para enviar un mensaje
+     * 
+     * @param session WebSocketSession con la conexión
+     * @param type    String con el tipo de mensaje
+     * @param message String con el mensaje
+     */
+    protected void sendMessage(@NonNull WebSocketSession session, String type, String message) {
         try {
             String payload = String.format("{\"type\":\"%s\",\"message\":\"%s\"}", type, message);
             session.sendMessage(new TextMessage(payload));
@@ -333,7 +348,13 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private String extractStreamId(String payload) {
+    /**
+     * Función para extraer el ID del streaming
+     * 
+     * @param payload String con el payload
+     * @return String con el ID del streaming
+     */
+    protected String extractStreamId(String payload) {
         if (payload.contains("rtmpUrl")) {
             ObjectMapper objectMapper = new ObjectMapper();
             try {
@@ -347,7 +368,13 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         return null;
     }
 
-    private void startFFmpegProcessForUser(String streamId, String rtmpUrl) {
+    /**
+     * Función para iniciar el proceso FFmpeg para un usuario
+     * 
+     * @param streamId ID del streaming
+     * @param rtmpUrl  URL del streaming
+     */
+    protected void startFFmpegProcessForUser(String streamId, String rtmpUrl) {
         String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         String userId = streamId.substring(0, streamId.lastIndexOf('_'));
         if (ffmpegThreads.containsKey(sessionId)) {
@@ -370,7 +397,13 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
         });
     }
 
-    private boolean isAuthorized(Authentication auth) {
+    /**
+     * Función para verificar si el usuario está autorizado
+     * 
+     * @param auth Authentication con los datos del usuario
+     * @return Booleano con el resultado de la verificación
+     */
+    protected boolean isAuthorized(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
@@ -380,4 +413,52 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
                 .anyMatch(role -> role.equals("ROLE_PROF") || role.equals("ROLE_ADMIN"));
     }
 
+    /**
+     * Función para eliminar el preview del streaming
+     * 
+     * @param sessionId ID del streaming
+     * @throws IOException
+     */
+    protected void removePreview(String sessionId) throws IOException {
+        Path baseUploadDir = Paths.get(uploadDir);
+        Path previewsDir = baseUploadDir.resolve("previews");
+        try (Stream<Path> paths = Files.walk(previewsDir, 1)) {
+            Optional<Path> matchingDir = paths
+                    .filter(Files::isDirectory)
+                    .filter(path -> path.getFileName().toString().endsWith("_" + sessionId))
+                    .findFirst();
+
+            if (matchingDir.isPresent()) {
+                Path previewDir = baseUploadDir.resolve("previews");
+                String streamId = previewDir.getFileName().toString();
+                if (!Files.exists(previewDir) || !Files.isDirectory(previewDir)) {
+                    // Si la carpeta no existe, buscar la carpeta con el mismo nombre
+                    String temp = streamId;
+                    streamId = Files.walk(previewDir.getParent())
+                            .sorted(Comparator.reverseOrder())
+                            .filter(path -> path.getFileName().toString().contains(temp))
+                            .findFirst().get().toString();
+                    previewDir = baseUploadDir.resolve("previews").resolve(streamId);
+                }
+                try {
+                    Files.walk(previewDir)
+                            .sorted(Comparator.reverseOrder())
+                            .map(Path::toFile)
+                            .forEach(File::delete);
+                } catch (IOException e) {
+                    logger.error("Error al eliminar la carpeta de la previsualización: {}", e.getMessage());
+                    throw new RuntimeException(
+                            "Error al eliminar la carpeta de la previsualización: " + e.getMessage());
+                }
+                Path m3u8 = baseUploadDir.resolve("previews").resolve(streamId + ".m3u8");
+                if (Files.exists(m3u8)) {
+                    Files.delete(m3u8);
+                }
+            } else {
+                logger.info("No se encontró una carpeta para el sessionId: {}", sessionId);
+            }
+        } catch (IOException e) {
+            logger.error("Error al buscar la carpeta: {}", e.getMessage());
+        }
+    }
 }

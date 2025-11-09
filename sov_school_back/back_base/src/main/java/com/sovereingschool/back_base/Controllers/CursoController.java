@@ -38,11 +38,22 @@ import jakarta.persistence.EntityNotFoundException;
 public class CursoController {
 	private ICursoService cursoService;
 
+	/**
+	 * Constructor de CursoController
+	 *
+	 * @param cursoService Servicio de cursos
+	 */
 	public CursoController(ICursoService cursoService) {
 		this.cursoService = cursoService;
 	}
 
 	/* Parte de gestión de cursos */
+
+	/**
+	 * Función para obtener todos los cursos
+	 * 
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getAll")
 	public ResponseEntity<?> getAll() {
 		Object response = new Object();
@@ -55,6 +66,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para obtener el curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getCurso/{id}")
 	public ResponseEntity<?> getCurso(@PathVariable Long id) {
 		Object response = new Object();
@@ -70,6 +87,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para obtener el nombre del curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getNombreCurso/{id}")
 	public ResponseEntity<?> getNombreCurso(@PathVariable Long id) {
 		Object response = new Object();
@@ -85,6 +108,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para obtener los nombres de los profesores del curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getNombresProfesoresCurso/{id}")
 	public ResponseEntity<?> getNombresProfesoresCurso(@PathVariable Long id) {
 		Object response = new Object();
@@ -104,6 +133,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para obtener la fecha de creación del curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getFechaCreacionCurso/{id}")
 	public ResponseEntity<?> getFechaCreacionCurso(@PathVariable Long id) {
 		Object response = new Object();
@@ -119,6 +154,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para obtener las clases del curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getClasesDelCurso/{id}")
 	public ResponseEntity<?> getClasesDelCurso(@PathVariable Long id) {
 		Object response = new Object();
@@ -136,6 +177,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para obtener los planes del curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getPlanesDelCurso/{id}")
 	public ResponseEntity<?> getPlanesDelCurso(@PathVariable Long id) {
 		Object response = new Object();
@@ -153,6 +200,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para obtener el precio del curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/getPrecioCurso/{id}")
 	public ResponseEntity<?> getPrecioCurso(@PathVariable Long id) {
 		Object response = new Object();
@@ -168,6 +221,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para actualizar el curso
+	 * 
+	 * @param curso Curso a actualizar
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('PROF', 'ADMIN')")
 	@PutMapping("/update")
 	public ResponseEntity<?> updateCurso(@RequestBody Curso curso) {
@@ -186,6 +245,12 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para eliminar el curso
+	 * 
+	 * @param id ID del curso
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('PROF', 'ADMIN')")
 	@DeleteMapping("/delete/{id}")
 	public ResponseEntity<?> deleteCurso(@PathVariable Long id) {
@@ -205,6 +270,14 @@ public class CursoController {
 	}
 
 	/* Parte de gestión de clases */
+
+	/**
+	 * Función para obtener la clase del curso
+	 * 
+	 * @param idCurso ID del curso
+	 * @param idClase ID de la clase
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 	@GetMapping("/{idCurso}/getClaseForId/{idClase}")
 	public ResponseEntity<?> getClaseForId(@PathVariable Long idCurso, @PathVariable Long idClase) {
@@ -230,6 +303,13 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para eliminar la clase del curso
+	 * 
+	 * @param idCurso ID del curso
+	 * @param idClase ID de la clase
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('PROF', 'ADMIN')")
 	@DeleteMapping("/{idCurso}/deleteClase/{idClase}")
 	public ResponseEntity<?> deleteClase(@PathVariable Long idCurso, @PathVariable Long idClase) {
@@ -265,6 +345,14 @@ public class CursoController {
 		}
 	}
 
+	/**
+	 * Función para subir un video
+	 * 
+	 * @param idCurso ID del curso
+	 * @param idClase ID de la clase
+	 * @param file    Archivo subido
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('PROF', 'ADMIN')")
 	@PostMapping("/subeVideo/{idCurso}/{idClase}")
 	public ResponseEntity<?> subeVideo(@PathVariable Long idCurso, @PathVariable Long idClase,

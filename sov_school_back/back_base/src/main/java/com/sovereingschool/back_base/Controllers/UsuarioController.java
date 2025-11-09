@@ -76,17 +76,34 @@ public class UsuarioController {
 	private IUsuarioService usuarioService;
 	private JwtUtil jwtUtil;
 
-	@Value("${variable.FOTOS_DIR}")
 	private String uploadDir;
 
-	@Value("${variable.BACK_BASE}")
 	private String backBase;
 
-	public UsuarioController(IUsuarioService usuarioService, JwtUtil jwtUtil) {
+	/**
+	 * Constructor de UsuarioController
+	 *
+	 * @param uploadDir      Ruta de carga de archivos
+	 * @param backBase       URL del microservicio de back
+	 * @param usuarioService Servicio de usuarios
+	 * @param jwtUtil        Utilidad de JWT
+	 */
+	public UsuarioController(@Value("${variable.FOTOS_DIR}") String uploadDir,
+			@Value("${variable.BACK_BASE}") String backBase,
+			IUsuarioService usuarioService,
+			JwtUtil jwtUtil) {
+		this.uploadDir = uploadDir;
+		this.backBase = backBase;
 		this.usuarioService = usuarioService;
 		this.jwtUtil = jwtUtil;
 	}
 
+	/**
+	 * Función para obtener el usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/{id}")
 	public ResponseEntity<?> getUsuario(@PathVariable Long id) {
 		Object response = new Object();
@@ -102,6 +119,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para obtener el nombre del usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/nombre/{id}")
 	public ResponseEntity<?> getNombreUsuario(@PathVariable Long id) {
 		Object response = new Object();
@@ -121,6 +144,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para obtener las fotos del usuario
+	 * 
+	 * @param nombreFoto Nombre de la foto
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/fotos/{nombreFoto}")
 	public ResponseEntity<?> getFotos(@PathVariable String nombreFoto) {
 		Object response = new Object();
@@ -159,6 +188,12 @@ public class UsuarioController {
 		return new ResponseEntity<>(response, headers, HttpStatus.OK);
 	}
 
+	/**
+	 * Función para obtener el rol del usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/roll/{id}")
 	public ResponseEntity<?> getRollUsuario(@PathVariable Long id) {
 		Object response = new Object();
@@ -178,6 +213,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para obtener el plan del usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/plan/{id}")
 	public ResponseEntity<?> getPlanUsuario(@PathVariable Long id) {
 		Object response = new Object();
@@ -197,6 +238,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para obtener los cursos del usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/cursos/{id}")
 	public ResponseEntity<?> getCursosUsuario(@PathVariable Long id) {
 		Object response = new Object();
@@ -216,6 +263,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para crear un nuevo usuario
+	 * 
+	 * @param newUsuario Objeto NewUsuario con los datos del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PostMapping("/nuevo")
 	public ResponseEntity<?> createUsuario(@RequestBody NewUsuario newUsuario) {
 		Object response = new Object();
@@ -239,6 +292,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para confirmar el correo electrónico
+	 * 
+	 * @param token Token JWT
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PostMapping("/confirmation")
 	public ResponseEntity<?> confirmationEmail(@RequestBody String token) {
 		Object response = new Object();
@@ -284,6 +343,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para editar el usuario
+	 * 
+	 * @param usuario Objeto Usuario con los datos del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 	@PutMapping("/edit")
 	public ResponseEntity<?> editUsuario(@RequestBody Usuario usuario) {
@@ -315,6 +380,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para cambiar el plan del usuario
+	 * 
+	 * @param usuario Objeto Usuario con los datos del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 	@PutMapping("/plan")
 	public ResponseEntity<?> changePlanUsuario(@RequestBody Usuario usuario) {
@@ -345,6 +416,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para cambiar los cursos del usuario
+	 * 
+	 * @param cursosUsuario Objeto CursosUsuario con los datos del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasRole('USER') or hasRole('PROF') or hasRole('ADMIN')")
 	@PutMapping("/cursos")
 	public ResponseEntity<?> changeCursosUsuario(@RequestBody CursosUsuario cursosUsuario) {
@@ -376,6 +453,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para eliminar el usuario
+	 * 
+	 * @param id ID del usuario
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 	@DeleteMapping("/delete/{id}")
 	public ResponseEntity<?> deleteUsuario(@PathVariable Long id) {
@@ -396,6 +479,11 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para obtener los profesores
+	 * 
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@GetMapping("/profes")
 	public ResponseEntity<?> getProfes() {
 		Object response = new Object();
@@ -408,6 +496,12 @@ public class UsuarioController {
 		}
 	}
 
+	/**
+	 * Función para subir las fotos del usuario
+	 * 
+	 * @param files Lista de archivos subidos
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 	@PostMapping("/subeFotos")
 	public ResponseEntity<?> uploadImages(@RequestBody MultipartFile[] files) {
@@ -473,6 +567,11 @@ public class UsuarioController {
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 
+	/**
+	 * Función para obtener todos los usuarios
+	 * 
+	 * @return ResponseEntity<Object> con el resultado de la operación
+	 */
 	@PreAuthorize("hasAnyRole('ADMIN')")
 	@GetMapping("/getAll")
 	public ResponseEntity<?> getAllUsuarios() {

@@ -42,6 +42,12 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import reactor.core.publisher.Mono;
 
+/**
+ * Servicio de gestión de cursos, implementando la interfaz ICursoService
+ * 
+ * 
+ * 
+ */
 @Service
 @Transactional
 public class CursoService implements ICursoService {
@@ -53,20 +59,33 @@ public class CursoService implements ICursoService {
 
     private Logger logger = LoggerFactory.getLogger(CursoService.class);
 
-    @Value("${variable.BACK_STREAM_DOCKER}")
     private String backStreamURL;
 
-    @Value("${variable.BACK_CHAT_DOCKER}")
     private String backChatURL;
 
     private Path baseUploadDir;
 
+    /**
+     * Constructor de CursoService
+     *
+     * @param uploadDir       Ruta de carga de archivos
+     * @param backStreamURL   URL del microservicio de streaming
+     * @param backChatURL     URL del microservicio de chat
+     * @param cursoRepo       Repositorio de cursos
+     * @param claseRepo       Repositorio de clases
+     * @param initAppService  Servicio de inicialización
+     * @param webClientConfig Configuración de WebClient
+     */
     public CursoService(
             @Value("${variable.VIDEOS_DIR}") String uploadDir,
+            @Value("${variable.BACK_STREAM_DOCKER}") String backStreamURL,
+            @Value("${variable.BACK_CHAT_DOCKER}") String backChatURL,
             CursoRepository cursoRepo,
             ClaseRepository claseRepo,
             InitAppService initAppService,
             WebClientConfig webClientConfig) {
+        this.backStreamURL = backStreamURL;
+        this.backChatURL = backChatURL;
         this.baseUploadDir = Paths.get(uploadDir);
         this.cursoRepo = cursoRepo;
         this.claseRepo = claseRepo;
@@ -349,7 +368,13 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void creaCarpetaCurso(Curso curso) throws InternalServerException {
+    /**
+     * Función para crear la carpeta del curso
+     * 
+     * @param curso Curso a crear la carpeta
+     * @throws InternalServerException
+     */
+    protected void creaCarpetaCurso(Curso curso) throws InternalServerException {
         Path cursoPath = baseUploadDir.resolve(curso.getIdCurso().toString());
         File cursoFile = new File(cursoPath.toString());
         if (!cursoFile.exists() || !cursoFile.isDirectory() && !cursoFile.mkdir()) {
@@ -358,7 +383,16 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void creaClasesCurso(Curso curso, List<Clase> clases) throws RepositoryException, InternalServerException {
+    /**
+     * Función para crear las clases del curso
+     * 
+     * @param curso  Curso a crear las clases
+     * @param clases Lista de Clases a crear
+     * @throws RepositoryException
+     * @throws InternalServerException
+     */
+    protected void creaClasesCurso(Curso curso, List<Clase> clases)
+            throws RepositoryException, InternalServerException {
         if (clases.isEmpty()) {
             for (Clase clase : clases) {
                 clase.setCursoClase(curso);
@@ -383,7 +417,14 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void actualizarChatCurso(Curso curso) throws InternalComunicationException {
+    /**
+     * Función para actualizar el chat del curso
+     * 
+     * @param curso Curso a actualizar el chat
+     * @throws InternalComunicationException
+     * @throws InternalServerException
+     */
+    protected void actualizarChatCurso(Curso curso) throws InternalComunicationException {
         try {
             WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
             webClient.post().uri("/actualizar_curso_chat")
@@ -411,7 +452,14 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void actualizarStreamCurso(Curso curso) throws InternalComunicationException {
+    /**
+     * Función para actualizar el streaming del curso
+     * 
+     * @param curso Curso a actualizar el streaming
+     * @throws InternalComunicationException
+     * @throws InternalServerException
+     */
+    protected void actualizarStreamCurso(Curso curso) throws InternalComunicationException {
         try {
             WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
             webClient.post().uri("/actualizar_curso_stream")
@@ -440,16 +488,26 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void updateSSR() throws InternalComunicationException {
+    /**
+     * Función para actualizar el SSR
+     * 
+     * @throws InternalComunicationException
+     */
+    protected void updateSSR() throws InternalComunicationException {
         try {
             this.initAppService.refreshSSR();
         } catch (Exception e) {
-            logger.error("Error en actualizar el SSR: {}", e.getMessage());
             throw new InternalComunicationException("Error en actualizar el SSR: " + e.getMessage(), e);
         }
     }
 
-    private void deleteCursoStream(Long idCurso) throws InternalComunicationException {
+    /**
+     * Función para eliminar el streaming del curso
+     * 
+     * @param idCurso id del curso
+     * @throws InternalComunicationException
+     */
+    protected void deleteCursoStream(Long idCurso) throws InternalComunicationException {
         try {
             WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
             webClient.delete()
@@ -477,7 +535,13 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void deleteCursoChat(Long idCurso) throws InternalComunicationException {
+    /**
+     * Función para eliminar el chat del curso
+     * 
+     * @param idCurso id del curso
+     * @throws InternalComunicationException
+     */
+    protected void deleteCursoChat(Long idCurso) throws InternalComunicationException {
         try {
             WebClient webClientChat = webClientConfig.createSecureWebClient(backChatURL);
             webClientChat.delete()
@@ -507,7 +571,14 @@ public class CursoService implements ICursoService {
 
     }
 
-    private void creaCarpetaClase(Curso curso, Clase clase) throws InternalServerException {
+    /**
+     * Función para crear la carpeta de la clase
+     * 
+     * @param curso Curso a crear la carpeta
+     * @param clase Clase a crear la carpeta
+     * @throws InternalServerException
+     */
+    protected void creaCarpetaClase(Curso curso, Clase clase) throws InternalServerException {
         Path clasePath = baseUploadDir.resolve(curso.getIdCurso().toString())
                 .resolve(clase.getIdClase().toString());
         File claseFile = new File(clasePath.toString());
@@ -516,7 +587,13 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void deleteCarpetaClase(Clase clase) throws InternalServerException {
+    /**
+     * Función para eliminar la carpeta de la clase
+     * 
+     * @param clase Clase a eliminar la carpeta
+     * @throws InternalServerException
+     */
+    protected void deleteCarpetaClase(Clase clase) throws InternalServerException {
         if (clase.getDireccionClase().isEmpty()) {
             try {
                 Path path = Paths.get(clase.getDireccionClase()).getParent();
@@ -543,7 +620,13 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void deleteCarpetaCurso(Long idCurso) throws InternalServerException {
+    /**
+     * Función para eliminar la carpeta del curso
+     * 
+     * @param idCurso id del curso
+     * @throws InternalServerException
+     */
+    protected void deleteCarpetaCurso(Long idCurso) throws InternalServerException {
         Path cursoPath = Paths.get(this.baseUploadDir.toString(), idCurso.toString());
         File cursoFile = new File(cursoPath.toString());
         if (cursoFile.exists()) {
@@ -562,7 +645,6 @@ public class CursoService implements ICursoService {
                     }
                 });
             } catch (IOException e) {
-                logger.error("Error al borrar la carpeta del curso: {}", e.getMessage());
                 throw new InternalServerException("Error al borrar la carpeta del curso: " + e.getMessage(), e);
             }
         } else {
@@ -570,7 +652,13 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void deleteClaseStream(Clase clase) throws InternalComunicationException {
+    /**
+     * Función para eliminar el streaming de la clase
+     * 
+     * @param clase Clase a eliminar el streaming
+     * @throws InternalComunicationException
+     */
+    protected void deleteClaseStream(Clase clase) throws InternalComunicationException {
         try {
             // Obtener token
             WebClient webClient = webClientConfig.createSecureWebClient(backStreamURL);
@@ -601,7 +689,13 @@ public class CursoService implements ICursoService {
         }
     }
 
-    private void deleteClaseChat(Clase clase) throws InternalComunicationException {
+    /**
+     * Función para eliminar el chat de la clase
+     * 
+     * @param clase Clase a eliminar el chat
+     * @throws InternalComunicationException
+     */
+    protected void deleteClaseChat(Clase clase) throws InternalComunicationException {
         try {
             WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
             webClient.delete()

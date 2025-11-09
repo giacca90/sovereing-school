@@ -38,11 +38,25 @@ public class InitAppService implements IInitAppService {
 
     private Logger logger = LoggerFactory.getLogger(InitAppService.class);
 
-    @Value("${variable.FRONT_DOCKER}")
     private String frontDocker;
 
-    public InitAppService(CursoRepository cursoRepo, ClaseRepository claseRepo, UsuarioRepository usuarioRepo,
-            JwtUtil jwtUtil, WebClientConfig webClientConfig) {
+    /**
+     * Constructor de InitAppService
+     *
+     * @param frontDocker     URL del microservicio de front
+     * @param cursoRepo       Repositorio de cursos
+     * @param claseRepo       Repositorio de clases
+     * @param usuarioRepo     Repositorio de usuarios
+     * @param jwtUtil         Utilidad de JWT
+     * @param webClientConfig Configuración de WebClient
+     */
+    public InitAppService(@Value("${variable.FRONT_DOCKER}") String frontDocker,
+            CursoRepository cursoRepo,
+            ClaseRepository claseRepo,
+            UsuarioRepository usuarioRepo,
+            JwtUtil jwtUtil,
+            WebClientConfig webClientConfig) {
+        this.frontDocker = frontDocker;
         this.cursoRepo = cursoRepo;
         this.claseRepo = claseRepo;
         this.usuarioRepo = usuarioRepo;
@@ -50,11 +64,21 @@ public class InitAppService implements IInitAppService {
         this.webClientConfig = webClientConfig;
     }
 
+    /**
+     * Función para obtener los profesores
+     * 
+     * @return Lista de Usuarios
+     */
     @Override
     public List<Usuario> getProfesores() {
         return this.usuarioRepo.getInit();
     }
 
+    /**
+     * Función para obtener la información inicial
+     * 
+     * @return InitApp
+     */
     @Override
     public InitApp getInit() {
         List<Usuario> profes = this.usuarioRepo.getInit();
@@ -99,11 +123,19 @@ public class InitAppService implements IInitAppService {
 
     }
 
+    /**
+     * Función para obtener el token de inicialización
+     * 
+     * @return String con el token de inicialización
+     */
     @Override
     public String getInitToken() {
         return this.jwtUtil.generateInitToken();
     }
 
+    /**
+     * Función para actualizar el SSR
+     */
     @Override
     public void refreshSSR() {
         try {

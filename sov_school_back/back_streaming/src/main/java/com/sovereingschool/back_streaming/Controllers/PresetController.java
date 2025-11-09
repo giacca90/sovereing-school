@@ -29,10 +29,20 @@ public class PresetController {
 
     private Logger logger = LoggerFactory.getLogger(PresetController.class);
 
+    /**
+     * Constructor de PresetController
+     *
+     * @param usuarioPresetsService Servicio de presets
+     */
     public PresetController(UsuarioPresetsService usuarioPresetsService) {
         this.usuarioPresetsService = usuarioPresetsService;
     }
 
+    /**
+     * Función para iniciar el servicio de presets
+     *
+     * @return ResponseEntity<Boolean> con el resultado de la operación
+     */
     @GetMapping("/start")
     public ResponseEntity<Boolean> getMethodName() {
         try {
@@ -44,6 +54,12 @@ public class PresetController {
         }
     }
 
+    /**
+     * Función para obtener los presets del usuario
+     *
+     * @param idUsuario ID del usuario
+     * @return ResponseEntity<Map<String, PresetValue>> con los presets del usuario
+     */
     @GetMapping("/get/{idUsuario}")
     public ResponseEntity<?> getPresets(@PathVariable Long idUsuario) {
         try {
@@ -59,6 +75,13 @@ public class PresetController {
         }
     }
 
+    /**
+     * Función para actualizar los presets del usuario
+     *
+     * @param data      String con los datos del usuario
+     * @param idUsuario ID del usuario
+     * @return ResponseEntity<Boolean> con el resultado de la operación
+     */
     @PutMapping("/save/{idUsuario}")
     public ResponseEntity<?> update(@RequestBody String data, @PathVariable Long idUsuario) {
         try {
