@@ -84,40 +84,36 @@ public class InitAppService implements IInitAppService {
         List<Usuario> profes = this.usuarioRepo.getInit();
         List<ProfesInit> profesInit = new ArrayList<>();
         profes.forEach(profe -> {
-            ProfesInit init = new ProfesInit();
-            init.setIdUsuario(profe.getIdUsuario());
-            init.setNombreUsuario(profe.getNombreUsuario());
-            init.setFotoUsuario(profe.getFotoUsuario());
-            init.setPresentacion(profe.getPresentacion());
+            ProfesInit init = new ProfesInit(
+                    profe.getIdUsuario(),
+                    profe.getNombreUsuario(),
+                    profe.getFotoUsuario(),
+                    profe.getPresentacion());
             profesInit.add(init);
-
         });
 
         List<Curso> cursos = this.cursoRepo.getAllCursos();
         List<CursosInit> cursosInit = new ArrayList<>();
         cursos.forEach(curso -> {
-            CursosInit init = new CursosInit();
-            init.setIdCurso(curso.getIdCurso());
-            init.setNombreCurso(curso.getNombreCurso());
-            init.setImagenCurso(curso.getImagenCurso());
-            init.setDescriccionCorta(curso.getDescriccionCorta());
-            List<Long> idsProfes = new ArrayList<>();
-            curso.getProfesoresCurso().forEach(profe -> idsProfes.add(profe.getIdUsuario()));
-
-            init.setProfesoresCurso(idsProfes);
+            CursosInit init = new CursosInit(
+                    curso.getIdCurso(),
+                    curso.getNombreCurso(),
+                    curso.getProfesoresCurso().stream().map(profesor -> profesor.getIdUsuario()).toList(),
+                    curso.getDescriccionCorta(),
+                    curso.getImagenCurso());
             cursosInit.add(init);
         });
 
-        Estadistica estadistica = new Estadistica();
-        estadistica.setClases(this.claseRepo.count());
-        estadistica.setCursos(this.cursoRepo.count());
-        estadistica.setProfesores(profesInit.size());
-        estadistica.setAlumnos(this.usuarioRepo.count() - profesInit.size());
+        Estadistica estadistica = new Estadistica(
+                profesInit.size(),
+                this.usuarioRepo.count() - profesInit.size(),
+                this.cursoRepo.count(),
+                this.claseRepo.count());
 
-        InitApp init = new InitApp();
-        init.setCursosInit(cursosInit);
-        init.setProfesInit(profesInit);
-        init.setEstadistica(estadistica);
+        InitApp init = new InitApp(
+                cursosInit,
+                profesInit,
+                estadistica);
 
         return init;
 

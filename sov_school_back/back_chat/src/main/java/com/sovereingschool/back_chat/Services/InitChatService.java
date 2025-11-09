@@ -2,9 +2,7 @@ package com.sovereingschool.back_chat.Services;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -392,25 +390,30 @@ public class InitChatService {
                                 cursoChat.getIdCurso());
                         throw new EntityNotFoundException("Error en obtener el curso con ID " + cursoChat.getIdCurso());
                     });
-                    CursoChatDTO cursoChatDTO = new CursoChatDTO();
-                    cursoChatDTO.setIdCurso(cursoChat.getIdCurso());
-                    cursoChatDTO.setNombreCurso(curso.getNombreCurso());
-                    cursoChatDTO.setFotoCurso(curso.getImagenCurso());
+
+                    List<MensajeChatDTO> mensajes;
                     if (cursoChat.getUltimo() != null) {
-                        Optional<MensajeChat> ultimoMensaje = this.mensajeChatRepo.findById(cursoChat.getUltimo());
-                        if (ultimoMensaje.isPresent()) {
-                            List<MensajeChatDTO> ultimoDTO = this.getMensajesDTO(Arrays.asList(ultimoMensaje.get()));
-                            cursoChatDTO.setMensajes(ultimoDTO);
-                        } else {
-                            MensajeChatDTO noMessage = this.generateNoMessage(cursoChat, curso);
-                            cursoChatDTO.setMensajes(Arrays.asList(noMessage));
-                        }
+                        mensajes = this.mensajeChatRepo.findById(cursoChat.getUltimo())
+                                .map(ultimo -> this.getMensajesDTO(List.of(ultimo)))
+                                .orElseGet(() -> List.of(this.generateNoMessage(cursoChat, curso)));
                     } else {
-                        MensajeChatDTO noMessage = this.generateNoMessage(cursoChat, curso);
-                        cursoChatDTO.setMensajes(Arrays.asList(noMessage));
+                        mensajes = List.of(this.generateNoMessage(cursoChat, curso));
                     }
+
+                    // Suponiendo que no tienes clases todavía
+                    List<ClaseChatDTO> clases = new ArrayList<>();
+
+                    // Crear record directamente
+                    CursoChatDTO cursoChatDTO = new CursoChatDTO(
+                            cursoChat.getIdCurso(),
+                            clases,
+                            mensajes,
+                            curso.getNombreCurso(),
+                            curso.getImagenCurso());
+
                     cursosChatDTO.add(cursoChatDTO);
                 }
+
             }
         }
         return cursosChatDTO;
@@ -424,11 +427,21 @@ public class InitChatService {
      * @return MensajeChatDTO con los datos del mensaje
      */
     protected MensajeChatDTO generateNoMessage(CursoChat cursoChat, Curso curso) {
-        return MensajeChatDTO.builder()
-                .idCurso(cursoChat.getIdCurso())
-                .nombreCurso(curso.getNombreCurso())
-                .fotoCurso(curso.getImagenCurso())
-                .mensaje("No hay mensajes en este curso")
-                .build();
+        return new MensajeChatDTO(
+                null, // idMensaje
+                cursoChat.getIdCurso(), // idCurso
+                null, // idClase
+                null, // idUsuario
+                curso.getNombreCurso(), // nombreCurso
+                null, // nombreClase
+                null, // nombreUsuario
+                curso.getImagenCurso(), // fotoCurso
+                null, // fotoUsuario
+                null, // respuesta
+                null, // pregunta
+                "No hay mensajes en este curso", // mensaje
+                null // fecha
+        );
     }
+
 }

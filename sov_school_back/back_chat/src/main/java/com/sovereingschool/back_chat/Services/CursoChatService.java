@@ -148,8 +148,8 @@ public class CursoChatService {
 
             // Obtener ID de respuesta si existe
             String respId = null;
-            if (mensajeChatDTO.getRespuesta() != null) {
-                respId = mensajeChatDTO.getRespuesta().getIdMensaje();
+            if (mensajeChatDTO.respuesta() != null) {
+                respId = mensajeChatDTO.respuesta().idMensaje();
                 if (respId == null) {
                     throw new IllegalArgumentException("ID de respuesta nulo en MensajeChatDTO");
                 }
@@ -158,36 +158,36 @@ public class CursoChatService {
             // Crear y guardar el mensaje principal
             MensajeChat mensajeChat = new MensajeChat(
                     null,
-                    mensajeChatDTO.getIdClase(),
-                    mensajeChatDTO.getIdCurso(),
-                    mensajeChatDTO.getIdUsuario(),
+                    mensajeChatDTO.idClase(),
+                    mensajeChatDTO.idCurso(),
+                    mensajeChatDTO.idUsuario(),
                     respId,
-                    mensajeChatDTO.getPregunta(),
-                    mensajeChatDTO.getMensaje(),
-                    mensajeChatDTO.getFecha());
+                    mensajeChatDTO.pregunta(),
+                    mensajeChatDTO.mensaje(),
+                    mensajeChatDTO.fecha());
             MensajeChat savedMessage = mensajeChatRepo.save(mensajeChat);
             String savedId = savedMessage.getId();
 
             // Actualizar CursoChat
-            CursoChat cursoChat = cursoChatRepo.findByIdCurso(mensajeChatDTO.getIdCurso()).orElseThrow(() -> {
+            CursoChat cursoChat = cursoChatRepo.findByIdCurso(mensajeChatDTO.idCurso()).orElseThrow(() -> {
                 logger.error("Error en obtener el curso del chat");
                 throw new EntityNotFoundException("Error en obtener el curso del chat");
             });
-            if (mensajeChatDTO.getIdClase() == null || mensajeChatDTO.getIdClase() == 0) {
+            if (mensajeChatDTO.idClase() == null || mensajeChatDTO.idClase() == 0) {
                 cursoChat.getMensajes().add(savedId);
             } else {
                 cursoChat.getClases().stream()
-                        .filter(c -> Objects.equals(c.getIdClase(), mensajeChatDTO.getIdClase()))
+                        .filter(c -> Objects.equals(c.getIdClase(), mensajeChatDTO.idClase()))
                         .findFirst()
                         .orElseThrow(() -> new NoSuchElementException(
-                                "ClaseChat no encontrada para idClase: " + mensajeChatDTO.getIdClase()))
+                                "ClaseChat no encontrada para idClase: " + mensajeChatDTO.idClase()))
                         .getMensajes().add(savedId);
             }
             cursoChat.setUltimo(savedId);
             cursoChatRepo.save(cursoChat);
 
             // Actualizar UsuarioChat
-            UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(mensajeChatDTO.getIdUsuario())
+            UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(mensajeChatDTO.idUsuario())
                     .orElseThrow(() -> {
                         logger.error("Error en obtener el usuario del chat");
                         throw new EntityNotFoundException("Error en obtener el usuario del chat");
@@ -198,10 +198,10 @@ public class CursoChatService {
             }
 
             // Notificar profesores si es pregunta
-            if (mensajeChatDTO.getPregunta() != null) {
-                Curso curso = cursoRepo.findById(mensajeChatDTO.getIdCurso())
+            if (mensajeChatDTO.pregunta() != null) {
+                Curso curso = cursoRepo.findById(mensajeChatDTO.idCurso())
                         .orElseThrow(() -> new NoSuchElementException(
-                                "Curso no encontrado con id: " + mensajeChatDTO.getIdCurso()));
+                                "Curso no encontrado con id: " + mensajeChatDTO.idCurso()));
                 for (Usuario prof : curso.getProfesoresCurso()) {
                     UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(prof.getIdUsuario()).orElseThrow(() -> {
                         logger.error("Error en obtener el profesor del curso");

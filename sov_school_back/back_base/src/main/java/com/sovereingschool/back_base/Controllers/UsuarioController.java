@@ -431,7 +431,7 @@ public class UsuarioController {
 			return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
 		}
 		Long idUsuario = (Long) authentication.getDetails();
-		if (idUsuario == null || !idUsuario.equals(cursosUsuario.getIdUsuario())) {
+		if (idUsuario == null || !idUsuario.equals(cursosUsuario.idUsuario())) {
 			return new ResponseEntity<>("Error en el token de acceso: no hay id_usuario en el token",
 					HttpStatus.UNAUTHORIZED);
 		}

@@ -133,7 +133,7 @@ public class JwtUtil {
             String newUserString = convertirObjetoABase64(newUsuario);
             return JWT.create()
                     .withIssuer(this.userGenerator)
-                    .withSubject(newUsuario.getCorreoElectronico())
+                    .withSubject(newUsuario.correoElectronico())
                     .withClaim("rol", "ROLE_USER")
                     .withClaim("newUsuario", newUserString)
                     .withIssuedAt(new Date())

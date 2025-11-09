@@ -126,14 +126,14 @@ class UsuarioServiceTest {
     // ==========================
     @Test
     void createUsuario_SuccessfulCreation() throws RepositoryException, InternalComunicationException {
-        NewUsuario newUsuario = new NewUsuario();
-        newUsuario.setNombreUsuario("pepito");
-        newUsuario.setCorreoElectronico("pepito@example.com");
-        newUsuario.setPassword("plainpass");
-        newUsuario.setFotoUsuario(null);
-        newUsuario.setPlanUsuario(null);
-        newUsuario.setCursosUsuario(new ArrayList<>());
-        newUsuario.setFechaRegistroUsuario(new Date());
+        NewUsuario newUsuario = new NewUsuario(
+                "pepito",
+                "pepito@example.com",
+                "plainpass",
+                null,
+                null,
+                new ArrayList<>(),
+                new Date());
 
         Usuario usuarioInsertado = new Usuario();
         usuarioInsertado.setIdUsuario(10L);
@@ -176,10 +176,14 @@ class UsuarioServiceTest {
 
     @Test
     void createUsuario_ThrowsRepositoryException_WhenSavedUserHasNullId() throws InternalComunicationException {
-        NewUsuario newUsuario = new NewUsuario();
-        newUsuario.setNombreUsuario("fallo");
-        newUsuario.setCorreoElectronico("fallo@example.com");
-        newUsuario.setPassword("x");
+        NewUsuario newUsuario = new NewUsuario(
+                "fallo",
+                "fallo@example.com",
+                "x",
+                null,
+                null,
+                new ArrayList<>(),
+                new Date());
 
         Usuario usuarioSinId = new Usuario();
         usuarioSinId.setIdUsuario(null);
@@ -194,10 +198,14 @@ class UsuarioServiceTest {
 
     @Test
     void createUsuario_PropagatesDataIntegrityViolationException() {
-        NewUsuario newUsuario = new NewUsuario();
-        newUsuario.setNombreUsuario("dup");
-        newUsuario.setCorreoElectronico("dup@example.com");
-        newUsuario.setPassword("x");
+        NewUsuario newUsuario = new NewUsuario(
+                "dup",
+                "dup@example.com",
+                "x",
+                null,
+                null,
+                new ArrayList<>(),
+                new Date());
 
         when(usuarioRepo.save(any(Usuario.class))).thenThrow(new DataIntegrityViolationException("duplicate key"));
 
@@ -208,14 +216,14 @@ class UsuarioServiceTest {
 
     @Test
     void createUsuario_WithFotoUsuario_AssignsCorrectly() throws RepositoryException, InternalComunicationException {
-        NewUsuario newUsuario = new NewUsuario();
-        newUsuario.setNombreUsuario("pepito");
-        newUsuario.setCorreoElectronico("pepito@example.com");
-        newUsuario.setPassword("plainpass");
-        newUsuario.setFotoUsuario(List.of("foto1.png", "foto2.png"));
-        newUsuario.setPlanUsuario(null);
-        newUsuario.setCursosUsuario(new ArrayList<>());
-        newUsuario.setFechaRegistroUsuario(new Date());
+        NewUsuario newUsuario = new NewUsuario(
+                "pepito",
+                "pepito@example.com",
+                "plainpass",
+                List.of("foto1.png", "foto2.png"),
+                null,
+                new ArrayList<>(),
+                new Date());
 
         Usuario usuarioInsertado = new Usuario();
         usuarioInsertado.setIdUsuario(10L);
@@ -225,7 +233,7 @@ class UsuarioServiceTest {
         usuarioInsertado.setAccountNoExpired(true);
         usuarioInsertado.setCredentialsNoExpired(true);
         usuarioInsertado.setAccountNoLocked(true);
-        usuarioInsertado.setFotoUsuario(newUsuario.getFotoUsuario());
+        usuarioInsertado.setFotoUsuario(newUsuario.fotoUsuario());
 
         when(passwordEncoder.encode(anyString())).thenReturn("encodedPass");
         when(usuarioRepo.save(any(Usuario.class))).thenReturn(usuarioInsertado);
@@ -243,20 +251,20 @@ class UsuarioServiceTest {
         assertNotNull(resp);
         assertTrue(resp.status());
         assertEquals(usuarioInsertado, resp.usuario());
-        assertEquals(newUsuario.getFotoUsuario(), resp.usuario().getFotoUsuario());
+        assertEquals(newUsuario.fotoUsuario(), resp.usuario().getFotoUsuario());
     }
 
     @Test
     void createUsuario_WithEmptyFotoUsuario_AssignsEmptyList()
             throws RepositoryException, InternalComunicationException {
-        NewUsuario newUsuario = new NewUsuario();
-        newUsuario.setNombreUsuario("pepito");
-        newUsuario.setCorreoElectronico("pepito@example.com");
-        newUsuario.setPassword("plainpass");
-        newUsuario.setFotoUsuario(new ArrayList<>()); // lista vacía
-        newUsuario.setPlanUsuario(null);
-        newUsuario.setCursosUsuario(new ArrayList<>());
-        newUsuario.setFechaRegistroUsuario(new Date());
+        NewUsuario newUsuario = new NewUsuario(
+                "pepito",
+                "pepito@example.com",
+                "plainpass",
+                new ArrayList<>(),
+                null,
+                new ArrayList<>(),
+                new Date());
 
         Usuario usuarioInsertado = new Usuario();
         usuarioInsertado.setIdUsuario(10L);
@@ -266,7 +274,7 @@ class UsuarioServiceTest {
         usuarioInsertado.setAccountNoExpired(true);
         usuarioInsertado.setCredentialsNoExpired(true);
         usuarioInsertado.setAccountNoLocked(true);
-        usuarioInsertado.setFotoUsuario(newUsuario.getFotoUsuario());
+        usuarioInsertado.setFotoUsuario(newUsuario.fotoUsuario());
 
         when(passwordEncoder.encode(anyString())).thenReturn("encodedPass");
         when(usuarioRepo.save(any(Usuario.class))).thenReturn(usuarioInsertado);
@@ -284,6 +292,6 @@ class UsuarioServiceTest {
         assertNotNull(resp);
         assertTrue(resp.status());
         assertEquals(usuarioInsertado, resp.usuario());
-        assertEquals(newUsuario.getFotoUsuario(), resp.usuario().getFotoUsuario());
+        assertEquals(newUsuario.fotoUsuario(), resp.usuario().getFotoUsuario());
     }
 }

@@ -4,30 +4,18 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@AllArgsConstructor
-@NoArgsConstructor
-@Data
-@ToString
-public class NewUsuario implements Serializable {
-	private String nombreUsuario;
-
-	private String correoElectronico;
-
-	private String password;
-
-	private List<String> fotoUsuario;
-
-	private Plan planUsuario;
-
-	private List<Curso> cursosUsuario;
-
-	private Date fechaRegistroUsuario;
+@JsonPropertyOrder({ "nombreUsuario", "correoElectronico", "password", "fotoUsuario", "planUsuario", "cursosUsuario",
+		"fechaRegistroUsuario" })
+public record NewUsuario(
+		String nombreUsuario,
+		String correoElectronico,
+		String password,
+		List<String> fotoUsuario,
+		Plan planUsuario,
+		List<Curso> cursosUsuario,
+		Date fechaRegistroUsuario) implements Serializable {
 }

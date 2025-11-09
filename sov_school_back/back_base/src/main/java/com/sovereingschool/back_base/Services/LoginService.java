@@ -140,17 +140,17 @@ public class LoginService implements UserDetailsService, ILoginService {
      */
     @Override
     public Integer changePasswordLogin(ChangePassword changepassword) {
-        if (changepassword.getNewPassword().isEmpty() || changepassword.getOldPassword().isEmpty())
+        if (changepassword.newPassword().isEmpty() || changepassword.oldPassword().isEmpty())
             return null;
 
         // Desempaquetar Optional<String>
         String oldPasswordDB = this.loginRepository
-                .findPasswordLoginForId(changepassword.getIdUsuario())
+                .findPasswordLoginForId(changepassword.idUsuario())
                 .orElse(null);
 
-        if (Objects.equals(oldPasswordDB, changepassword.getOldPassword())) {
-            this.loginRepository.changePasswordLoginForId(changepassword.getIdUsuario(),
-                    changepassword.getNewPassword());
+        if (Objects.equals(oldPasswordDB, changepassword.oldPassword())) {
+            this.loginRepository.changePasswordLoginForId(changepassword.idUsuario(),
+                    changepassword.newPassword());
             return 1;
         }
 

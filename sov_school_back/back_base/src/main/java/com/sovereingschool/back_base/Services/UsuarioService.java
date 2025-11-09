@@ -159,15 +159,15 @@ public class UsuarioService implements IUsuarioService {
     public AuthResponse createUsuario(NewUsuario newUsuario) throws RepositoryException, InternalComunicationException {
         Usuario usuario = new Usuario(
                 null, // Long id_usuario
-                newUsuario.getNombreUsuario(), // String nombre_usuario
-                newUsuario.getFotoUsuario() == null || newUsuario.getFotoUsuario().isEmpty()
+                newUsuario.nombreUsuario(), // String nombre_usuario
+                newUsuario.fotoUsuario() == null || newUsuario.fotoUsuario().isEmpty()
                         ? new ArrayList<>(Arrays.asList(generarColorHex()))
-                        : newUsuario.getFotoUsuario(), // List<String> foto_usuario
+                        : newUsuario.fotoUsuario(), // List<String> foto_usuario
                 null, // Strting presentación
                 RoleEnum.USER, // Integer rol_usuario
-                newUsuario.getPlanUsuario(), // Plan plan_usuario
-                newUsuario.getCursosUsuario(), // List<String> cursos_usuario
-                newUsuario.getFechaRegistroUsuario(), // Date fecha_registro_usuario
+                newUsuario.planUsuario(), // Plan plan_usuario
+                newUsuario.cursosUsuario(), // List<String> cursos_usuario
+                newUsuario.fechaRegistroUsuario(), // Date fecha_registro_usuario
                 true,
                 true,
                 true,
@@ -179,8 +179,8 @@ public class UsuarioService implements IUsuarioService {
             }
             Login login = new Login();
             login.setUsuario(usuarioInsertado);
-            login.setCorreoElectronico(newUsuario.getCorreoElectronico());
-            login.setPassword(passwordEncoder.encode(newUsuario.getPassword()));
+            login.setCorreoElectronico(newUsuario.correoElectronico());
+            login.setPassword(passwordEncoder.encode(newUsuario.password()));
             this.loginRepo.save(login);
 
             // Crear el usuario en el microservicio de chat
@@ -200,7 +200,7 @@ public class UsuarioService implements IUsuarioService {
                     usuarioInsertado.getAccountNoLocked(),
                     roles);
 
-            Authentication auth = new UsernamePasswordAuthenticationToken(newUsuario.getCorreoElectronico(),
+            Authentication auth = new UsernamePasswordAuthenticationToken(newUsuario.correoElectronico(),
                     userDetails.getPassword(),
                     userDetails.getAuthorities());
 
@@ -404,11 +404,11 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Integer changeCursosUsuario(CursosUsuario cursosUsuario) {
-        Optional<Usuario> oldUsuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.getIdUsuario());
+        Optional<Usuario> oldUsuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.idUsuario());
         if (oldUsuario.isEmpty()) {
             throw new IllegalArgumentException("El usuario no existe");
         }
-        List<Curso> cursos = this.cursoRepo.findAllById(cursosUsuario.getIdsCursos());
+        List<Curso> cursos = this.cursoRepo.findAllById(cursosUsuario.idsCursos());
         oldUsuario.get().setCursosUsuario(cursos);
 
         // Añadir el usuario al microservicio de stream
@@ -417,7 +417,7 @@ public class UsuarioService implements IUsuarioService {
         // Añadir el usuario al microservicio de chat
         this.addUsuarioChat(oldUsuario.get());
 
-        return this.usuarioRepo.changeUsuarioForId(cursosUsuario.getIdUsuario(), oldUsuario.get()).orElseThrow(() -> {
+        return this.usuarioRepo.changeUsuarioForId(cursosUsuario.idUsuario(), oldUsuario.get()).orElseThrow(() -> {
             logger.error("Error en cambiar los cursos del usuario");
             return new RuntimeException("Error en cambiar los cursos del usuario");
         });
@@ -488,7 +488,7 @@ public class UsuarioService implements IUsuarioService {
     public boolean sendConfirmationEmail(NewUsuario newUsuario) throws InternalServerException {
         Context context = new Context();
         String token = jwtUtil.generateRegistrationToken(newUsuario);
-        context.setVariable("nombre", newUsuario.getNombreUsuario());
+        context.setVariable("nombre", newUsuario.nombreUsuario());
         context.setVariable("link", frontURL + "/confirm-email?token=" + token);
         context.setVariable("currentYear", Year.now().getValue());
 
@@ -498,7 +498,7 @@ public class UsuarioService implements IUsuarioService {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            helper.setTo(newUsuario.getCorreoElectronico());
+            helper.setTo(newUsuario.correoElectronico());
             helper.setSubject("Confirmación de Correo Electrónico");
             helper.setText(htmlContent, true);
             mailSender.send(mimeMessage);
