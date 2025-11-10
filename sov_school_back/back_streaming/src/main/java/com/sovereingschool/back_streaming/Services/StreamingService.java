@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -31,6 +32,7 @@ import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_streaming.Models.ResolutionProfile;
+import com.sovereingschool.back_streaming.Utils.GPUDetector;
 
 @Service
 @Transactional
@@ -283,9 +285,10 @@ public class StreamingService {
      */
     protected List<String> creaComandoFFmpeg(String inputFilePath, boolean live, String[] videoSetting)
             throws IOException, InterruptedException, RuntimeException {
+
         String hlsPlaylistType = live ? "event" : "vod";
         String hlsFlags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
-        // String preset = live ? "veryfast" : "fast"; // No se usa en VAAPI
+
         String width = null;
         String height = null;
         String fps = null;
@@ -294,7 +297,8 @@ public class StreamingService {
             height = videoSetting[1];
             fps = videoSetting[2];
         }
-        // Obtener la resolución del video con ffprobe
+
+        // Obtener la resolución si falta
         if (width == null || height == null || fps == null) {
             videoSetting = this.ffprobe(inputFilePath);
             width = videoSetting[0];
@@ -307,55 +311,50 @@ public class StreamingService {
         int inputFps = Integer.parseInt(fps);
         int totalPixels = inputWidth * inputHeight;
 
-        // Filtra todos los perfiles cuya área sea ≤ la del input
-        // y cuyo fps sea 30 (fallback) o menor o igual al input
+        // calcular perfiles a usar
         List<ResolutionProfile> resolutionPairs = this.calculateResolutionPairs(totalPixels, inputFps);
 
-        // Crear los filtros
-        List<String> filters = new ArrayList<>();
+        // Detectar aceleración una sola vez
+        GPUDetector.VideoAcceleration accel = GPUDetector.detectAcceleration();
 
-        String filtro = "[0:v]format=nv12,hwupload,split=" + resolutionPairs.size();
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            filtro += "[v" + (i + 1) + "]";
+        // Crear los filtros según aceleración
+        List<String> filters;
+        switch (accel) {
+            case VAAPI:
+                filters = createIntelGPUFilter(resolutionPairs);
+                break;
+            case NVIDIA:
+                filters = createNvidiaGPUFilter(resolutionPairs);
+                break;
+            case CPU:
+            default:
+                filters = createCPUFilter(resolutionPairs);
+                break;
         }
 
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).getWidth() + ":h="
-                    + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
-        }
-        filters.add(filtro);
+        // Base del comando
+        List<String> ffmpegCommand = new ArrayList<>();
+        ffmpegCommand.add("ffmpeg");
+        ffmpegCommand.add("-loglevel");
+        ffmpegCommand.add("info");
 
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            int fpsn = resolutionPairs.get(i).getFps();
-            filters.addAll(Arrays.asList(
-                    "-map", "[v" + (i + 1) + "out]",
-                    "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
-                    // "-qp:v:" + i, "4", // Constante de calidad
-                    "-profile:v:" + i, resolutionPairs.get(i).getProfile(),
-                    "-level:v:" + i, resolutionPairs.get(i).getLevel(),
-                    "-b:v:" + i, resolutionPairs.get(i).getBitrate(),
-                    "-maxrate:v:" + i, resolutionPairs.get(i).getMaxrate(),
-                    "-bufsize:v:" + i, resolutionPairs.get(i).getBufsize(),
-                    "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
-                    "-keyint_min", String.valueOf(fpsn)));
-        }
-
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            filters.addAll(Arrays.asList("-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i,
-                    resolutionPairs.get(i).getAudioBitrate()));
-            if (i == 0) {
-                filters.addAll(Arrays.asList("-ac", "2"));
-            }
+        // Opciones específicas de hw antes del -i
+        switch (accel) {
+            case VAAPI:
+                // Vaapi: especificamos dispositivo VAAPI (debe estar presente y montado)
+                ffmpegCommand.addAll(List.of("-vaapi_device", "/dev/dri/renderD128"));
+                break;
+            case NVIDIA:
+                // NVIDIA: habilitar hwaccel y salida en formato cuda. Puede necesitar ajustes
+                // si el ffmpeg/driver requiere init_hw_device/filter_hw_device.
+                ffmpegCommand.addAll(List.of("-hwaccel", "cuda", "-hwaccel_output_format", "cuda"));
+                break;
+            case CPU:
+                // CPU: no añadimos -hwaccel (no existe -hwaccel cpu)
+                break;
         }
 
-        // Crea el comando FFmpeg
-        List<String> ffmpegCommand = new ArrayList<>(List.of(
-                "ffmpeg", "-loglevel", "info",
-                "-vaapi_device", "/dev/dri/renderD128" // Dispositivo VAAPI
-        // "-hwaccel", "vaapi", "-hwaccel_output_format", "vaapi" // Acceleration para
-        // VAAPI
-        ));
-
+        // Lectura input / opciones para pipe
         if (live && !inputFilePath.contains("pipe:")) {
             ffmpegCommand.add("-re");
         }
@@ -372,19 +371,25 @@ public class StreamingService {
             ffmpegCommand.addAll(List.of("-i", inputFilePath));
         }
 
-        ffmpegCommand.addAll(List.of(
-                "-filter_complex"));
+        // Añadir filter_complex: asume que el primer elemento de filters es la cadena
+        // del grafo
+        ffmpegCommand.add("-filter_complex");
         ffmpegCommand.addAll(filters);
-        ffmpegCommand.addAll(List.of("-var_stream_map"));
-        String streamMap = "";
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            int Width = resolutionPairs.get(i).getWidth();
-            int Height = resolutionPairs.get(i).getHeight();
-            int fpsn = resolutionPairs.get(i).getFps();
-            streamMap += " v:" + i + ",a:" + i + ",name:" + Width + "x" + Height + "@" + fpsn;
-        }
-        ffmpegCommand.add(streamMap);
 
+        // Construir var_stream_map (sin espacio inicial)
+        StringBuilder streamMap = new StringBuilder();
+        for (int i = 0; i < resolutionPairs.size(); i++) {
+            int w = resolutionPairs.get(i).getWidth();
+            int h = resolutionPairs.get(i).getHeight();
+            int fpsn = resolutionPairs.get(i).getFps();
+            if (streamMap.length() > 0)
+                streamMap.append(" ");
+            streamMap.append("v:").append(i).append(",a:").append(i).append(",name:")
+                    .append(w).append("x").append(h).append("@").append(fpsn);
+        }
+        ffmpegCommand.addAll(List.of("-var_stream_map", streamMap.toString()));
+
+        // Opciones de salida HLS (maestro)
         ffmpegCommand.addAll(List.of("-master_pl_name", "master.m3u8",
                 "-f", "hls",
                 "-hls_time", "2",
@@ -394,9 +399,12 @@ public class StreamingService {
                 "-hls_segment_filename", "%v/data%05d.ts",
                 "%v/stream.m3u8"));
 
+        // Si quieres además guardar un original.mp4 cuando live
         if (live) {
-            ffmpegCommand.addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy",
-                    "-c:a", "aac", "original.mp4"));
+            // Nota: usar -map y -c:v copy produce un segundo output; en este caso
+            // las opciones se aplican a ese output concreto.
+            ffmpegCommand
+                    .addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy", "-c:a", "aac", "original.mp4"));
         }
 
         logger.info("Comando FFmpeg: {}", String.join(" ", ffmpegCommand));
@@ -509,17 +517,168 @@ public class StreamingService {
      * @param resolutionPairs Lista de ResolutionProfile
      * @return String con el filtro de CPU
      */
-    protected String createCPUFilter(List<ResolutionProfile> resolutionPairs) {
-        String filtro = "";
-        for (int i = 0; i < resolutionPairs.size(); i++) {
+    protected List<String> createCPUFilter(List<ResolutionProfile> resolutionPairs) {
+        // defensa básica
+        if (resolutionPairs == null || resolutionPairs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int n = resolutionPairs.size();
+        List<String> filters = new ArrayList<>();
+
+        // 1) Construir el filtergraph: split + scale por salida
+        StringBuilder graph = new StringBuilder();
+        // split desde la entrada
+        graph.append("[0:v]split=").append(n);
+        for (int i = 0; i < n; i++) {
+            graph.append("[v").append(i + 1).append("]");
+        }
+        // ahora las escalas (una por each vX -> vXout)
+        for (int i = 0; i < n; i++) {
+            ResolutionProfile rp = resolutionPairs.get(i);
+            graph.append(";");
+            graph.append("[v").append(i + 1).append("]");
+            graph.append("scale=w=").append(rp.getWidth())
+                    .append(":h=").append(rp.getHeight())
+                    .append("[v").append(i + 1).append("out]");
+        }
+        // añadir el grafo como primer elemento de la lista de filtros
+        filters.add(graph.toString());
+
+        // 2) Opciones por cada stream de vídeo (map + codec + rates etc.)
+        for (int i = 0; i < n; i++) {
+            ResolutionProfile rp = resolutionPairs.get(i);
+            int fpsn = rp.getFps();
+
+            filters.addAll(Arrays.asList(
+                    "-map", "[v" + (i + 1) + "out]",
+                    "-c:v:" + i, "libx264", // encoder CPU
+                    "-profile:v:" + i, rp.getProfile(),
+                    "-level:v:" + i, rp.getLevel(),
+                    "-b:v:" + i, rp.getBitrate(),
+                    "-maxrate:v:" + i, rp.getMaxrate(),
+                    "-bufsize:v:" + i, rp.getBufsize(),
+                    "-g", String.valueOf(fpsn),
+                    "-keyint_min", String.valueOf(fpsn)));
+        }
+
+        // 3) Mapear audio por cada stream (mismo audio 0:a:0 en cada salida)
+        for (int i = 0; i < n; i++) {
+            filters.addAll(Arrays.asList(
+                    "-map", "0:a:0", // map primer audio del input
+                    "-c:a:" + i, "aac",
+                    "-b:a:" + i, resolutionPairs.get(i).getAudioBitrate()));
             if (i == 0) {
-                filtro += " [v1]copy[v1out]";
-            } else {
-                filtro += "; [v" + (i + 1) + "]scale=w=" +
-                        resolutionPairs.get(i).getWidth() + ":h="
-                        + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
+                // Forzar estereo si lo quieres solo una vez (aplica antes de outputs)
+                filters.addAll(Arrays.asList("-ac", "2"));
             }
         }
-        return filtro;
+
+        return filters;
     }
+
+    /**
+     * Función para crear el filtro de GPU de Intel
+     * 
+     * @param resolutionPairs Lista de ResolutionProfile
+     * @return Lista de String con el filtro de GPU
+     */
+    protected List<String> createIntelGPUFilter(List<ResolutionProfile> resolutionPairs) {
+        List<String> filters = new ArrayList<>();
+
+        String filtro = "[0:v]format=nv12,hwupload,split=" + resolutionPairs.size();
+        for (int i = 0; i < resolutionPairs.size(); i++) {
+            filtro += "[v" + (i + 1) + "]";
+        }
+
+        for (int i = 0; i < resolutionPairs.size(); i++) {
+            filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).getWidth() + ":h="
+                    + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
+        }
+        filters.add(filtro);
+
+        for (int i = 0; i < resolutionPairs.size(); i++) {
+            int fpsn = resolutionPairs.get(i).getFps();
+            filters.addAll(Arrays.asList(
+                    "-map", "[v" + (i + 1) + "out]",
+                    "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
+                    // "-qp:v:" + i, "4", // Constante de calidad
+                    "-profile:v:" + i, resolutionPairs.get(i).getProfile(),
+                    "-level:v:" + i, resolutionPairs.get(i).getLevel(),
+                    "-b:v:" + i, resolutionPairs.get(i).getBitrate(),
+                    "-maxrate:v:" + i, resolutionPairs.get(i).getMaxrate(),
+                    "-bufsize:v:" + i, resolutionPairs.get(i).getBufsize(),
+                    "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
+                    "-keyint_min", String.valueOf(fpsn)));
+        }
+
+        for (int i = 0; i < resolutionPairs.size(); i++) {
+            filters.addAll(Arrays.asList("-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i,
+                    resolutionPairs.get(i).getAudioBitrate()));
+            if (i == 0) {
+                filters.addAll(Arrays.asList("-ac", "2"));
+            }
+        }
+
+        return filters;
+    }
+
+    protected List<String> createNvidiaGPUFilter(List<ResolutionProfile> resolutionPairs) {
+        if (resolutionPairs == null || resolutionPairs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> filters = new ArrayList<>();
+        int n = resolutionPairs.size();
+
+        // --- Filtro base con split y escalado por hardware
+        StringBuilder filtro = new StringBuilder();
+        filtro.append("[0:v]format=nv12,hwupload_cuda,split=").append(n);
+        for (int i = 0; i < n; i++) {
+            filtro.append("[v").append(i + 1).append("]");
+        }
+
+        // Escalado por resolución (cada salida independiente)
+        for (int i = 0; i < n; i++) {
+            ResolutionProfile rp = resolutionPairs.get(i);
+            filtro.append(";[v").append(i + 1).append("]")
+                    .append("scale_cuda=w=").append(rp.getWidth())
+                    .append(":h=").append(rp.getHeight())
+                    .append("[v").append(i + 1).append("out]");
+        }
+
+        filters.add(filtro.toString());
+
+        // --- Configuración de video (una salida por resolución)
+        for (int i = 0; i < n; i++) {
+            ResolutionProfile rp = resolutionPairs.get(i);
+            int fpsn = rp.getFps();
+
+            filters.addAll(Arrays.asList(
+                    "-map", "[v" + (i + 1) + "out]",
+                    "-c:v:" + i, "h264_nvenc",
+                    "-preset:v:" + i, "p4", // rango p1–p7 (más alto = más calidad)
+                    "-profile:v:" + i, rp.getProfile(),
+                    "-level:v:" + i, rp.getLevel(),
+                    "-b:v:" + i, rp.getBitrate(),
+                    "-maxrate:v:" + i, rp.getMaxrate(),
+                    "-bufsize:v:" + i, rp.getBufsize(),
+                    "-g", String.valueOf(fpsn),
+                    "-keyint_min", String.valueOf(fpsn)));
+        }
+
+        // --- Configuración de audio (una pista por salida)
+        for (int i = 0; i < n; i++) {
+            filters.addAll(Arrays.asList(
+                    "-map", "0:a:0",
+                    "-c:a:" + i, "aac",
+                    "-b:a:" + i, resolutionPairs.get(i).getAudioBitrate()));
+            if (i == 0) {
+                filters.addAll(Arrays.asList("-ac", "2"));
+            }
+        }
+
+        return filters;
+    }
+
 }

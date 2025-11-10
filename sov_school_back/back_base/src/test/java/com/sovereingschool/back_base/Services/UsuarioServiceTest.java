@@ -15,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -24,6 +25,7 @@ import javax.net.ssl.SSLException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -80,6 +82,9 @@ class UsuarioServiceTest {
 
     private UsuarioService usuarioService;
 
+    @TempDir
+    Path tempDir;
+
     @BeforeEach
     void setUp() throws SSLException, URISyntaxException {
         // Lenient mocks para WebClient (evita UnnecessaryStubbingException)
@@ -102,7 +107,7 @@ class UsuarioServiceTest {
                 "http://mocked-chat-url",
                 "http://mocked-stream-url",
                 "http://mocked-front-url",
-                "/tmp/uploads");
+                tempDir.toString());
     }
 
     // ==========================
