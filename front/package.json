@@ -59,7 +59,7 @@
 		"@types/express": "5.0.5",
 		"@types/jasmine": "5.1.12",
 		"@types/jsonwebtoken": "9.0.10",
-		"@types/node": "24.10.0",
+		"@types/node": "24.10.1",
 		"@types/video.js": "7.3.58",
 		"@typescript-eslint/eslint-plugin": "8.46.4",
 		"@typescript-eslint/parser": "8.46.4",
