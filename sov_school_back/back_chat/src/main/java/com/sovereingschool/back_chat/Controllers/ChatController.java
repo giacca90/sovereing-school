@@ -21,10 +21,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sovereingschool.back_chat.DTOs.CursoChatDTO;
 import com.sovereingschool.back_chat.Services.CursoChatService;
 import com.sovereingschool.back_chat.Services.InitChatService;
 import com.sovereingschool.back_common.Models.Curso;
+import com.sovereingschool.back_common.Models.Usuario;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -159,11 +162,16 @@ public class ChatController {
      */
     @PostMapping("/crea_usuario_chat")
     public ResponseEntity<?> creaUsuarioChat(@RequestBody String message) {
+        ObjectMapper objectMapper = new ObjectMapper();
         try {
-            this.cursoChatService.creaUsuarioChat(message);
+            Usuario usuario = objectMapper.readValue(message, Usuario.class);
+            this.cursoChatService.creaUsuarioChat(usuario);
             return new ResponseEntity<>("Usuario chat creado con exito!!!", HttpStatus.OK);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (JsonProcessingException e) {
+            return new ResponseEntity<>(
+                    "Error al parsear JSON del usuario: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             return new ResponseEntity<>("Error en crear el usuario del chat: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);

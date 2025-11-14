@@ -249,24 +249,22 @@ public class CursoChatService {
      * @throws InternalServerException
      * @throws RuntimeException
      */
-    public void creaUsuarioChat(String message) throws RepositoryException, InternalServerException {
-        // Crear una instancia de ObjectMapper para parsear el JSON
-        ObjectMapper objectMapper = new ObjectMapper();
-        // Convertir el JSON en un objeto Usuario
-        Usuario usuario;
+    public void creaUsuarioChat(Usuario usuario) throws InternalServerException {
         try {
-            usuario = objectMapper.readValue(message, Usuario.class);
-            if (usuarioChatRepo.findByIdUsuario(usuario.getIdUsuario()).isPresent()) {
-                // TODO: Modificar para que actualice el uauario si ya existe
-                throw new RepositoryException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
-            }
-            UsuarioChat usuarioChat = new UsuarioChat(
-                    null, // String id
-                    usuario.getIdUsuario(), // Long id_usuario
-                    new ArrayList<>(), // List<CursoChat> cursos
-                    new ArrayList<>()); // List<String> mensajes
-            usuarioChatRepo.save(usuarioChat);
-        } catch (JsonProcessingException e) {
+            UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(usuario.getIdUsuario())
+                    .orElseGet(() -> {
+                        // Si no existe, lo creamos
+                        UsuarioChat nuevo = new UsuarioChat(
+                                null,
+                                usuario.getIdUsuario(),
+                                new ArrayList<>(),
+                                new ArrayList<>());
+                        return usuarioChatRepo.save(nuevo); // devolvemos el creado
+                    });
+
+            // Actualizamos los chats de los cursos del usuario
+            this.updateChatsCursosUsuario(usuario, usuarioChat);
+        } catch (Exception e) {
             throw new InternalServerException("Error al parsear JSON del usuario: " + e.getMessage());
         }
     }
@@ -610,5 +608,28 @@ public class CursoChatService {
                 cursoChat.getIdCurso(),
                 nombreClase,
                 mensajesDTO);
+    }
+
+    protected void updateChatsCursosUsuario(Usuario usuario, UsuarioChat usuarioChat) {
+        List<Curso> cursos = usuario.getCursosUsuario();
+        List<CursoChat> cursosChat = cursoChatRepo.findAllById(usuarioChat.getCursos());
+        // Buscamos cursos nuevos
+        for (Curso curso : cursos) {
+            cursosChat.stream()
+                    .filter(c -> c.getIdCurso().equals(curso.getIdCurso()))
+                    .findFirst().orElseGet(() -> {
+                        // Es un curso nuevo, buscamo el chat de este curso
+                        CursoChat cursoChat = cursoChatRepo.findByIdCurso(curso.getIdCurso()).orElseThrow(() -> {
+                            // El chat del curso no existe
+                            logger.error("Error en obtener el curso del chat");
+                            throw new EntityNotFoundException("Error en obtener el curso del chat");
+                        });
+                        // Añadimos el ID del CursoChat al usuario
+                        usuarioChat.getCursos().add(cursoChat.getId());
+                        return cursoChat;
+                    });
+        }
+        // Actualizamos el usuarioChat
+        usuarioChatRepo.save(usuarioChat);
     }
 }

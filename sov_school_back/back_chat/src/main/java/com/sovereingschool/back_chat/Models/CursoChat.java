@@ -26,8 +26,10 @@ public class CursoChat implements Serializable {
     /** Lista de ClaseChat */
     private List<ClaseChat> clases;
 
+    /** Lista de ids de documentos de mensajes */
     private List<String> mensajes;
 
+    /** ID del documento del ultimo mensaje */
     private String ultimo;
 
 }

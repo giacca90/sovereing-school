@@ -13,10 +13,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ClaseChat {
 
+    /** Clase ID */
     private Long idClase;
 
+    /** Curso ID */
     private Long idCurso;
 
+    /** Lista de ids de documentos de mensajes */
     private List<String> mensajes;
 
 }
