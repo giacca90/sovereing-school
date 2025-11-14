@@ -257,6 +257,7 @@ public class CursoChatService {
         try {
             usuario = objectMapper.readValue(message, Usuario.class);
             if (usuarioChatRepo.findByIdUsuario(usuario.getIdUsuario()).isPresent()) {
+                // TODO: Modificar para que actualice el uauario si ya existe
                 throw new RepositoryException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
             }
             UsuarioChat usuarioChat = new UsuarioChat(

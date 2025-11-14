@@ -16,6 +16,7 @@ import com.sovereingschool.back_base.DTOs.Estadistica;
 import com.sovereingschool.back_base.DTOs.InitApp;
 import com.sovereingschool.back_base.DTOs.ProfesInit;
 import com.sovereingschool.back_base.Interfaces.IInitAppService;
+import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
@@ -131,9 +132,11 @@ public class InitAppService implements IInitAppService {
 
     /**
      * Función para actualizar el SSR
+     * 
+     * @throws InternalComunicationException
      */
     @Override
-    public void refreshSSR() {
+    public void refreshSSR() throws InternalComunicationException {
         try {
             InitApp init = this.getInit();
 
@@ -163,7 +166,7 @@ public class InitAppService implements IInitAppService {
                     });
 
         } catch (Exception e) {
-            logger.error("Error al actualizar el SSR: {}", e.getMessage());
+            throw new InternalComunicationException("Error al actualizar el SSR: " + e.getMessage());
         }
     }
 

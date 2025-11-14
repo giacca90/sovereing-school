@@ -8,6 +8,9 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
 
+/**
+ * DTO para el registro de usuarios
+ */
 @JsonPropertyOrder({ "nombreUsuario", "correoElectronico", "password", "fotoUsuario", "planUsuario", "cursosUsuario",
 		"fechaRegistroUsuario" })
 public record NewUsuario(

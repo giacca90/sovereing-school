@@ -20,10 +20,13 @@ public class UsuarioChat implements Serializable {
     @Id
     private String id;
 
+    /** Usuario ID */
     private Long idUsuario;
 
+    /** Lista de ids de documentos de cursos */
     private List<String> cursos;
 
+    /** Lista de ids de documentos de mensajes */
     private List<String> mensajes;
 
 }

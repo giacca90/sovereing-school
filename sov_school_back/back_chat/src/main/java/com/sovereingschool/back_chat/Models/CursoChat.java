@@ -20,8 +20,10 @@ public class CursoChat implements Serializable {
     @Id
     private String id;
 
+    /** Curso ID */
     private Long idCurso;
 
+    /** Lista de ClaseChat */
     private List<ClaseChat> clases;
 
     private List<String> mensajes;

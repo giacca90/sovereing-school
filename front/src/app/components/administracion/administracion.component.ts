@@ -32,7 +32,9 @@ export class AdministracionComponent {
 	) {}
 
 	cargaUsuarios() {
-		document.querySelectorAll('button').forEach((b) => b.classList.remove('text-green-700'));
+		for (const b of document.querySelectorAll('button')) {
+			b.classList.remove('text-green-700');
+		}
 		document.querySelector('#usuariosButton')?.classList.add('text-green-700');
 		if (this.usuarios.length === 0) {
 			this.usuariosService.getAllUsuarios().subscribe((data: Usuario[] | null) => {
@@ -46,7 +48,9 @@ export class AdministracionComponent {
 	}
 
 	cargaCursos() {
-		document.querySelectorAll('button').forEach((b) => b.classList.remove('text-green-700'));
+		for (const b of document.querySelectorAll('button')) {
+			b.classList.remove('text-green-700');
+		}
 		document.querySelector('#cursosButton')?.classList.add('text-green-700');
 		if (this.cursos.length === 0) {
 			this.cursosService.getAllCursos().subscribe((data: Curso[] | null) => {
@@ -60,7 +64,9 @@ export class AdministracionComponent {
 	}
 
 	cargaChats() {
-		document.querySelectorAll('button').forEach((b) => b.classList.remove('text-green-700'));
+		for (const b of document.querySelectorAll('button')) {
+			b.classList.remove('text-green-700');
+		}
 		document.querySelector('#chatsButton')?.classList.add('text-green-700');
 		if (this.chats.length === 0) {
 			this.chatsService.getAllChats().subscribe((data: CursoChat[] | null) => {
@@ -149,41 +155,42 @@ export class AdministracionComponent {
 	}
 
 	mostrarUsuario(idUsuario: number) {
-		document.querySelectorAll('[id^="user-data-"]').forEach((d) => {
+		for (const d of document.querySelectorAll('[id^="user-data-"]')) {
 			if (d.id === `user-data-${idUsuario}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
 				(d as HTMLDivElement).style.display = 'none';
 			}
-		});
+		}
 	}
 
 	mostrarCurso(idCurso: number) {
-		document.querySelectorAll('[id^="curso-data-"]').forEach((d) => {
+		for (const d of document.querySelectorAll('[id^="curso-data-"]')) {
 			if (d.id === `curso-data-${idCurso}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
 				(d as HTMLDivElement).style.display = 'none';
 			}
-		});
+		}
 	}
+
 	mostrarChat(idCurso: number) {
-		document.querySelectorAll('[id^="chat-data-"]').forEach((d) => {
+		for (const d of document.querySelectorAll('[id^="chat-data-"]')) {
 			if (d.id === `chat-data-${idCurso}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
 				(d as HTMLDivElement).style.display = 'none';
 			}
-		});
+		}
 	}
 
 	mostrarClaseChat(idClase: number) {
-		document.querySelectorAll('[id^="clase-chat-"]').forEach((d) => {
+		for (const d of document.querySelectorAll('[id^="clase-chat-"]')) {
 			if (d.id === `clase-chat-${idClase}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
 				(d as HTMLDivElement).style.display = 'none';
 			}
-		});
+		}
 	}
 }

@@ -36,7 +36,7 @@ public interface IUsuarioService {
 
     public Integer changeCursosUsuario(CursosUsuario cursosUsuario);
 
-    public String deleteUsuario(Long id) throws RepositoryException;
+    public String deleteUsuario(Long id) throws RepositoryException, InternalComunicationException;
 
     public List<Usuario> getProfes();
 

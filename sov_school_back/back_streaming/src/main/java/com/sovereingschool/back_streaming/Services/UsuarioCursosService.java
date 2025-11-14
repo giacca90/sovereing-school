@@ -106,6 +106,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
      * @throws InternalServerException
      */
     @Override
+    // TODO: Revisar, para añadir el usuario si ya existe
     public String addNuevoUsuario(Usuario usuario) throws InternalServerException {
         if (usuarioCursosRepository.findByIdUsuario(usuario.getIdUsuario()).isPresent()) {
             throw new InternalServerException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
