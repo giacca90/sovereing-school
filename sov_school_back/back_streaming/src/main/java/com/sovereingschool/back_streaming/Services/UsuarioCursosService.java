@@ -96,6 +96,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             userCourses.setCursos(courseStatuses);
             usuarioCursosRepository.save(userCourses);
         }
+
     }
 
     /**
@@ -106,37 +107,20 @@ public class UsuarioCursosService implements IUsuarioCursosService {
      * @throws InternalServerException
      */
     @Override
-    // TODO: Revisar, para añadir el usuario si ya existe
     public String addNuevoUsuario(Usuario usuario) throws InternalServerException {
-        if (usuarioCursosRepository.findByIdUsuario(usuario.getIdUsuario()).isPresent()) {
-            throw new InternalServerException("Ya existe un usuario con el ID " + usuario.getIdUsuario());
-        }
-        List<Curso> courses = usuario.getCursosUsuario();
-        List<StatusCurso> courseStatuses = new ArrayList<>();
-        if (courses != null) {
-            courseStatuses = courses.stream().map(course -> {
-                List<Clase> classes = course.getClasesCurso();
-                List<StatusClase> classStatuses = classes.stream().map(clazz -> {
-                    StatusClase classStatus = new StatusClase();
-                    classStatus.setIdClase(clazz.getIdClase());
-                    classStatus.setCompleted(false);
-                    classStatus.setProgress(0);
-                    return classStatus;
-                }).toList();
 
-                StatusCurso courseStatus = new StatusCurso();
-                courseStatus.setIdCurso(course.getIdCurso());
-                courseStatus.setClases(classStatuses);
-                return courseStatus;
-            }).toList();
-        }
+        UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(usuario.getIdUsuario())
+                .orElseGet(() -> {
+                    // Si no existe, lo creamos
+                    UsuarioCursos nuevo = new UsuarioCursos(
+                            null,
+                            usuario.getIdUsuario(),
+                            usuario.getRollUsuario(),
+                            new ArrayList<>());
+                    return this.usuarioCursosRepository.save(nuevo); // devolvemos el creado
+                });
 
-        UsuarioCursos userCourses = new UsuarioCursos();
-        userCourses.setIdUsuario(usuario.getIdUsuario());
-        userCourses.setRolUsuario(usuario.getRollUsuario()); // Asegurarse de establecer el rol
-        userCourses.setCursos(courseStatuses);
-
-        usuarioCursosRepository.save(userCourses);
+        this.updateCursosUsuario(usuario, usuarioCursos);
         return "Nuevo Usuario Insertado con Exito!!!";
     }
 
@@ -156,60 +140,48 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             throw new EntityNotFoundException("Error en obtener el usuario del streaming");
         });
 
-        if (idClase == 0 && usuario.getRolUsuario().name().equals(RoleEnum.PROF.name())
-                || usuario.getRolUsuario().name().equals(RoleEnum.ADMIN.name())) {
-            Curso curso = cursoRepository.findById(idCurso)
-                    .orElseThrow(() -> new EntityNotFoundException("Curso no encontrado con id " + idCurso));
+        Long resolvedIdClase = idClase;
 
-            if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
-                throw new InternalServerException("El curso no tiene clases registradas");
-            }
+        // Si no se pide una clase
+        if (resolvedIdClase == 0) {
+            // Si es un profesor o admin, obtenemos la primera clase del curso
+            if (usuario.getRolUsuario() == RoleEnum.PROF || usuario.getRolUsuario() == RoleEnum.ADMIN) {
+                Curso curso = cursoRepository.findById(idCurso)
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                "Curso con id " + idCurso + " no encontrado el en repositorio"));
 
-            idClase = curso.getClasesCurso().get(0).getIdClase();
-        }
-
-        if (usuario.getRolUsuario().name().equals(RoleEnum.PROF.name())
-                || usuario.getRolUsuario().name().equals(RoleEnum.ADMIN.name())) {
-            try {
-                Long id = idClase;
-                Clase clase = claseRepository.findById(idClase).orElseThrow(
-                        () -> new EntityNotFoundException("Clase no encontrada con id " + id));
-                String direccion = clase.getDireccionClase();
-                if (direccion == null) {
-                    logger.error("Clase sin direccion");
-                    return null;
+                if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
+                    throw new InternalServerException("El curso no tiene clases registradas");
                 }
-                return direccion;
-            } catch (Exception e) {
-                logger.error("Error en obtener la clase: {}", e.getMessage());
-            }
-        }
 
-        List<StatusCurso> cursos = usuario.getCursos();
+                resolvedIdClase = curso.getClasesCurso().get(0).getIdClase();
+            } else {
+                // Si es un usuario normal, obtenemos la clase actual
+                StatusCurso cursoStatus = usuario.getCursos().stream()
+                        .filter(c -> c.getIdCurso().equals(idCurso))
+                        .findFirst()
+                        .orElseThrow(() -> new EntityNotFoundException("Curso no encontrado con id " + idCurso));
 
-        for (StatusCurso curso : cursos) {
-            if (curso.getIdCurso().equals(idCurso)) {
-                List<StatusClase> sClases = curso.getClases();
-                for (StatusClase sClase : sClases) {
-                    if (idClase == 0) {
-                        if (!sClase.isCompleted()) {
-                            Clase clase = claseRepository.findById(sClase.getIdClase()).orElseThrow(
-                                    () -> new EntityNotFoundException(
-                                            "Clase no encontrada con id " + sClase.getIdClase()));
-                            return clase.getDireccionClase();
-                        }
-                        continue;
-                    }
-                    if (sClase.getIdClase().equals(idClase)) {
-                        Long id = idClase;
-                        Clase clase = claseRepository.findById(idClase).orElseThrow(
-                                () -> new EntityNotFoundException("Clase no encontrada con id " + id));
-                        return clase.getDireccionClase();
-                    }
+                if (cursoStatus.getClases().isEmpty()) {
+                    throw new InternalServerException("El curso no tiene clases registradas");
                 }
+
+                resolvedIdClase = cursoStatus.getClases().stream()
+                        .filter(c -> !c.isCompleted())
+                        .findFirst()
+                        .orElseGet(() -> cursoStatus.getClases().get(0))
+                        .getIdClase();
             }
         }
-        return null;
+
+        Clase clase = claseRepository.findById(resolvedIdClase).orElseThrow(
+                () -> new EntityNotFoundException("Clase no encontrada con id " + idClase));
+        String direccion = clase.getDireccionClase();
+        if (direccion == null) {
+            logger.error("Clase sin direccion");
+            return null;
+        }
+        return direccion;
     }
 
     /**
@@ -227,7 +199,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             query.addCriteria(Criteria.where("cursos.id_curso").is(idCurso));
             List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
-            if (usuarioCursos == null || usuarioCursos.isEmpty()) {
+            if (usuarioCursos.isEmpty()) {
                 logger.error("No se encontró el documento.");
                 return false;
             }
@@ -270,18 +242,12 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             }
 
             for (UsuarioCursos usuario : usuarioCursos) {
-                for (StatusCurso curso : usuario.getCursos()) {
-                    if (curso.getIdCurso().equals(idCurso)) {
-                        for (int i = 0; i < curso.getClases().size(); i++) {
-                            if (curso.getClases().get(i).getIdClase().equals(idClase)) {
-                                curso.getClases().remove(i);
-                                mongoTemplate.save(usuario);
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }
+                usuario.getCursos().stream()
+                        .filter(c -> c.getIdCurso().equals(idCurso))
+                        .findFirst()
+                        .ifPresent(curso -> curso.getClases().removeIf(c -> c.getIdClase().equals(idClase)));
+
+                mongoTemplate.save(usuario);
             }
             return true;
         } catch (Exception e) {
@@ -304,8 +270,8 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             logger.error("Error en obtener el usuario del chat");
             throw new EntityNotFoundException("Error en obtener el usuario del chat");
         });
-        if (usuarioCursos.getRolUsuario().name().equals("PROFESOR")
-                || usuarioCursos.getRolUsuario().name().equals("ADMIN")) {
+
+        if (usuarioCursos.getRolUsuario() == RoleEnum.PROF || usuarioCursos.getRolUsuario() == RoleEnum.ADMIN) {
             Curso curso = cursoRepository.findById(idCurso)
                     .orElseThrow(() -> new EntityNotFoundException("Curso no encontrado con id " + idCurso));
 
@@ -337,6 +303,8 @@ public class UsuarioCursosService implements IUsuarioCursosService {
      * @throws InternalServerException
      */
     @Override
+
+    // TODO: Revisar
     public void actualizarCursoStream(Curso curso) throws InternalServerException {
         List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getIdCurso());
         if (usuarios != null && !usuarios.isEmpty()) {
@@ -401,7 +369,7 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         query.addCriteria(Criteria.where("cursos.id_curso").is(id));
         List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
-        if (usuarioCursos == null || usuarioCursos.isEmpty()) {
+        if (usuarioCursos.isEmpty()) {
             logger.error("No se encontró el documento.");
             return false;
         }
@@ -417,5 +385,38 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             }
         }
         return true;
+    }
+
+    protected void updateCursosUsuario(Usuario usuario, UsuarioCursos usuarioCursos) {
+        List<Curso> cursos = usuario.getCursosUsuario();
+        List<StatusCurso> cursosStatus = usuarioCursos.getCursos();
+        // Buscamos cursos nuevos
+        for (Curso curso : cursos) {
+            cursosStatus.stream()
+                    .filter(c -> c.getIdCurso().equals(curso.getIdCurso()))
+                    .findFirst().orElseGet(() -> {
+                        // Es un curso nuevo, creamos el StatusCurso
+                        StatusCurso cursoStatus = new StatusCurso();
+                        cursoStatus.setIdCurso(curso.getIdCurso());
+                        List<StatusClase> clases = this.createClasesCurso(curso);
+                        cursoStatus.setClases(clases);
+                        // Añadimos el StatusCurso al usuario
+                        usuarioCursos.getCursos().add(cursoStatus);
+                        return cursoStatus;
+                    });
+        }
+        // Actualizamos el usuarioCursos
+        this.usuarioCursosRepository.save(usuarioCursos);
+    }
+
+    protected List<StatusClase> createClasesCurso(Curso curso) {
+        List<Clase> clases = curso.getClasesCurso();
+        return clases.stream().map(clazz -> {
+            StatusClase classStatus = new StatusClase();
+            classStatus.setIdClase(clazz.getIdClase());
+            classStatus.setCompleted(false);
+            classStatus.setProgress(0);
+            return classStatus;
+        }).toList();
     }
 }

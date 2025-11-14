@@ -21,7 +21,13 @@ import lombok.NoArgsConstructor;
 public class UsuarioCursos implements Serializable {
     @Id
     private String id;
+
+    /** Usuario ID */
     private Long idUsuario;
+
+    /** Rol del usuario */
     private RoleEnum rolUsuario;
+
+    /** Lista de StatusCurso */
     private List<StatusCurso> cursos;
 }

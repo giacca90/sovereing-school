@@ -3,7 +3,6 @@ package com.sovereingschool.back_streaming.Models;
 import java.util.List;
 
 import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +13,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Entity
 public class StatusCurso {
     @Id
     private Long idCurso;
