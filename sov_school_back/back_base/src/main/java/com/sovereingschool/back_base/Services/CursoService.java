@@ -657,6 +657,8 @@ public class CursoService implements ICursoService {
      * 
      * @param clase Clase a eliminar el streaming
      * @throws InternalComunicationException
+     * 
+     *                                       TODO: Cambiar por Redis Stream
      */
     protected void deleteClaseStream(Clase clase) throws InternalComunicationException {
         try {
@@ -694,6 +696,8 @@ public class CursoService implements ICursoService {
      * 
      * @param clase Clase a eliminar el chat
      * @throws InternalComunicationException
+     * 
+     *                                       TODO: Cambiar por Redis Stream
      */
     protected void deleteClaseChat(Clase clase) throws InternalComunicationException {
         try {

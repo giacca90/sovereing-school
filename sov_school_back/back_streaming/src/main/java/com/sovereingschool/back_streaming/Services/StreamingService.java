@@ -215,7 +215,7 @@ public class StreamingService {
      * @throws InternalServerException
      */
     public void stopFFmpegProcessForUser(String streamId)
-            throws RuntimeException, InternalServerException {
+            throws InternalServerException {
         String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         Process process = ffmpegProcesses.remove(sessionId);
 

@@ -44,15 +44,23 @@ public class SecurityConfig {
 
     private final ObjectMapper objectMapper;
 
-    @Value("${variable.FRONT}")
     private String front;
 
-    @Value("${variable.FRONT_DOCKER}")
     private String frontDocker;
 
-    // Quitar LoginService y UsuarioService del constructor
-    public SecurityConfig(JwtTokenValidator jwtTokenValidator, JwtTokenCookieFilter jwtTokenCookieFilter,
+    /**
+     * Constructor de SecurityConfig
+     * 
+     * @param jwtTokenValidator
+     * @param jwtTokenCookieFilter
+     * @param objectMapper
+     */
+    public SecurityConfig(@Value("${variable.FRONT}") String front,
+            @Value("${variable.FRONT_DOCKER}") String frontDocker,
+            JwtTokenValidator jwtTokenValidator, JwtTokenCookieFilter jwtTokenCookieFilter,
             ObjectMapper objectMapper) {
+        this.front = front;
+        this.frontDocker = frontDocker;
         this.jwtTokenValidator = jwtTokenValidator;
         this.jwtTokenCookieFilter = jwtTokenCookieFilter;
         this.objectMapper = objectMapper;
@@ -137,7 +145,7 @@ public class SecurityConfig {
     @Bean
     public CustomOAuth2SuccessHandler customOAuth2SuccessHandler(LoginService loginService,
             UsuarioService usuarioService) {
-        return new CustomOAuth2SuccessHandler(loginService, usuarioService, objectMapper);
+        return new CustomOAuth2SuccessHandler(front, loginService, usuarioService, objectMapper);
     }
 
 }

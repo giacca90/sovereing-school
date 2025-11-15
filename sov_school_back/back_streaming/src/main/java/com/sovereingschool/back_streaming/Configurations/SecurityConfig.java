@@ -36,10 +36,11 @@ public class SecurityConfig {
     private JwtTokenValidator jwtTokenValidator;
     private JwtTokenCookieFilter jwtTokenCookieFilter;
 
-    @Value("${variable.FRONT}")
     private String front;
 
-    public SecurityConfig(JwtTokenValidator jwtTokenValidator, JwtTokenCookieFilter jwtTokenCookieFilter) {
+    public SecurityConfig(@Value("${variable.FRONT}") String front,
+            JwtTokenValidator jwtTokenValidator, JwtTokenCookieFilter jwtTokenCookieFilter) {
+        this.front = front;
         this.jwtTokenValidator = jwtTokenValidator;
         this.jwtTokenCookieFilter = jwtTokenCookieFilter;
     }

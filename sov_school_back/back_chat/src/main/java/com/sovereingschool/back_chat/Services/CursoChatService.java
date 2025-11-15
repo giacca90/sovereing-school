@@ -610,6 +610,12 @@ public class CursoChatService {
                 mensajesDTO);
     }
 
+    /**
+     * Función para actualizar los cursos de un usuario
+     * 
+     * @param usuario     Usuario a actualizar
+     * @param usuarioChat UsuarioChat del usuario
+     */
     protected void updateChatsCursosUsuario(Usuario usuario, UsuarioChat usuarioChat) {
         List<Curso> cursos = usuario.getCursosUsuario();
         List<CursoChat> cursosChat = cursoChatRepo.findAllById(usuarioChat.getCursos());

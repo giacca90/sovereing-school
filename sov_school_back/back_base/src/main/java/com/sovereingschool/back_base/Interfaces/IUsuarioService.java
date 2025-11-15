@@ -34,7 +34,7 @@ public interface IUsuarioService {
 
     public Integer changePlanUsuario(Usuario usuario);
 
-    public Integer changeCursosUsuario(CursosUsuario cursosUsuario);
+    public Integer changeCursosUsuario(CursosUsuario cursosUsuario) throws RepositoryException;
 
     public String deleteUsuario(Long id) throws RepositoryException, InternalComunicationException;
 

@@ -34,19 +34,23 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final WebsocketAuthHandshakeInterceptor authHandshakeInterceptor;
     private final Logger logger = LoggerFactory.getLogger(WebSocketConfig.class);
 
-    @Value("${variable.RTMP}")
     private String RTMP_URL;
 
-    @Value("${variable.RTMP_DOCKER}")
     private String RTMP_DOCKER;
 
-    @Value("${variable.VIDEOS_DIR}")
     private String uploadDir;
 
     private final ScheduledExecutorService pingScheduler = Executors.newScheduledThreadPool(1);
 
-    public WebSocketConfig(StreamingService streamingService,
+    public WebSocketConfig(
+            @Value("${variable.RTMP}") String RTMP_URL,
+            @Value("${variable.RTMP_DOCKER}") String RTMP_DOCKER,
+            @Value("${variable.VIDEOS_DIR}") String uploadDir,
+            StreamingService streamingService,
             WebsocketAuthHandshakeInterceptor authHandshakeInterceptor) {
+        this.RTMP_URL = RTMP_URL;
+        this.RTMP_DOCKER = RTMP_DOCKER;
+        this.uploadDir = uploadDir;
         this.streamingService = streamingService;
         this.authHandshakeInterceptor = authHandshakeInterceptor;
     }

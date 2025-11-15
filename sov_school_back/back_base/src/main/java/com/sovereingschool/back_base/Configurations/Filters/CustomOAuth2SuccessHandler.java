@@ -33,7 +33,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private UsuarioService usuarioService;
 
     private ObjectMapper objectMapper;
-    @Value("${variable.FRONT}")
+
     private String front;
 
     /**
@@ -43,8 +43,11 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
      * @param usuarioService
      * @param objectMapper
      */
-    public CustomOAuth2SuccessHandler(LoginService loginService, UsuarioService usuarioService,
+    public CustomOAuth2SuccessHandler(
+            @Value("${variable.FRONT}") String front,
+            LoginService loginService, UsuarioService usuarioService,
             ObjectMapper objectMapper) {
+        this.front = front;
         this.loginService = loginService;
         this.usuarioService = usuarioService;
         this.objectMapper = objectMapper;

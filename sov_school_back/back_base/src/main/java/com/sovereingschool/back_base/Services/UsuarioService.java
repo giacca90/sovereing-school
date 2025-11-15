@@ -86,7 +86,7 @@ public class UsuarioService implements IUsuarioService {
     private final InitAppService initAppService;
     private final SpringTemplateEngine templateEngine;
 
-    private final Logger logger = LoggerFactory.getLogger(UsuarioService.class);
+    protected final Logger logger = LoggerFactory.getLogger(UsuarioService.class);
 
     private final String backChatURL;
     private final String backStreamURL;
@@ -388,6 +388,7 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param usuario Objeto Usuario con los datos del usuario
      * @return Integer con el resultado de la operación
+     * @throws RepositoryException
      * @throws EntityNotFoundException  si el usuario no existe
      * @throws RuntimeException         si ocurre un error en el servidor
      * @throws IllegalArgumentException si el ID no es válido
@@ -397,7 +398,7 @@ public class UsuarioService implements IUsuarioService {
      *
      */
     @Override
-    public Integer changeCursosUsuario(CursosUsuario cursosUsuario) {
+    public Integer changeCursosUsuario(CursosUsuario cursosUsuario) throws RepositoryException {
         Optional<Usuario> oldUsuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.idUsuario());
         if (oldUsuario.isEmpty()) {
             throw new IllegalArgumentException("El usuario no existe");
@@ -417,7 +418,7 @@ public class UsuarioService implements IUsuarioService {
 
         return this.usuarioRepo.changeUsuarioForId(cursosUsuario.idUsuario(), oldUsuario.get()).orElseThrow(() -> {
             logger.error("Error en cambiar los cursos del usuario");
-            return new RuntimeException("Error en cambiar los cursos del usuario");
+            return new RepositoryException("Error en cambiar los cursos del usuario");
         });
     }
 
@@ -538,11 +539,14 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param usuario Usuario a crear el chat
      * @throws InternalComunicationException
+     * 
+     *                                       TODO: Cambiar por Redis Stream
      */
     protected void createUsuarioChat(Usuario usuario) throws InternalComunicationException {
         try {
             WebClient webClient = webClientConfig.createSecureWebClient(backChatURL);
-            webClient.post().uri("/crea_usuario_chat")
+            webClient.post()
+                    .uri("/crea_usuario_chat")
                     .body(Mono.just(usuario), Usuario.class)
                     .retrieve()
                     .onStatus(
@@ -572,13 +576,15 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param usuarioInsertado Usuario a crear el streaming
      * @throws InternalComunicationException
+     * 
+     *                                       TODO: Cambiar por Redis Stream
      */
-    protected void createUsuarioStream(Usuario usuarioInsertado) throws InternalComunicationException {
+    protected void createUsuarioStream(Usuario usuario) throws InternalComunicationException {
         try {
             WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
             webClientStream.put()
                     .uri("/nuevoUsuario")
-                    .body(Mono.just(usuarioInsertado), Usuario.class)
+                    .body(Mono.just(usuario), Usuario.class)
                     .retrieve()
                     .onStatus(
                             HttpStatusCode::isError, // compatible con HttpStatusCode
@@ -621,6 +627,8 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param id ID del usuario
      * @throws InternalComunicationException
+     * 
+     *                                       TODO: Cambiar por Redis Stream
      */
     protected void deleteUsuarioStream(Long id) throws InternalComunicationException {
         try {
@@ -654,6 +662,8 @@ public class UsuarioService implements IUsuarioService {
      * 
      * @param id ID del usuario
      * @throws InternalComunicationException
+     * 
+     *                                       TODO: Cambiar por Redis Stream
      */
     protected void deleteUsuarioChat(Long id) throws InternalComunicationException {
         try {
@@ -678,7 +688,6 @@ public class UsuarioService implements IUsuarioService {
                         }
                     });
         } catch (Exception e) {
-            logger.error("Error en borrar el chat del usuario: {}", e.getMessage());
             throw new InternalComunicationException("Error en borrar el chat del usuario: " + e.getMessage());
         }
     }

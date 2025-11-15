@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -36,9 +39,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Answers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailParseException;
 import org.springframework.mail.MailSendException;
@@ -46,6 +52,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
@@ -69,6 +76,7 @@ import com.sovereingschool.back_common.Utils.JwtUtil;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.persistence.EntityNotFoundException;
+import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
@@ -106,8 +114,6 @@ class UsuarioServiceTest {
             when(jwtUtil.generateToken(any(Authentication.class), eq("refresh"), eq(10L))).thenReturn("refresh-token");
 
             UsuarioService spyService = spy(usuarioService);
-            doNothing().when(spyService).createUsuarioChat(any(Usuario.class));
-            doNothing().when(spyService).createUsuarioStream(any(Usuario.class));
             doNothing().when(spyService).updateSSR();
 
             AuthResponse resp = spyService.createUsuario(newUsuario);
@@ -124,8 +130,6 @@ class UsuarioServiceTest {
             verify(passwordEncoder).encode("plainpass");
             verify(jwtUtil).generateToken(any(Authentication.class), eq("access"), eq(10L));
             verify(jwtUtil).generateToken(any(Authentication.class), eq("refresh"), eq(10L));
-            verify(spyService).createUsuarioChat(usuarioInsertado);
-            verify(spyService).createUsuarioStream(usuarioInsertado);
             verify(spyService).updateSSR();
         }
 
@@ -198,8 +202,6 @@ class UsuarioServiceTest {
             when(jwtUtil.generateToken(any(), eq("refresh"), eq(10L))).thenReturn("refresh-token");
 
             UsuarioService spyService = spy(usuarioService);
-            doNothing().when(spyService).createUsuarioChat(any(Usuario.class));
-            doNothing().when(spyService).createUsuarioStream(any(Usuario.class));
             doNothing().when(spyService).updateSSR();
 
             AuthResponse resp = spyService.createUsuario(newUsuario);
@@ -239,8 +241,6 @@ class UsuarioServiceTest {
             when(jwtUtil.generateToken(any(), eq("refresh"), eq(10L))).thenReturn("refresh-token");
 
             UsuarioService spyService = spy(usuarioService);
-            doNothing().when(spyService).createUsuarioChat(any(Usuario.class));
-            doNothing().when(spyService).createUsuarioStream(any(Usuario.class));
             doNothing().when(spyService).updateSSR();
 
             AuthResponse resp = spyService.createUsuario(newUsuario);
@@ -695,7 +695,7 @@ class UsuarioServiceTest {
     @Nested
     class ChangeCursosUsuarioTests {
         @Test
-        void changeCursosUsuario_SuccessfulUpdate() throws InternalComunicationException {
+        void changeCursosUsuario_SuccessfulUpdate_MockWebClientResponses() throws Exception {
             // Arrange
             Usuario oldUsuario = new Usuario();
             oldUsuario.setIdUsuario(1L);
@@ -711,23 +711,58 @@ class UsuarioServiceTest {
             when(cursoRepo.findAllById(idsCursos)).thenReturn(List.of(curso1, curso2));
             when(usuarioRepo.changeUsuarioForId(eq(1L), any(Usuario.class))).thenReturn(Optional.of(1));
 
+            // Spy del servicio
             UsuarioService spyService = spy(usuarioService);
-            doNothing().when(spyService).createUsuarioStream(any(Usuario.class));
-            doNothing().when(spyService).createUsuarioChat(any(Usuario.class));
+
+            // Mock WebClient para createUsuarioStream
+            WebClient mockWebClientStream = mock(WebClient.class, RETURNS_DEEP_STUBS);
+            when(webClientConfig.createSecureWebClient(backStreamURL)).thenReturn(mockWebClientStream);
+            when(mockWebClientStream.put()
+                    .uri("/nuevoUsuario")
+                    .body(any(Mono.class), eq(Usuario.class))
+                    .retrieve()
+                    .bodyToMono(String.class))
+                    .thenAnswer(invocation -> {
+                        // Ejecutar el Mono y cubrir el subscribe
+                        Mono<String> mono = Mono.just("Nuevo Usuario Insertado con Exito!!!");
+                        return mono.doOnNext(res -> {
+                            if (res == null || !res.equals("Nuevo Usuario Insertado con Exito!!!")) {
+                                spyService.logger.error("Error inesperado al crear el usuario en el stream: {}",
+                                        res);
+                            }
+                        }).block();
+                    });
+
+            // Mock WebClient para createUsuarioChat
+            WebClient mockWebClientChat = mock(WebClient.class, RETURNS_DEEP_STUBS);
+            when(webClientConfig.createSecureWebClient(backChatURL)).thenReturn(mockWebClientChat);
+            when(mockWebClientChat.post()
+                    .uri("/crea_usuario_chat")
+                    .body(any(Mono.class), eq(Usuario.class))
+                    .retrieve()
+                    .bodyToMono(String.class))
+                    .thenAnswer(invocation -> {
+                        Mono<String> mono = Mono.just("Usuario chat creado con exito!!!");
+                        return mono.doOnNext(res -> {
+                            if (res == null || !res.equals("Usuario chat creado con exito!!!")) {
+                                spyService.logger.error("Error en crear el usuario en el chat: {}", res);
+                            }
+                        }).block();
+                    });
 
             // Act
             Integer result = spyService.changeCursosUsuario(cursosUsuario);
 
             // Assert
-            assertNotNull(result);
             assertEquals(1, result);
             assertEquals(List.of(curso1, curso2), oldUsuario.getCursosUsuario());
 
+            // Verificaciones
             verify(usuarioRepo).findUsuarioForId(1L);
             verify(cursoRepo).findAllById(idsCursos);
-            verify(spyService).createUsuarioStream(oldUsuario);
-            verify(spyService).createUsuarioChat(oldUsuario);
             verify(usuarioRepo).changeUsuarioForId(1L, oldUsuario);
+            verify(spyService).createUsuarioChat(oldUsuario);
+            verify(spyService).createUsuarioStream(oldUsuario);
         }
 
         @Test
@@ -748,7 +783,124 @@ class UsuarioServiceTest {
         }
 
         @Test
-        void changeCursosUsuario_RepositoryError_ThrowsInternalServerException() {
+        void changeCursosUsuario_errorCreateUsuarioStream_Response404_NoThrowsException()
+                throws InternalComunicationException, RepositoryException, SSLException, URISyntaxException {
+
+            Long id = 1L;
+
+            Usuario oldUsuario = new Usuario();
+            oldUsuario.setIdUsuario(id);
+
+            Curso curso1 = new Curso();
+            Curso curso2 = new Curso();
+
+            List<Long> idsCursos = List.of(101L, 102L);
+            CursosUsuario cursosUsuario = new CursosUsuario(id, idsCursos);
+
+            // Mock repositorios
+            when(usuarioRepo.findUsuarioForId(id)).thenReturn(Optional.of(oldUsuario));
+            when(cursoRepo.findAllById(idsCursos)).thenReturn(List.of(curso1, curso2));
+            when(usuarioRepo.changeUsuarioForId(eq(id), any(Usuario.class))).thenReturn(Optional.of(1));
+
+            // Mock del WebClient del microservicio de stream con deep stubs
+            WebClient mockWebClientStream = mock(WebClient.class, RETURNS_DEEP_STUBS);
+            when(webClientConfig.createSecureWebClient(backStreamURL)).thenReturn(mockWebClientStream);
+
+            // Simular 404 directamente en bodyToMono encadenando todos los métodos
+            when(mockWebClientStream.put()
+                    .uri("/nuevoUsuario")
+                    .body(any(Mono.class), eq(Usuario.class))
+                    .retrieve()
+                    .onStatus(any(), any())
+                    .bodyToMono(String.class))
+                    .thenReturn(Mono.error(new WebClientResponseException(
+                            404,
+                            "Not Found",
+                            HttpHeaders.EMPTY,
+                            null,
+                            null)));
+
+            // Ejecutar → no debe lanzar excepción
+            Integer result = usuarioService.changeCursosUsuario(cursosUsuario);
+
+            // Verificaciones básicas
+            assertEquals(1, result);
+            verify(usuarioRepo).findUsuarioForId(id);
+            verify(cursoRepo).findAllById(idsCursos);
+            verify(usuarioRepo).changeUsuarioForId(eq(id), any(Usuario.class));
+        }
+
+        @Test
+        void changeCursosUsuario_errorCreateUsuarioChat_NoThrowsException()
+                throws RepositoryException, InternalComunicationException, SSLException, URISyntaxException {
+
+            Long id = 1L;
+
+            Usuario oldUsuario = new Usuario();
+            oldUsuario.setIdUsuario(id);
+
+            Curso curso1 = new Curso();
+            Curso curso2 = new Curso();
+
+            List<Long> idsCursos = List.of(101L, 102L);
+            CursosUsuario cursosUsuario = new CursosUsuario(id, idsCursos);
+
+            // Mock repos
+            when(usuarioRepo.findUsuarioForId(id)).thenReturn(Optional.of(oldUsuario));
+            when(cursoRepo.findAllById(idsCursos)).thenReturn(List.of(curso1, curso2));
+            when(usuarioRepo.changeUsuarioForId(eq(id), any(Usuario.class))).thenReturn(Optional.of(1));
+
+            // Spy sobre el service real
+            UsuarioService spyService = spy(usuarioService);
+
+            // Simular WebClient para createUsuarioStream
+            WebClient mockWebClientStream = mock(WebClient.class, RETURNS_DEEP_STUBS);
+            when(webClientConfig.createSecureWebClient(backStreamURL)).thenReturn(mockWebClientStream);
+            when(mockWebClientStream.put()
+                    .uri("/nuevoUsuario")
+                    .body(any(Mono.class), eq(Usuario.class))
+                    .retrieve()
+                    .bodyToMono(String.class))
+                    .thenReturn(Mono.just("Nuevo Usuario Insertado con Exito!!!"));
+
+            // Mock del WebClient del microservicio de stream
+            WebClient mockWebClientStream2 = mock(WebClient.class, RETURNS_DEEP_STUBS);
+
+            when(webClientConfig.createSecureWebClient(backStreamURL))
+                    .thenReturn(mockWebClientStream2);
+
+            // Simular 404
+            // Simular 404 directamente en bodyToMono encadenando todos los métodos
+
+            when(mockWebClientStream2.put()
+                    .uri("/crea_usuario_chat")
+                    .body(any(Mono.class), eq(Usuario.class))
+                    .retrieve()
+                    .onStatus(any(), any())
+
+                    .bodyToMono(String.class))
+                    .thenReturn(Mono.error(new WebClientResponseException(
+                            404,
+                            "Not Found",
+                            HttpHeaders.EMPTY,
+                            null,
+                            null)));
+
+            // Ejecutar → NO debe lanzar excepción
+            Integer result = spyService.changeCursosUsuario(cursosUsuario);
+
+            assertEquals(1, result);
+
+            // Verificaciones
+            verify(usuarioRepo).findUsuarioForId(id);
+            verify(cursoRepo).findAllById(idsCursos);
+            verify(spyService).createUsuarioStream(any(Usuario.class)); // se llamó
+            verify(spyService).createUsuarioChat(any(Usuario.class)); // se llamó y falló
+            verify(usuarioRepo).changeUsuarioForId(eq(id), any(Usuario.class));
+        }
+
+        @Test
+        void changeCursosUsuario_RepositoryError_ThrowsRepositoryException() {
             // Arrange
             Usuario oldUsuario = new Usuario();
             oldUsuario.setIdUsuario(1L);
@@ -763,8 +915,8 @@ class UsuarioServiceTest {
 
             when(usuarioRepo.changeUsuarioForId(eq(1L), any(Usuario.class))).thenReturn(Optional.empty());
 
-            RuntimeException ex = assertThrows(
-                    RuntimeException.class,
+            RepositoryException ex = assertThrows(
+                    RepositoryException.class,
                     () -> usuarioService.changeCursosUsuario(cursosUsuario));
 
             assertTrue(ex.getMessage().contains("Error en cambiar los cursos del usuario"));
@@ -782,13 +934,17 @@ class UsuarioServiceTest {
     class DeleteUsuarioTests {
         @Test
         void deleteUsuario_SuccessfulDeletion() throws RepositoryException, InternalComunicationException {
+            UsuarioService spyService = spy(usuarioService);
+            doNothing().when(spyService).deleteUsuarioStream(anyLong());
+            doNothing().when(spyService).deleteUsuarioChat(anyLong());
+            doNothing().when(initAppService).refreshSSR();
             Long userId = 1L;
             Usuario usuario = new Usuario();
             usuario.setIdUsuario(userId);
             String aspect = "Usuario eliminado con éxito!!!";
             when(usuarioRepo.findUsuarioForId(userId)).thenReturn(Optional.of(usuario));
 
-            String resp = usuarioService.deleteUsuario(userId);
+            String resp = spyService.deleteUsuario(userId);
 
             assertNotNull(resp);
             assertEquals(aspect, resp);
@@ -856,22 +1012,34 @@ class UsuarioServiceTest {
         }
 
         @Test
-        void deleteUsuario_ErrorUpdateSSR_ThrowsRepositoryException() throws InternalComunicationException {
-            Long userId = 1L;
-            when(usuarioRepo.findUsuarioForId(userId)).thenReturn(Optional.of(new Usuario()));
+        void deleteUsuario_ErrorUpdateSSR_NoThrowsException()
+                throws InternalComunicationException, RepositoryException {
+            Long id = 1L;
+            when(usuarioRepo.findUsuarioForId(id)).thenReturn(Optional.of(new Usuario()));
 
-            // 👇 Para métodos void
-            doThrow(new InternalComunicationException("Error al eliminar el usuario"))
-                    .when(initAppService).refreshSSR();
+            // refreshSSR lanza excepción controlada
+            doThrow(new InternalComunicationException("fallo SSR"))
+                    .when(initAppService)
+                    .refreshSSR();
 
-            InternalComunicationException ex = assertThrows(
-                    InternalComunicationException.class,
-                    () -> usuarioService.deleteUsuario(userId));
+            // Spy para interceptar métodos protected
+            UsuarioService spy = Mockito.spy(usuarioService);
 
-            assertTrue(ex.getMessage().contains("Error en eliminar el usuario con ID"));
+            doNothing().when(spy).deleteUsuarioChat(id);
+            doNothing().when(spy).deleteUsuarioStream(id);
 
-            verify(usuarioRepo).findUsuarioForId(userId);
-            verify(loginRepo).deleteById(userId);
+            // Ejecutar → NO debe lanzar excepción
+            String resp = spy.deleteUsuario(id);
+
+            assertEquals("Usuario eliminado con éxito!!!", resp);
+
+            verify(loginRepo).deleteById(id);
+            verify(usuarioRepo).deleteById(id);
+            verify(initAppService).refreshSSR();
+
+            // El flujo continúa
+            verify(spy).deleteUsuarioChat(id);
+            verify(spy).deleteUsuarioStream(id);
         }
     }
 
@@ -1094,17 +1262,10 @@ class UsuarioServiceTest {
     @Mock
     private WebClientConfig webClientConfig;
 
-    @Mock
+    // Usamos RETURNS_DEEP_STUBS para evitar tener que mockear cada etapa
+    // manualmente
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private WebClient webClient;
-
-    @Mock
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
-
-    @Mock
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
-
-    @Mock
-    private WebClient.ResponseSpec responseSpec;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -1122,18 +1283,20 @@ class UsuarioServiceTest {
     private InitAppService initAppService;
     @Mock
     private SpringTemplateEngine templateEngine;
+
     @TempDir
     Path tempDir;
 
     private UsuarioService usuarioService;
+    private final String backChatURL = "http://mocked-chat-url";
+    private final String backStreamURL = "http://mocked-stream-url";
+    private final String frontURL = "http://mocked-front-url";
 
     @BeforeEach
     void setUp() throws SSLException, URISyntaxException {
-        // Lenient mocks para WebClient (evita UnnecessaryStubbingException)
+        // Con RETURNS_DEEP_STUBS no necesitamos mockear
+        // RequestHeadersUriSpec/RequestHeadersSpec/ResponseSpec manualmente
         lenient().when(webClientConfig.createSecureWebClient(anyString())).thenReturn(webClient);
-        lenient().when(webClient.delete()).thenReturn(requestHeadersUriSpec);
-        lenient().when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
-        lenient().when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
 
         // Crear servicio con dependencias mock
         usuarioService = new UsuarioService(
@@ -1146,9 +1309,10 @@ class UsuarioServiceTest {
                 mailSender,
                 initAppService,
                 templateEngine,
-                "http://mocked-chat-url",
-                "http://mocked-stream-url",
-                "http://mocked-front-url",
+                backChatURL,
+                backStreamURL,
+                frontURL,
                 tempDir.toString());
     }
+
 }

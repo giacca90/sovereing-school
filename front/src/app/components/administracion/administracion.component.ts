@@ -32,7 +32,7 @@ export class AdministracionComponent {
 	) {}
 
 	cargaUsuarios() {
-		for (const b of document.querySelectorAll('button')) {
+		for (const b of Array.from(document.querySelectorAll('button'))) {
 			b.classList.remove('text-green-700');
 		}
 		document.querySelector('#usuariosButton')?.classList.add('text-green-700');
@@ -48,7 +48,7 @@ export class AdministracionComponent {
 	}
 
 	cargaCursos() {
-		for (const b of document.querySelectorAll('button')) {
+		for (const b of Array.from(document.querySelectorAll('button'))) {
 			b.classList.remove('text-green-700');
 		}
 		document.querySelector('#cursosButton')?.classList.add('text-green-700');
@@ -64,7 +64,7 @@ export class AdministracionComponent {
 	}
 
 	cargaChats() {
-		for (const b of document.querySelectorAll('button')) {
+		for (const b of Array.from(document.querySelectorAll('button'))) {
 			b.classList.remove('text-green-700');
 		}
 		document.querySelector('#chatsButton')?.classList.add('text-green-700');
@@ -155,7 +155,7 @@ export class AdministracionComponent {
 	}
 
 	mostrarUsuario(idUsuario: number) {
-		for (const d of document.querySelectorAll('[id^="user-data-"]')) {
+		for (const d of Array.from(document.querySelectorAll('[id^="user-data-"]'))) {
 			if (d.id === `user-data-${idUsuario}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
@@ -165,7 +165,7 @@ export class AdministracionComponent {
 	}
 
 	mostrarCurso(idCurso: number) {
-		for (const d of document.querySelectorAll('[id^="curso-data-"]')) {
+		for (const d of Array.from(document.querySelectorAll('[id^="curso-data-"]'))) {
 			if (d.id === `curso-data-${idCurso}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
@@ -175,7 +175,7 @@ export class AdministracionComponent {
 	}
 
 	mostrarChat(idCurso: number) {
-		for (const d of document.querySelectorAll('[id^="chat-data-"]')) {
+		for (const d of Array.from(document.querySelectorAll('[id^="chat-data-"]'))) {
 			if (d.id === `chat-data-${idCurso}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
@@ -185,7 +185,7 @@ export class AdministracionComponent {
 	}
 
 	mostrarClaseChat(idClase: number) {
-		for (const d of document.querySelectorAll('[id^="clase-chat-"]')) {
+		for (const d of Array.from(document.querySelectorAll('[id^="clase-chat-"]'))) {
 			if (d.id === `clase-chat-${idClase}`) {
 				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
 			} else {
