@@ -19,8 +19,6 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -64,7 +62,6 @@ public class Usuario implements Serializable {
     @JsonIgnoreProperties({ "clasesCurso", "planesCurso", "precioCurso" })
     private List<Curso> cursosUsuario;
 
-    @Temporal(TemporalType.DATE)
     @Column(name = "fecha_registro_usuario")
     private Date fechaRegistroUsuario;
 

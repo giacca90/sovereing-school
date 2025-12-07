@@ -19,7 +19,6 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.socket.CloseStatus;
@@ -72,7 +71,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
      * @param session WebSocketSession con la conexión
      */
     @Override
-    public void afterConnectionEstablished(@NonNull WebSocketSession session) {
+    public void afterConnectionEstablished(WebSocketSession session) {
         try {
             String error = (String) session.getAttributes().get("Error");
             if (error != null) {
@@ -113,7 +112,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
      * @throws Exception
      */
     @Override
-    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) throws Exception {
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String sessionId = session.getId();
         try {
             streamingService.stopFFmpegProcessForUser(sessionId);
@@ -236,7 +235,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
      * @throws Exception
      */
     @Override
-    protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         try {
             String payload = message.getPayload();
 
@@ -267,7 +266,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
      * 
      * @param session WebSocketSession con la conexión
      */
-    protected void handleRequestRtmpUrl(@NonNull WebSocketSession session) {
+    protected void handleRequestRtmpUrl(WebSocketSession session) {
         Long userId = (Long) session.getAttributes().get("idUsuario");
         if (userId == null) {
             sendMessage(session, "error", "userId no proporcionado");
@@ -300,7 +299,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
      * @param session WebSocketSession con la conexión
      * @param payload String con el payload
      */
-    protected void handleEmitirOBS(@NonNull WebSocketSession session, String payload) {
+    protected void handleEmitirOBS(WebSocketSession session, String payload) {
         String streamId = extractStreamId(payload);
         if (streamId == null) {
             sendMessage(session, "error", "rtmpUrl no proporcionada");
@@ -321,7 +320,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
      * @param session WebSocketSession con la conexión
      * @param payload String con el payload
      */
-    protected void handleDetenerStreamOBS(@NonNull WebSocketSession session, String payload) {
+    protected void handleDetenerStreamOBS(WebSocketSession session, String payload) {
         String streamId = extractStreamId(payload);
         if (streamId != null) {
             try {
@@ -339,7 +338,7 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
      * @param type    String con el tipo de mensaje
      * @param message String con el mensaje
      */
-    protected void sendMessage(@NonNull WebSocketSession session, String type, String message) {
+    protected void sendMessage(WebSocketSession session, String type, String message) {
         try {
             String payload = String.format("{\"type\":\"%s\",\"message\":\"%s\"}", type, message);
             session.sendMessage(new TextMessage(payload));

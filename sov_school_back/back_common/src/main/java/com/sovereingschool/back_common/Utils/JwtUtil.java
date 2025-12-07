@@ -52,19 +52,19 @@ public class JwtUtil {
     private String userGenerator;
 
     public Date getExpiredForServer() {
-        return new Date(System.currentTimeMillis() + 60 * 60 * 1000); // 1 hour
+        return new Date(System.currentTimeMillis() + 60 * 60 * 1000);
     }
 
     public Date getExpiredForAccessToken() {
-        return new Date(System.currentTimeMillis() + 15 * 60 * 1000); // 15 minutes
+        return new Date(System.currentTimeMillis() + 15 * 60 * 1000);
     }
 
     public Date getExpiredForRefreshToken() {
-        return new Date(System.currentTimeMillis() + 15 * 24 * 60 * 60 * 1000); // 15 days
+        return new Date(System.currentTimeMillis() + 15 * 24 * 60 * 60 * 1000);
     }
 
     public Date getExpiredForInitToken() {
-        return new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000); // 1 day
+        return new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000);
     }
 
     /**
@@ -75,7 +75,6 @@ public class JwtUtil {
      * @param idUsuario      Long del id del usuario
      * @return String con el token JWT
      */
-
     public String generateToken(Authentication authentication, String tokenType, Long idUsuario) {
 
         Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
@@ -87,14 +86,11 @@ public class JwtUtil {
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.joining(","));
 
-        Date expiration;
-        if (tokenType.equals("access")) {
-            expiration = getExpiredForAccessToken();
-        } else if (tokenType.equals("server")) {
-            expiration = getExpiredForServer();
-        } else {
-            expiration = getExpiredForRefreshToken();
-        }
+        Date expiration = switch (tokenType) {
+            case "access" -> getExpiredForAccessToken();
+            case "server" -> getExpiredForServer();
+            default -> getExpiredForRefreshToken();
+        };
 
         return JWT.create()
                 .withIssuer(this.userGenerator)
@@ -104,7 +100,7 @@ public class JwtUtil {
                 .withIssuedAt(new Date())
                 .withExpiresAt(expiration)
                 .withJWTId(UUID.randomUUID().toString())
-                .withNotBefore(new Date(System.currentTimeMillis())) //
+                .withNotBefore(new Date(System.currentTimeMillis()))
                 .sign(algorithm);
     }
 
@@ -113,7 +109,6 @@ public class JwtUtil {
      * 
      * @return String con el token JWT
      */
-
     public String generateInitToken() {
         Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
         return JWT.create()
@@ -123,7 +118,7 @@ public class JwtUtil {
                 .withIssuedAt(new Date())
                 .withExpiresAt(getExpiredForInitToken())
                 .withJWTId(UUID.randomUUID().toString())
-                .withNotBefore(new Date(System.currentTimeMillis())) //
+                .withNotBefore(new Date(System.currentTimeMillis()))
                 .sign(algorithm);
     }
 
@@ -139,7 +134,7 @@ public class JwtUtil {
                     .withIssuedAt(new Date())
                     .withExpiresAt(getExpiredForInitToken())
                     .withJWTId(UUID.randomUUID().toString())
-                    .withNotBefore(new Date(System.currentTimeMillis())) //
+                    .withNotBefore(new Date(System.currentTimeMillis()))
                     .sign(algorithm);
         } catch (IOException e) {
             throw new InternalServerException("Error al generar el token de registro: " + e.getMessage());
@@ -154,12 +149,9 @@ public class JwtUtil {
      */
 
     public String getUsername(String token) throws AuthenticationException {
-        if (token == null || token.isEmpty()) {
-            throw new BadCredentialsException("El token no puede estar vacío");
-        }
-
         DecodedJWT decodedJWT = decodeToken(token);
         String username = decodedJWT.getSubject();
+
         if (username == null || username.isEmpty()) {
             throw new BadCredentialsException("El token no contiene un nombre de usuario válido");
         }
@@ -172,14 +164,10 @@ public class JwtUtil {
      * @param token String con el token JWT
      * @return String con los roles separados lo ','
      */
-
     public String getRoles(String token) throws AuthenticationException {
-        if (token == null || token.isEmpty()) {
-            throw new BadCredentialsException("El token no puede estar vacío");
-        }
-
         DecodedJWT decodedJWT = decodeToken(token);
         String roles = decodedJWT.getClaim("rol").asString();
+
         if (roles == null || roles.isEmpty()) {
             throw new BadCredentialsException("El token no contiene roles válidos");
         }
@@ -192,14 +180,9 @@ public class JwtUtil {
      * @param token String con el token JWT
      * @return Long con el ID de usuario
      */
-
     public Long getIdUsuario(String token) throws AuthenticationException {
-        if (token == null || token.isEmpty()) {
-            throw new BadCredentialsException("El token no puede estar vacío");
-        }
         DecodedJWT decodedJWT = decodeToken(token);
-        Claim idClaim = decodedJWT.getClaim("idUsuario");
-        return idClaim.asLong();
+        return decodedJWT.getClaim("idUsuario").asLong();
     }
 
     /**
@@ -209,13 +192,10 @@ public class JwtUtil {
      * @param claim String con el claim que se desea obtener
      * @return String con el valor del claim
      */
-
     public String getSpecificClaim(String token, String claim) throws AuthenticationException {
-        if (token == null || claim == null || claim.isEmpty()) {
-            throw new BadCredentialsException("El JWT decodificado y el claim no pueden ser nulos o vacíos");
-        }
         DecodedJWT decodedJWT = decodeToken(token);
         String claimValue = decodedJWT.getClaim(claim).asString();
+
         if (claimValue == null) {
             throw new BadCredentialsException("El claim solicitado no existe en el token");
         }
@@ -228,11 +208,7 @@ public class JwtUtil {
      * @param token String con el token JWT
      * @return Map<String, Claim> con todos los claims del token
      */
-
     public Map<String, Claim> getAllClaims(String token) throws AuthenticationException {
-        if (token == null || token.isEmpty()) {
-            throw new BadCredentialsException("El token no puede estar vacío");
-        }
         DecodedJWT decodedJWT = decodeToken(token);
         return decodedJWT.getClaims();
     }
@@ -243,31 +219,26 @@ public class JwtUtil {
      * @param token String con el token JWT
      * @return Objecto Authentication del token
      */
-
     public Authentication createAuthenticationFromToken(String token) throws AuthenticationException {
-        if (token == null || token.isEmpty()) {
-            throw new BadCredentialsException("El token no puede estar vacío");
-        }
-        String username = null;
-        if (getIdUsuario(token) != null) {
-            username = getIdUsuario(token).toString();
-        } else {
-            username = getUsername(token);
-        }
-        String rolesString = getRoles(token);
-        Long idUsuario = null;
-        if (username != null && !username.equals("server") && !username.equals("Visitante")) {
-            idUsuario = getIdUsuario(token);
-        }
+        DecodedJWT decodedJWT = decodeToken(token);
+
+        String subject = decodedJWT.getSubject();
+        String rolesString = decodedJWT.getClaim("rol").asString();
 
         List<SimpleGrantedAuthority> authorities = Arrays.stream(rolesString.split(","))
-                .map(SimpleGrantedAuthority::new).toList();
+                .map(SimpleGrantedAuthority::new)
+                .toList();
 
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, token,
-                authorities);
+        // 🚫👈 Prevención de recursión infinita para tokens internos del servidor
+        if ("server".equals(subject)) {
+            return new UsernamePasswordAuthenticationToken("server", null, authorities);
+        }
+
+        Long idUsuario = decodedJWT.getClaim("idUsuario").asLong();
+
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(subject, token, authorities);
 
         auth.setDetails(idUsuario);
-
         return auth;
     }
 
@@ -283,6 +254,18 @@ public class JwtUtil {
         return true;
     }
 
+    public DecodedJWT decodeRawToken(String token) {
+        Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
+        return JWT.require(algorithm).withIssuer(this.userGenerator).build().verify(token);
+    }
+
+    public Authentication createAuthenticationFromServerToken() {
+        return new UsernamePasswordAuthenticationToken(
+                "server",
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+    }
+
     /**
      * Decodifica y verifica un token JWT
      * 
@@ -294,19 +277,23 @@ public class JwtUtil {
         if (token == null || token.isBlank()) {
             throw new BadCredentialsException("El token no puede estar vacío");
         }
+
         try {
             Algorithm algorithm = Algorithm.HMAC256(this.privateKay);
-            JWTVerifier verifier = JWT.require(algorithm).withIssuer(this.userGenerator).build();
+            JWTVerifier verifier = JWT.require(algorithm)
+                    .withIssuer(this.userGenerator)
+                    .build();
             return verifier.verify(token);
+
         } catch (TokenExpiredException ex) {
-            // Token expirado
             throw new InsufficientAuthenticationException("Token expirado: " + ex.getMessage(), ex);
+
         } catch (JWTVerificationException ex) {
-            // Token mal formado, firma inválida, issuer incorrecto, etc.
             throw new BadCredentialsException("Error al verificar el token: " + ex.getMessage(), ex);
+
         } catch (Exception ex) {
-            // Cualquier otro error inesperado
             throw new AuthenticationServiceException("Error inesperado al procesar el token: " + ex.getMessage(), ex);
         }
     }
+
 }

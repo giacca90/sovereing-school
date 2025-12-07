@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -114,7 +113,7 @@ class UsuarioServiceTest {
             when(jwtUtil.generateToken(any(Authentication.class), eq("refresh"), eq(10L))).thenReturn("refresh-token");
 
             UsuarioService spyService = spy(usuarioService);
-            doNothing().when(spyService).updateSSR();
+            // doNothing().when(spyService).updateSSR();
 
             AuthResponse resp = spyService.createUsuario(newUsuario);
 
@@ -935,9 +934,6 @@ class UsuarioServiceTest {
         @Test
         void deleteUsuario_SuccessfulDeletion() throws RepositoryException, InternalComunicationException {
             UsuarioService spyService = spy(usuarioService);
-            doNothing().when(spyService).deleteUsuarioStream(anyLong());
-            doNothing().when(spyService).deleteUsuarioChat(anyLong());
-            doNothing().when(initAppService).refreshSSR();
             Long userId = 1L;
             Usuario usuario = new Usuario();
             usuario.setIdUsuario(userId);

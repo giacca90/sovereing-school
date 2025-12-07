@@ -9,9 +9,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -63,7 +63,7 @@ public class CursoService implements ICursoService {
 
     private String backChatURL;
 
-    private Path baseUploadDir;
+    protected Path baseUploadDir;
 
     /**
      * Constructor de CursoService
@@ -92,6 +92,14 @@ public class CursoService implements ICursoService {
         this.initAppService = initAppService;
         this.webClientConfig = webClientConfig;
     }
+
+    /**
+     * Funciones para el servicio de gestión de cursos
+     * 
+     * @param newCurso Curso a crear
+     * @return Long con el ID del curso creado
+     * @throws RepositoryException
+     */
 
     @Override
     public Long createCurso(Curso newCurso) throws RepositoryException {
@@ -151,7 +159,7 @@ public class CursoService implements ICursoService {
         if (profesores == null || profesores.isEmpty()) {
             throw new NotFoundException("Error en obtener los profesores del curso con ID " + idCurso);
         }
-        return this.cursoRepo.findProfesoresCursoById(idCurso);
+        return profesores;
     }
 
     /**
@@ -194,7 +202,7 @@ public class CursoService implements ICursoService {
      * @param id_curso ID del curso
      * @return Lista de Plan con los planes del curso
      * @throws NotFoundException si no hay planes del curso
-     * 
+     *                           TODO: Revisar si es correcto que devielva el error
      */
     @Override
     public List<Plan> getPlanesDelCurso(Long idCurso) throws NotFoundException {
@@ -228,32 +236,38 @@ public class CursoService implements ICursoService {
      * 
      * @param curso Curso: curso a actualizar
      * @return Curso con los datos actualizados
-     * @throws ServiceException si ocurre un error en el servidor
-     * 
+     * @throws InternalServerException
+     * @throws RepositoryException
+     * @throws InternalComunicationException
+     * @throws NotFoundException
+     * @throws ServiceException              si ocurre un error en el servidor
      */
-    @Override
     public Curso updateCurso(Curso curso)
-            throws NotFoundException, InternalServerException, InternalComunicationException, RepositoryException {
+            throws InternalServerException, RepositoryException, InternalComunicationException, NotFoundException {
 
         List<Clase> clases = curso.getClasesCurso();
         curso.setClasesCurso(null);
-        // Si el curso no existe, crear un nuevo
-        if (curso.getIdCurso().equals(0L)) {
+
+        // 1️⃣ Si es curso nuevo → saveAndFlush
+        if (curso.getIdCurso() == null || curso.getIdCurso() == 0L) {
             curso.setIdCurso(null);
-            curso = this.cursoRepo.save(curso);
+            curso = cursoRepo.saveAndFlush(curso);
+
+            // 2️⃣ Si es curso existente → obtener "managed entity"
+        } else {
+            curso = cursoRepo.findById(curso.getIdCurso())
+                    .orElseThrow(() -> new NotFoundException("Curso no encontrado"));
         }
-        // Crear la carpeta del curso si no existe
+
+        // 3️⃣ Carpeta
         this.creaCarpetaCurso(curso);
 
-        // Crear las clases del curso si no existen
+        // 4️⃣ Crear/actualizar clases con el curso ya gestionado
         this.creaClasesCurso(curso, clases);
-        // Actualizar el chat del curso
+
+        // 5️⃣ Chat, stream, SSR...
         this.actualizarChatCurso(curso);
-
-        // Actializa el curso en el stream
         this.actualizarStreamCurso(curso);
-
-        // Actualizar el SSR
         this.updateSSR();
 
         return curso;
@@ -272,14 +286,15 @@ public class CursoService implements ICursoService {
     @Override
     public Boolean deleteCurso(Long idCurso) throws ServiceException {
         try {
-            if (this.getCurso(idCurso).getClasesCurso() != null) {
-                for (Clase clase : this.getCurso(idCurso).getClasesCurso()) {
+            List<Clase> clases = this.getCurso(idCurso).getClasesCurso();
+            if (clases != null) {
+                for (Clase clase : clases) {
                     this.deleteClase(clase);
                 }
             }
         } catch (Exception e) {
             logger.error("CursoService: deleteCurso: Error en obtener el curso con ID {}: ", idCurso);
-            throw new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
+            throw new EntityNotFoundException("Error borrar las clases del curso con ID " + idCurso);
         }
         this.cursoRepo.deleteById(idCurso);
 
@@ -304,10 +319,9 @@ public class CursoService implements ICursoService {
 
     @Override
     public void deleteClase(Clase clase) throws ServiceException {
-        Optional<Clase> optionalClase = this.claseRepo.findById(clase.getIdClase());
-        if (!optionalClase.isPresent()) {
+        this.claseRepo.findById(clase.getIdClase()).orElseThrow(() -> {
             throw new IllegalArgumentException("Clase no encontrada con id " + clase.getIdClase());
-        }
+        });
 
         this.claseRepo.delete(clase);
         // Eliminar la carpeta de la clase
@@ -373,13 +387,17 @@ public class CursoService implements ICursoService {
      * 
      * @param curso Curso a crear la carpeta
      * @throws InternalServerException
+     * 
+     *                                 TODO: Probar si el cambio funciona
      */
     protected void creaCarpetaCurso(Curso curso) throws InternalServerException {
         Path cursoPath = baseUploadDir.resolve(curso.getIdCurso().toString());
         File cursoFile = new File(cursoPath.toString());
-        if (!cursoFile.exists() || !cursoFile.isDirectory() && !cursoFile.mkdir()) {
-            logger.error("Error en crear la carpeta del curso.");
-            throw new InternalServerException("Error en crear la carpeta del curso.");
+        if (!cursoFile.exists() || !cursoFile.isDirectory()) {
+            if (!cursoFile.mkdir()) {
+                logger.error("Error en crear la carpeta del curso.");
+                throw new InternalServerException("Error en crear la carpeta del curso.");
+            }
         }
     }
 
@@ -390,31 +408,43 @@ public class CursoService implements ICursoService {
      * @param clases Lista de Clases a crear
      * @throws RepositoryException
      * @throws InternalServerException
+     * @throws NotFoundException
      */
+    @Transactional
     protected void creaClasesCurso(Curso curso, List<Clase> clases)
             throws RepositoryException, InternalServerException {
-        if (clases.isEmpty()) {
-            for (Clase clase : clases) {
-                clase.setCursoClase(curso);
-                if (clase.getIdClase().equals(0L)) {
-                    clase.setIdClase(null);
-                }
-                try {
-                    clase = this.claseRepo.save(clase);
-                } catch (IllegalArgumentException e) {
-                    throw new RepositoryException("Error en guardar la clase: " + e.getMessage(), e);
-                }
 
-                // Crea la carpeta de la clase si no existe
-                this.creaCarpetaClase(curso, clase);
-            }
-            curso.setClasesCurso(clases);
-            try {
-                this.cursoRepo.save(curso);
-            } catch (IllegalArgumentException e) {
-                throw new RepositoryException("Error en actualizar el curso: " + e.getMessage());
-            }
+        if (clases == null || clases.isEmpty()) {
+            return;
         }
+
+        Curso cursoManaged = cursoRepo.getReferenceById(curso.getIdCurso());
+
+        for (Clase clase : clases) {
+
+            if (clase.getIdClase() != null && clase.getIdClase() == 0L) {
+                clase.setIdClase(null);
+            }
+
+            // 🔥 ASIGNAR AMBOS LADOS - ESTO ES LO QUE FALTABA 🔥
+            clase.setCursoClase(cursoManaged);
+            List<Clase> clasesManaged = cursoManaged.getClasesCurso();
+            if (clasesManaged == null) {
+                clasesManaged = new ArrayList<>();
+            }
+            clasesManaged.add(clase);
+            cursoManaged.setClasesCurso(clasesManaged);
+
+            try {
+                claseRepo.save(clase); // save is fine, flushing lo hará al final
+            } catch (IllegalArgumentException e) {
+                throw new RepositoryException("Error en guardar la clase: " + e.getMessage(), e);
+            }
+
+            creaCarpetaClase(cursoManaged, clase);
+        }
+
+        cursoRepo.save(cursoManaged);
     }
 
     /**
@@ -579,11 +609,26 @@ public class CursoService implements ICursoService {
      * @throws InternalServerException
      */
     protected void creaCarpetaClase(Curso curso, Clase clase) throws InternalServerException {
-        Path clasePath = baseUploadDir.resolve(curso.getIdCurso().toString())
+        Path clasePath = baseUploadDir
+                .resolve(curso.getIdCurso().toString())
                 .resolve(clase.getIdClase().toString());
-        File claseFile = new File(clasePath.toString());
-        if (!claseFile.exists() || !claseFile.isDirectory() && !claseFile.mkdir()) {
-            throw new InternalServerException("Error en crear la carpeta de la clase");
+
+        File claseFile = clasePath.toFile();
+
+        // Intenta crear toda la estructura si no existe
+        if (!claseFile.exists()) {
+            boolean creada = claseFile.mkdirs(); // CREA TODAS LAS CARPETAS NECESARIAS
+
+            if (!creada) {
+                throw new InternalServerException(
+                        "Error al crear la estructura de carpetas para: " + clasePath);
+            }
+        }
+
+        // Validación final por seguridad
+        if (!claseFile.isDirectory()) {
+            throw new InternalServerException(
+                    "La ruta existe pero no es una carpeta: " + clasePath);
         }
     }
 

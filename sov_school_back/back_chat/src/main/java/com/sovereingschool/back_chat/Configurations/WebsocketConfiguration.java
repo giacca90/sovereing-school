@@ -7,7 +7,6 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.NonNull;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.security.messaging.context.SecurityContextChannelInterceptor;
@@ -31,21 +30,21 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer,
     }
 
     @Override
-    public void configureMessageBroker(@NonNull MessageBrokerRegistry config) {
+    public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/init_chat");
         config.setApplicationDestinationPrefixes("/app");
         config.setUserDestinationPrefix("/user");
     }
 
     @Override
-    public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/chat-socket")
                 .setAllowedOriginPatterns("*")
                 .addInterceptors(handshakeInterceptor); // Aquí se agrega el HandshakeInterceptor
     }
 
     @Override
-    public void configureClientInboundChannel(@NonNull ChannelRegistration registration) {
+    public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(securityContextChannelInterceptor(), authInterceptor);
     }
 

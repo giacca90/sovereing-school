@@ -5,9 +5,9 @@ export class Init {
 	public cursosInit: CursosInit[];
 	public estadistica: Estadistica;
 
-	constructor(Curso: CursosInit[], _prof: ProfesInit[], _estadistica: Estadistica) {
+	constructor(_cursos: CursosInit[], _prof: ProfesInit[], _estadistica: Estadistica) {
 		this.profesInit = _prof;
-		this.cursosInit = Curso;
+		this.cursosInit = _cursos;
 		this.estadistica = _estadistica;
 	}
 }

@@ -31,11 +31,16 @@ public class WebClientConfig {
 		this.jwtUtil = jwtUtil;
 	}
 
-	// Bean global que siempre envía JWT
+	// ------------------ Bean explícito de WebClient.Builder ------------------
+	@Bean
+	public WebClient.Builder webClientBuilder() {
+		return WebClient.builder();
+	}
+
+	// ------------------ Bean global que siempre envía JWT ------------------
 	@Bean
 	public WebClient webClient(WebClient.Builder builder) throws SSLException {
-		HttpClient httpClient;
-		httpClient = createHttpClient();
+		HttpClient httpClient = createHttpClient();
 
 		String authToken = this.jwtUtil.generateToken(null, "server", null);
 
@@ -46,30 +51,17 @@ public class WebClientConfig {
 				.build();
 	}
 
-	// Método para crear WebClient con baseUrl y headers específicos, igual que
-	// antes
-	/**
-	 * Método para crear WebClient con baseUrl y headers específicos
-	 * 
-	 * @param baseUrl {@link String} con la URL base
-	 * @return {@link WebClient} con baseUrl y headers específicos
-	 * @throws URISyntaxException {@link URISyntaxException} cuando no se puede
-	 *                            parsear la URL
-	 * @throws SSLException       {@link SSLException} cuando no se puede crear el
-	 *                            HttpClient
-	 */
+	// ------------------ Método para crear WebClient seguro con baseUrl
+	// ------------------
 	public WebClient createSecureWebClient(String baseUrl) throws URISyntaxException, SSLException {
 		URI uri = new URI(baseUrl);
 		String host = uri.getHost();
 		int port = uri.getPort();
 
 		HttpClient httpClient = createHttpClient();
-
 		String authToken = this.jwtUtil.generateToken(null, "server", null);
 
-		String hostHeader = (port == 443 || port == -1)
-				? host
-				: host + ":" + port;
+		String hostHeader = (port == 443 || port == -1) ? host : host + ":" + port;
 
 		return WebClient.builder()
 				.clientConnector(new ReactorClientHttpConnector(httpClient))
@@ -80,12 +72,7 @@ public class WebClientConfig {
 				.build();
 	}
 
-	/**
-	 * Método interno que decide si usar InsecureTrustManagerFactory o SSL normal
-	 *
-	 * @throws SSLException {@link SSLException} cuando no se puede crear el
-	 *                      HttpClient
-	 */
+	// ------------------ Método interno para crear HttpClient ------------------
 	private HttpClient createHttpClient() throws SSLException {
 		if (insecureSsl) {
 			SslContext sslContext = SslContextBuilder.forClient()
@@ -93,11 +80,9 @@ public class WebClientConfig {
 					.build();
 			return HttpClient.create()
 					.secure(t -> t.sslContext(sslContext));
-
 		} else {
 			return HttpClient.create()
 					.secure();
-
 		}
 	}
 }

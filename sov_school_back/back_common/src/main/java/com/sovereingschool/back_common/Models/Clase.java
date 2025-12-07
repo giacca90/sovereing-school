@@ -32,7 +32,7 @@ public class Clase implements Serializable {
     private String nombreClase;
 
     @Column(name = "descripcion_clase", length = 1000)
-    private String descripcionClase; // ✅ corregido el nombre de la propiedad (antes: descriccionClase)
+    private String descripcionClase;
 
     @Column(name = "contenido_clase", length = 10000)
     private String contenidoClase;

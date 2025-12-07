@@ -16,7 +16,6 @@ import java.util.concurrent.Executor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.socket.CloseStatus;
@@ -65,7 +64,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
      * @param session WebSocketSession con la conexión
      */
     @Override
-    public void afterConnectionEstablished(@NonNull WebSocketSession session) {
+    public void afterConnectionEstablished(WebSocketSession session) {
         try {
             String error = (String) session.getAttributes().get("Error");
             if (error != null) {
@@ -103,7 +102,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
      * @throws Exception
      */
     @Override
-    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         String userId = session.getId();
 
         if (pionWriter != null) {
@@ -141,7 +140,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
      * @throws Exception
      */
     @Override
-    protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
             String payload = message.getPayload();
             JsonNode json = objectMapper.readTree(payload);

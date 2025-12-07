@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sovereingschool.back_chat.DTOs.CursoChatDTO;
 import com.sovereingschool.back_chat.Services.CursoChatService;
 import com.sovereingschool.back_chat.Services.InitChatService;
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Usuario;
 
@@ -285,7 +286,7 @@ public class ChatController {
         try {
             this.cursoChatService.actualizarCursoChat(curso);
             return new ResponseEntity<>("Curso chat actualizado con éxito!!!", HttpStatus.OK);
-        } catch (RuntimeException e) {
+        } catch (InternalServerException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
             return new ResponseEntity<>("Error en actualizar el chat del curso: " + e.getCause(),

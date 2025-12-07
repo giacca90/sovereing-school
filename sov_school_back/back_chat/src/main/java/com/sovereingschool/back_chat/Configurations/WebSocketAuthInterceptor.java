@@ -6,8 +6,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessagingException;
@@ -37,7 +35,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     }
 
     @Override
-    public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
+    public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
 
         if (accessor.getCommand() == StompCommand.CONNECT) {
@@ -121,8 +119,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     }
 
     @Override
-    public void afterSendCompletion(@NonNull Message<?> message, @NonNull MessageChannel channel, boolean sent,
-            @Nullable Exception ex) {
+    public void afterSendCompletion(Message<?> message, MessageChannel channel, boolean sent,
+            Exception ex) {
         if (ex != null) {
             logger.error("WebSocketAuthInterceptor: {}", ex.getMessage());
         }

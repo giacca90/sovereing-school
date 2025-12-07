@@ -76,8 +76,7 @@ export class InitService {
 
 		// 4️⃣ Fetch real al backend
 		try {
-			const response = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
-
+			const response: Init = await firstValueFrom(this.http.get<Init>(this.apiUrl, { headers: this.headers, withCredentials: true }));
 			if (isPlatformServer(this.platformId)) {
 				// Guardamos en cache global SSR
 				setGlobalInitCache(response);

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS curso (
 CREATE TABLE IF NOT EXISTS clase (
 	id_clase SERIAL PRIMARY KEY,
 	nombre_clase VARCHAR(255) NOT NULL,
-	descriccion_clase TEXT,
+	descripcion_clase TEXT,
 	contenido_clase TEXT,
 	tipo_clase INTEGER NOT NULL,
 	direccion_clase VARCHAR(255) NOT NULL,
@@ -107,7 +107,7 @@ embargando al D.N.I.',
 	);
 INSERT INTO clase (
 		nombre_clase,
-		descriccion_clase,
+		descripcion_clase,
 		contenido_clase,
 		tipo_clase,
 		direccion_clase,

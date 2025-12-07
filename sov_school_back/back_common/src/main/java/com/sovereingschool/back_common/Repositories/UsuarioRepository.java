@@ -19,7 +19,11 @@ import jakarta.transaction.Transactional;
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
-    @Query("SELECT u FROM Usuario u WHERE u.idUsuario = :id")
+    @Query("""
+            SELECT u FROM Usuario u
+            LEFT JOIN FETCH u.cursosUsuario
+            WHERE u.idUsuario = :id
+            """)
     Optional<Usuario> findUsuarioForId(@Param("id") Long id);
 
     @Query("SELECT u.nombreUsuario FROM Usuario u WHERE u.idUsuario = :id")

@@ -23,7 +23,7 @@
 					</div>
 				}
 				<div class="m-2 flex w-full grow flex-col">
-					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccionClase" />
+					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descripcionClase" />
 					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenidoClase"></textarea>
 				</div>
 			</div>
@@ -38,7 +38,7 @@
 					<app-editor-video [clase]="clase" (videoSeleccionado)="this.subeVideo($event)"></app-editor-video>
 				</div>
 				<div class="m-2 flex w-full grow flex-col">
-					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descriccionClase" />
+					<input type="text" class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Pon una breve descripción de tu clase." [(ngModel)]="clase.descripcionClase" />
 					<textarea class="m-2 cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" rows="5" placeholder="Aquí es donde va todo el contenido de tu clase, todo lo que no esté en el video u en otros contenidos." [(ngModel)]="clase.contenidoClase"></textarea>
 				</div>
 			</div>

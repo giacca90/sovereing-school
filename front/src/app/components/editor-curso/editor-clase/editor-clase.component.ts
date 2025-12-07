@@ -232,7 +232,6 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 		});
 	}
 
-	// Recuperar imagenes del curso y del usuario para el componente WebOBS
 	/**
 	 * Recupera las imagenes del curso y del usuario para el componente WebOBS
 	 */
@@ -440,7 +439,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 			this.readyComponent = false;
 			return false;
 		}
-		if (this.clase.descriccionClase == null || this.clase.descriccionClase == '') {
+		if (this.clase.descripcionClase == null || this.clase.descripcionClase == '') {
 			alert('Debes poner una descripción para la clase');
 			this.readyComponent = false;
 			return false;
@@ -482,8 +481,8 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	/** Procesa la clase según su tipo */
 	private async procesarClasePorTipo(): Promise<void> {
 		if (this.clase.tipoClase === 0) {
+			this.curso.clasesCurso?.push(this.clase);
 			if (this.clase.cursoClase === 0) {
-				this.curso.clasesCurso?.push(this.clase);
 				this.close();
 				return;
 			}

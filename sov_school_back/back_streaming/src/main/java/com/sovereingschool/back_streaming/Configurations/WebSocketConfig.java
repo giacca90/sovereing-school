@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.NonNull;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -56,7 +55,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     }
 
     @Override
-    public void registerWebSocketHandlers(@NonNull WebSocketHandlerRegistry registry) {
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         WebRTCSignalingHandler handler = new WebRTCSignalingHandler(webSocketTaskExecutor(), streamingService);
         registry.addHandler(handler, "/live-webcam")
                 .setAllowedOrigins("*")

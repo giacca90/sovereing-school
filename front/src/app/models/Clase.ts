@@ -3,10 +3,11 @@ export class Clase {
 
 	public nombreClase: string;
 
-	public descriccionClase: string;
+	public descripcionClase: string;
 
 	public contenidoClase: string;
 
+	// 0 - ESTATICO, 1 - OBS - 2 - WEBCAM
 	public tipoClase: number;
 
 	public direccionClase: string;
@@ -15,10 +16,10 @@ export class Clase {
 
 	public cursoClase: number;
 
-	constructor(idClase: number, nombreClase: string, descriccionClase: string, contenidoClase: string, tipoClase: number, direccionClase: string, posicionClase: number, cursoClase: number) {
+	constructor(idClase: number, nombreClase: string, descripcionClase: string, contenidoClase: string, tipoClase: number, direccionClase: string, posicionClase: number, cursoClase: number) {
 		this.idClase = idClase;
 		this.nombreClase = nombreClase;
-		this.descriccionClase = descriccionClase;
+		this.descripcionClase = descripcionClase;
 		this.contenidoClase = contenidoClase;
 		this.tipoClase = tipoClase;
 		this.direccionClase = direccionClase;

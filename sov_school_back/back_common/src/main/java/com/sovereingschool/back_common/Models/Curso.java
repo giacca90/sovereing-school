@@ -30,6 +30,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "curso")
 public class Curso implements Serializable {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id_curso")
@@ -46,8 +47,8 @@ public class Curso implements Serializable {
 	private Date fechaPublicacionCurso;
 
 	@OneToMany(mappedBy = "cursoClase", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonIgnoreProperties({ "cursoClase" })
 	@JsonManagedReference
+	@JsonIgnoreProperties({ "cursoClase" }) // evita recursión infinita
 	private List<Clase> clasesCurso;
 
 	@ManyToMany(fetch = FetchType.EAGER)
@@ -63,5 +64,4 @@ public class Curso implements Serializable {
 	private String imagenCurso;
 
 	private BigDecimal precioCurso;
-
 }

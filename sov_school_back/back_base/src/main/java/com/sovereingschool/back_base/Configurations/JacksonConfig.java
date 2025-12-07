@@ -3,21 +3,19 @@ package com.sovereingschool.back_base.Configurations;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.datatype.hibernate6.Hibernate6Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 @Configuration
 public class JacksonConfig {
 
     @Bean
-    public Module hibernateModule() {
-        Hibernate6Module module = new Hibernate6Module();
+    public ObjectMapper objectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
 
-        // ⚙️ Opciones recomendadas:
-        // No forzar la carga de relaciones LAZY (evita que se dispare sin querer un
-        // montón de queries)
-        module.disable(Hibernate6Module.Feature.FORCE_LAZY_LOADING);
+        // Manejo adecuado de fechas (muy recomendable)
+        mapper.registerModule(new JavaTimeModule());
 
-        return module;
+        return mapper;
     }
 }

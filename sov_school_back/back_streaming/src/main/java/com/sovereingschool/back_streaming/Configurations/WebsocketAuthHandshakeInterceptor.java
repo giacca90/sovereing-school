@@ -6,8 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
@@ -29,10 +27,10 @@ public class WebsocketAuthHandshakeInterceptor implements HandshakeInterceptor {
     }
 
     @Override
-    public boolean beforeHandshake(@NonNull ServerHttpRequest request,
-            @NonNull ServerHttpResponse response,
-            @NonNull WebSocketHandler wsHandler,
-            @NonNull Map<String, Object> attributes) {
+    public boolean beforeHandshake(ServerHttpRequest request,
+            ServerHttpResponse response,
+            WebSocketHandler wsHandler,
+            Map<String, Object> attributes) {
 
         try {
             MultiValueMap<String, String> params = UriComponentsBuilder.fromUri(request.getURI()).build()
@@ -59,10 +57,10 @@ public class WebsocketAuthHandshakeInterceptor implements HandshakeInterceptor {
     }
 
     @Override
-    public void afterHandshake(@NonNull ServerHttpRequest request,
-            @NonNull ServerHttpResponse response,
-            @NonNull WebSocketHandler wsHandler,
-            @Nullable Exception exception) {
+    public void afterHandshake(ServerHttpRequest request,
+            ServerHttpResponse response,
+            WebSocketHandler wsHandler,
+            Exception exception) {
         // No necesitamos hacer nada aquí
     }
 }
