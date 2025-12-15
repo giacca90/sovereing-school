@@ -8,9 +8,9 @@
 			<input (input)="this.compruebaCambios()" class="w-80 cursor-pointer bg-transparent font-bold text-blue-500" placeholder="NOMBRE DEL CURSO" type="text" [(ngModel)]="this.curso.nombreCurso" />
 		</div>
 		<br />
-		<input (input)="this.compruebaCambios()" placeholder="DESCRIPCIÓN CORTA" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" type="text" [(ngModel)]="this.curso.descriccionCorta" />
+		<input (input)="this.compruebaCambios()" placeholder="DESCRIPCIÓN CORTA" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" type="text" [(ngModel)]="this.curso.descripcionCorta" />
 		<br />
-		<textarea (input)="this.compruebaCambios()" placeholder="DESCRIPCIÓN LARGA" rows="5" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" [(ngModel)]="this.curso.descriccionLarga"></textarea>
+		<textarea (input)="this.compruebaCambios()" placeholder="DESCRIPCIÓN LARGA" rows="5" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" [(ngModel)]="this.curso.descripcionLarga"></textarea>
 		<br />
 		@if (this.curso.clasesCurso) {
 			<div id="curso" class="w-full cursor-pointer">

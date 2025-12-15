@@ -14,12 +14,12 @@
 
 						<div class="m-3 flex items-center justify-between">
 							@for (profe of curso.profesoresCurso; track profe) {
-								<span class="font-bold">Por: {{ profe.nombreUsuario }}</span>
-								<img [src]="profe.fotoUsuario[0]" alt="logo" class="h-12 w-12 object-contain" loading="lazy" />
+								<span class="font-bold">Por: {{ getProfessorName(profe) }}</span>
+								<img [src]="getProfessorPhoto(profe)" alt="logo" class="h-12 w-12 object-contain" loading="lazy" />
 							}
 						</div>
 
-						<p class="adaptive-text mr-3 ml-3">{{ curso.descriccionCorta }}</p>
+						<p class="adaptive-text mr-3 ml-3">{{ curso.descripcionCorta }}</p>
 					</div>
 				</div>
 			}

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.sovereingschool.back_base.DTOs.CursoDTO;
 import com.sovereingschool.back_base.Interfaces.ICursoService;
 import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
 import com.sovereingschool.back_common.Exceptions.InternalServerException;
@@ -229,10 +230,10 @@ public class CursoController {
 	 */
 	@PreAuthorize("hasAnyRole('PROF', 'ADMIN')")
 	@PutMapping("/update")
-	public ResponseEntity<?> updateCurso(@RequestBody Curso curso) {
+	public ResponseEntity<?> updateCurso(@RequestBody CursoDTO cursoDTO) {
 		Object response = new Object();
 		try {
-			response = this.cursoService.updateCurso(curso);
+			response = this.cursoService.updateCurso(this.cursoService.cursoDTOToCurso(cursoDTO));
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (NotFoundException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);

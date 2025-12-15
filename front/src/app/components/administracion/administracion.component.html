@@ -74,7 +74,7 @@
 						<p class="m-2">{{ curs.nombreCurso }}</p>
 						<p class="m-2">Profes:</p>
 						@for (prof of curs.profesoresCurso; track $index) {
-							<p class="m-2">{{ prof.nombreUsuario }}</p>
+							<p class="m-2">{{ getProfessorName(prof) }}</p>
 						}
 						<p class="m-2">Clases: {{ curs.clasesCurso?.length }}</p>
 					</div>
@@ -84,7 +84,7 @@
 					<p>Nombre: {{ curs.nombreCurso }}</p>
 					<p>Profesores:</p>
 					@for (prof of curs.profesoresCurso; track $index) {
-						<p class="m-2">{{ prof.nombreUsuario }}</p>
+						<p class="m-2">{{ getProfessorName(prof) }}</p>
 					}
 					<p>Clases:</p>
 					@for (clas of curs.clasesCurso; track $index) {

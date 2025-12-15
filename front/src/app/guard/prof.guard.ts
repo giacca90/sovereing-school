@@ -37,7 +37,7 @@ export class ProfGuard implements CanActivate {
 				return false;
 			}
 
-			const isProfesor = curso.profesoresCurso.some((profesor) => profesor.idUsuario === this.loginService.usuario?.idUsuario);
+			const isProfesor = curso.profesoresCurso.some((idProfe) => idProfe === this.loginService.usuario?.idUsuario);
 			if (!isProfesor) {
 				console.error('Usuario no es profesor del curso: ' + idCurso);
 				this.router.navigate(['/']);

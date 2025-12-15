@@ -25,7 +25,7 @@ export class PerfilUsuarioComponent implements OnDestroy {
 		private readonly usuarioService: UsuariosService,
 		private readonly initService: InitService,
 	) {
-		this.usuario = JSON.parse(JSON.stringify(this.loginService.usuario));
+		this.usuario = structuredClone(this.loginService.usuario);
 	}
 
 	cargaFoto(event: Event) {
@@ -55,7 +55,8 @@ export class PerfilUsuarioComponent implements OnDestroy {
 			// Si hay fotos para procesar
 			if (this.fotos.size > 0) {
 				const fotoPrincipal: string = (document.getElementById('fotoPrincipal') as HTMLImageElement).src;
-				this.usuario?.fotoUsuario.forEach((foto, index) => {
+				let index = 0;
+				for (const foto of this.usuario?.fotoUsuario || []) {
 					if (foto.startsWith('blob:')) {
 						const formData = new FormData();
 						const file = this.fotos.get(foto);
@@ -79,7 +80,8 @@ export class PerfilUsuarioComponent implements OnDestroy {
 							savePromises.push(savePromise);
 						}
 					}
-				});
+					index++;
+				}
 			}
 
 			// Espera a que todas las promesas se resuelvan antes de continuar
@@ -93,39 +95,24 @@ export class PerfilUsuarioComponent implements OnDestroy {
 	}
 
 	actualizaUsuario() {
-		const temp: Usuario = JSON.parse(JSON.stringify(this.loginService.usuario));
+		const temp: Usuario | null = structuredClone(this.loginService.usuario);
+		if (!temp) return;
 		if (this.usuario?.fotoUsuario && this.loginService.usuario?.fotoUsuario !== undefined) {
 			let fotoPrincipal: string = (document.getElementById('fotoPrincipal') as HTMLImageElement).src;
-			if (fotoPrincipal === undefined) {
-				fotoPrincipal = this.usuario.fotoUsuario[0];
-			}
+			fotoPrincipal ??= this.usuario.fotoUsuario[0];
 			if (fotoPrincipal !== this.usuario.fotoUsuario[0]) {
 				const f: string[] = [];
 				f.push(fotoPrincipal);
-				this.usuario.fotoUsuario.forEach((foto: string) => {
+				for (const foto of this.usuario.fotoUsuario) {
 					if (foto !== fotoPrincipal && !foto.startsWith('#')) {
 						f.push(foto);
 					}
-				});
+				}
 				this.usuario.fotoUsuario = f;
 			}
 			temp.fotoUsuario = this.usuario.fotoUsuario;
 			temp.nombreUsuario = this.usuario.nombreUsuario;
 			temp.presentacion = this.usuario.presentacion;
-			temp.cursosUsuario?.forEach((curso) => {
-				curso.clasesCurso = undefined;
-				curso.planesCurso = undefined;
-				curso.precioCurso = undefined;
-				curso.profesoresCurso.forEach((profe) => {
-					profe.fechaRegistroUsuario = undefined;
-					profe.cursosUsuario = undefined;
-					profe.planUsuario = undefined;
-					profe.rollUsuario = undefined;
-					if (profe.idUsuario === this.usuario?.idUsuario) {
-						profe.fotoUsuario = temp.fotoUsuario;
-					}
-				});
-			});
 
 			if (temp.planUsuario?.nombrePlan) temp.planUsuario.nombrePlan = undefined;
 			if (temp.planUsuario?.precioPlan) temp.planUsuario.precioPlan = undefined;

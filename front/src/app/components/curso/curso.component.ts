@@ -39,11 +39,11 @@ export class CursoComponent implements OnDestroy {
 		this.cursoService.getCurso(this.idCurso).then((curso) => {
 			this.curso = curso;
 			if (this.curso) {
-				if (this.curso.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0].idUsuario);
+				if (this.curso.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0]);
 				else {
-					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0].idUsuario)?.toString();
+					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0])?.toString();
 					for (let i = 1; i < this.curso.profesoresCurso.length; i++) {
-						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso.profesoresCurso[i].idUsuario);
+						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso.profesoresCurso[i]);
 					}
 					this.nombresProfesores = nombres;
 				}
@@ -53,9 +53,10 @@ export class CursoComponent implements OnDestroy {
 
 	compruebaPlan(planUsuario: Plan | undefined): Plan | null {
 		if (planUsuario !== undefined && planUsuario !== null && this.curso?.planesCurso) {
-			for (const plan of this.curso.planesCurso) {
-				if (plan.idPlan == planUsuario.idPlan) {
-					return plan;
+			for (const idPlan of this.curso.planesCurso) {
+				if (idPlan == planUsuario.idPlan) {
+					// TODO: Crear una forma de obtener el plan
+					return null;
 				}
 			}
 		}

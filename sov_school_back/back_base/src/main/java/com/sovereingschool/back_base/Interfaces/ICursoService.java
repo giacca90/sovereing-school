@@ -6,6 +6,8 @@ import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.sovereingschool.back_base.DTOs.ClaseDTO;
+import com.sovereingschool.back_base.DTOs.CursoDTO;
 import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
 import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Exceptions.NotFoundException;
@@ -44,4 +46,9 @@ public interface ICursoService {
     public void deleteClase(Clase clase) throws ServiceException;
 
     public String subeVideo(MultipartFile file) throws InternalServerException;
+
+    public Curso cursoDTOToCurso(CursoDTO cursoDTO) throws NotFoundException;
+
+    public Clase claseDTOToClase(ClaseDTO claseDTO);
+
 }

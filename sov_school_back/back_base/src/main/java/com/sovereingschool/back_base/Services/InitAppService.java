@@ -99,8 +99,8 @@ public class InitAppService implements IInitAppService {
             CursosInit init = new CursosInit(
                     curso.getIdCurso(),
                     curso.getNombreCurso(),
-                    curso.getProfesoresCurso().stream().map(profesor -> profesor.getIdUsuario()).toList(),
-                    curso.getDescriccionCorta(),
+                    curso.getProfesoresCurso().stream().map(Usuario::getIdUsuario).toList(),
+                    curso.getDescripcionCorta(),
                     curso.getImagenCurso());
             cursosInit.add(init);
         });
@@ -111,13 +111,10 @@ public class InitAppService implements IInitAppService {
                 this.cursoRepo.count(),
                 this.claseRepo.count());
 
-        InitApp init = new InitApp(
+        return new InitApp(
                 cursosInit,
                 profesInit,
                 estadistica);
-
-        return init;
-
     }
 
     /**

@@ -30,14 +30,14 @@ export class CursosInit {
 	idCurso: number;
 	nombreCurso: string;
 	profesoresCurso: number[];
-	descriccionCorta: string;
+	descripcionCorta: string;
 	imagenCurso: string;
 
 	constructor(_id: number, _nombre: string, _prof: number[], _desc: string, _imagen: string) {
 		this.idCurso = _id;
 		this.nombreCurso = _nombre;
 		this.profesoresCurso = _prof;
-		this.descriccionCorta = _desc;
+		this.descripcionCorta = _desc;
 		this.imagenCurso = _imagen;
 	}
 }

@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,11 +21,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.sovereingschool.back_base.Configurations.WebClientConfig;
+import com.sovereingschool.back_base.DTOs.ClaseDTO;
+import com.sovereingschool.back_base.DTOs.CursoDTO;
 import com.sovereingschool.back_base.Interfaces.ICursoService;
 import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
 import com.sovereingschool.back_common.Exceptions.InternalServerException;
@@ -37,9 +42,10 @@ import com.sovereingschool.back_common.Models.Plan;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_common.Repositories.CursoRepository;
+import com.sovereingschool.back_common.Repositories.PlanRepository;
+import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import reactor.core.publisher.Mono;
 
 /**
@@ -49,11 +55,13 @@ import reactor.core.publisher.Mono;
  * 
  */
 @Service
-@Transactional
+@Transactional(propagation = Propagation.REQUIRED)
 public class CursoService implements ICursoService {
 
     private CursoRepository cursoRepo;
     private ClaseRepository claseRepo;
+    private UsuarioRepository usuarioRepo;
+    private PlanRepository planRepo;
     private InitAppService initAppService;
     private WebClientConfig webClientConfig;
 
@@ -73,6 +81,7 @@ public class CursoService implements ICursoService {
      * @param backChatURL     URL del microservicio de chat
      * @param cursoRepo       Repositorio de cursos
      * @param claseRepo       Repositorio de clases
+     * @param usuarioRepo     Repositorio de usuarios
      * @param initAppService  Servicio de inicialización
      * @param webClientConfig Configuración de WebClient
      */
@@ -82,6 +91,8 @@ public class CursoService implements ICursoService {
             @Value("${variable.BACK_CHAT_DOCKER}") String backChatURL,
             CursoRepository cursoRepo,
             ClaseRepository claseRepo,
+            UsuarioRepository usuarioRepo,
+            PlanRepository planRepo,
             InitAppService initAppService,
             WebClientConfig webClientConfig) {
         this.backStreamURL = backStreamURL;
@@ -89,6 +100,8 @@ public class CursoService implements ICursoService {
         this.baseUploadDir = Paths.get(uploadDir);
         this.cursoRepo = cursoRepo;
         this.claseRepo = claseRepo;
+        this.usuarioRepo = usuarioRepo;
+        this.planRepo = planRepo;
         this.initAppService = initAppService;
         this.webClientConfig = webClientConfig;
     }
@@ -242,32 +255,30 @@ public class CursoService implements ICursoService {
      * @throws NotFoundException
      * @throws ServiceException              si ocurre un error en el servidor
      */
+    @Transactional
+    @Override
     public Curso updateCurso(Curso curso)
-            throws InternalServerException, RepositoryException, InternalComunicationException, NotFoundException {
+            throws NotFoundException, InternalServerException, InternalComunicationException, RepositoryException {
 
         List<Clase> clases = curso.getClasesCurso();
         curso.setClasesCurso(null);
-
-        // 1️⃣ Si es curso nuevo → saveAndFlush
-        if (curso.getIdCurso() == null || curso.getIdCurso() == 0L) {
+        // Si el curso no existe, crear un nuevo
+        if (curso.getIdCurso().equals(0L)) {
             curso.setIdCurso(null);
-            curso = cursoRepo.saveAndFlush(curso);
-
-            // 2️⃣ Si es curso existente → obtener "managed entity"
-        } else {
-            curso = cursoRepo.findById(curso.getIdCurso())
-                    .orElseThrow(() -> new NotFoundException("Curso no encontrado"));
+            curso = this.cursoRepo.save(curso);
         }
-
-        // 3️⃣ Carpeta
+        // Crear la carpeta del curso si no existe
         this.creaCarpetaCurso(curso);
 
-        // 4️⃣ Crear/actualizar clases con el curso ya gestionado
+        // Crear las clases del curso si no existen
         this.creaClasesCurso(curso, clases);
-
-        // 5️⃣ Chat, stream, SSR...
+        // Actualizar el chat del curso
         this.actualizarChatCurso(curso);
+
+        // Actializa el curso en el stream
         this.actualizarStreamCurso(curso);
+
+        // Actualizar el SSR
         this.updateSSR();
 
         return curso;
@@ -382,6 +393,58 @@ public class CursoService implements ICursoService {
         }
     }
 
+    public Curso cursoDTOToCurso(CursoDTO cursoDTO) throws NotFoundException {
+
+        // Profesores → lista mutable
+        List<Usuario> profesores = new ArrayList<>();
+        for (Long idProfesor : cursoDTO.profesoresCurso()) {
+            profesores.add(
+                    this.usuarioRepo.findById(idProfesor)
+                            .orElseThrow(() -> {
+                                logger.error("Error al obtener el profesor con ID {}", idProfesor);
+                                return new NotFoundException("Error al obtener el profesor con ID " + idProfesor);
+                            }));
+        }
+
+        // Clases → ¡importantísimo! convertir a lista MUTABLE
+        List<Clase> clases = cursoDTO.clasesCurso().stream()
+                .map(this::claseDTOToClase)
+                .collect(Collectors.toCollection(ArrayList::new)); // 🔥 LISTA MUTABLE 🔥
+
+        // Planes → lista mutable también
+        List<Plan> planes = cursoDTO.planesCurso().stream()
+                .map(idPlan -> this.planRepo.findById(idPlan).orElse(null))
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        return new Curso(
+                cursoDTO.idCurso(),
+                cursoDTO.nombreCurso(),
+                profesores,
+                cursoDTO.fechaPublicacionCurso(),
+                clases,
+                planes,
+                cursoDTO.descripcionCorta(),
+                cursoDTO.descripcionLarga(),
+                cursoDTO.imagenCurso(),
+                cursoDTO.precioCurso());
+    }
+
+    public Clase claseDTOToClase(ClaseDTO claseDTO) {
+        Clase clase = new Clase();
+        clase.setIdClase(claseDTO.idClase());
+        clase.setNombreClase(claseDTO.nombreClase());
+        clase.setDescripcionClase(claseDTO.descripcionClase());
+        clase.setContenidoClase(claseDTO.contenidoClase());
+        clase.setTipoClase(claseDTO.tipoClase());
+        clase.setDireccionClase(claseDTO.direccionClase());
+        clase.setPosicionClase(claseDTO.posicionClase());
+
+        // El curso se asigna LUEGO en creaClasesCurso()
+        clase.setCursoClase(null);
+
+        return clase;
+    }
+
     /**
      * Función para crear la carpeta del curso
      * 
@@ -410,41 +473,30 @@ public class CursoService implements ICursoService {
      * @throws InternalServerException
      * @throws NotFoundException
      */
-    @Transactional
     protected void creaClasesCurso(Curso curso, List<Clase> clases)
             throws RepositoryException, InternalServerException {
+        if (!clases.isEmpty()) {
+            for (Clase clase : clases) {
+                clase.setCursoClase(curso);
+                if (clase.getIdClase().equals(0L)) {
+                    clase.setIdClase(null);
+                }
+                try {
+                    clase = this.claseRepo.save(clase);
+                } catch (IllegalArgumentException e) {
+                    throw new RepositoryException("Error en guardar la clase: " + e.getMessage(), e);
+                }
 
-        if (clases == null || clases.isEmpty()) {
-            return;
-        }
-
-        Curso cursoManaged = cursoRepo.getReferenceById(curso.getIdCurso());
-
-        for (Clase clase : clases) {
-
-            if (clase.getIdClase() != null && clase.getIdClase() == 0L) {
-                clase.setIdClase(null);
+                // Crea la carpeta de la clase si no existe
+                this.creaCarpetaClase(curso, clase);
             }
-
-            // 🔥 ASIGNAR AMBOS LADOS - ESTO ES LO QUE FALTABA 🔥
-            clase.setCursoClase(cursoManaged);
-            List<Clase> clasesManaged = cursoManaged.getClasesCurso();
-            if (clasesManaged == null) {
-                clasesManaged = new ArrayList<>();
-            }
-            clasesManaged.add(clase);
-            cursoManaged.setClasesCurso(clasesManaged);
-
+            curso.setClasesCurso(clases);
             try {
-                claseRepo.save(clase); // save is fine, flushing lo hará al final
+                curso = this.cursoRepo.save(curso);
             } catch (IllegalArgumentException e) {
-                throw new RepositoryException("Error en guardar la clase: " + e.getMessage(), e);
+                throw new RepositoryException("Error en actualizar el curso: " + e.getMessage());
             }
-
-            creaCarpetaClase(cursoManaged, clase);
         }
-
-        cursoRepo.save(cursoManaged);
     }
 
     /**
@@ -639,29 +691,33 @@ public class CursoService implements ICursoService {
      * @throws InternalServerException
      */
     protected void deleteCarpetaClase(Clase clase) throws InternalServerException {
-        if (clase.getDireccionClase().isEmpty()) {
-            try {
-                Path path = Paths.get(clase.getDireccionClase()).getParent();
-                if (Files.exists(path) && !path.equals(baseUploadDir)) {
-                    Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-                        @Override
-                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                            Files.delete(file);
-                            return FileVisitResult.CONTINUE;
-                        }
+        // Si no hay ruta, no hacer nada
+        if (clase.getDireccionClase() == null || clase.getDireccionClase().isEmpty()) {
+            logger.warn("deleteCarpetaClase: la clase {} no tiene direccionClase", clase.getIdClase());
+            return;
+        }
 
-                        @Override
-                        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                            Files.delete(dir);
-                            return FileVisitResult.CONTINUE;
-                        }
-                    });
-                } else {
-                    throw new NotFoundException("La carpeta del la clase " + clase.getIdClase() + " no existe");
-                }
-            } catch (Exception e) {
-                throw new InternalServerException("Error en borrar el video: " + e.getMessage(), e);
+        try {
+            Path path = Paths.get(clase.getDireccionClase()).getParent();
+            if (path != null && Files.exists(path) && !path.equals(baseUploadDir)) {
+                Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        Files.delete(file);
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                        Files.delete(dir);
+                        return FileVisitResult.CONTINUE;
+                    }
+                });
+            } else {
+                throw new NotFoundException("La carpeta del la clase " + clase.getIdClase() + " no existe");
             }
+        } catch (Exception e) {
+            throw new InternalServerException("Error en borrar el video: " + e.getMessage(), e);
         }
     }
 
@@ -771,4 +827,14 @@ public class CursoService implements ICursoService {
             throw new InternalComunicationException("Error en borrar la clase en el chat: " + e.getMessage(), e);
         }
     }
+
+    private void copiarClase(Clase origen, Clase destino) {
+        destino.setNombreClase(origen.getNombreClase());
+        destino.setDescripcionClase(origen.getDescripcionClase());
+        destino.setContenidoClase(origen.getContenidoClase());
+        destino.setTipoClase(origen.getTipoClase());
+        destino.setDireccionClase(origen.getDireccionClase());
+        destino.setPosicionClase(origen.getPosicionClase());
+    }
+
 }

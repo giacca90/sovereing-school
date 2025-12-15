@@ -49,7 +49,7 @@ export class CursosService {
 			// Actualiza solo las propiedades relevantes sin romper la referencia
 			Object.assign(curso, {
 				clasesCurso: response.clasesCurso?.sort((a, b) => a.posicionClase - b.posicionClase),
-				descriccionLarga: response.descriccionLarga,
+				descripcionLarga: response.descripcionLarga,
 				fechaPublicacionCurso: response.fechaPublicacionCurso,
 				planesCurso: response.planesCurso,
 				precioCurso: response.precioCurso,
@@ -111,8 +111,8 @@ export class CursosService {
 	getCursosProfe(profe: Usuario) {
 		const cursosProfe: Curso[] = [];
 		for (const curso of this.cursos) {
-			for (const profe2 of curso.profesoresCurso) {
-				if (profe2.idUsuario === profe.idUsuario) {
+			for (const idProfe of curso.profesoresCurso) {
+				if (idProfe === profe.idUsuario) {
 					cursosProfe.push(curso);
 				}
 			}

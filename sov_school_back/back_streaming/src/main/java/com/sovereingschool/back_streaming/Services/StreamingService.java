@@ -129,7 +129,8 @@ public class StreamingService {
                     }
 
                     clase.setDireccionClase(destinationPath.toString() + "/master.m3u8");
-                    this.claseRepo.save(clase);
+                    clase.setCursoClase(curso);
+                    clase = this.claseRepo.save(clase);
                 }
             }
         }

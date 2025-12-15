@@ -65,7 +65,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	ngOnInit(): void {
 		if (this.idCurso === 0) {
 			if (this.loginService.usuario) {
-				this.curso = new Curso(0, '', [this.loginService.usuario], '', '', new Date(), [], [], '', 0);
+				this.curso = new Curso(0, '', [this.loginService.usuario.idUsuario], '', '', new Date(), [], [], '', 0);
 			} else {
 				console.error('No hay usuario logueado');
 				this.router.navigate(['/']);
@@ -187,8 +187,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 
 	compruebaCambios() {
 		this.cursoService.getCurso(this.curso.idCurso).then((curso) => {
-			console.log('this.curso: ' + JSON.stringify(this.curso));
-			console.log('curso: ' + JSON.stringify(curso));
 			this.editado = JSON.stringify(this.curso) !== JSON.stringify(curso);
 		});
 	}

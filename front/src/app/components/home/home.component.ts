@@ -21,7 +21,7 @@ export class HomeComponent {
 
 	constructor(
 		public cursoService: CursosService,
-		private readonly usuarioService: UsuariosService,
+		public usuarioService: UsuariosService,
 		public initService: InitService,
 		private readonly cdr: ChangeDetectorRef,
 		public router: Router,
@@ -189,5 +189,12 @@ export class HomeComponent {
 
 	delay(ms: number): Promise<void> {
 		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	getProfessorPhoto(idProfe: number) {
+		return this.usuarioService.profes.find((profe) => profe.idUsuario === idProfe)?.fotoUsuario[0];
+	}
+	getProfessorName(idProfe: number) {
+		return this.usuarioService.profes.find((profe) => profe.idUsuario === idProfe)?.nombreUsuario;
 	}
 }

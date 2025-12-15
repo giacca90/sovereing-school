@@ -4,9 +4,9 @@ import java.io.Serializable;
 import java.util.List;
 
 public record CursosInit(
-        Long idCurso,
-        String nombreCurso,
-        List<Long> profesoresCurso,
-        String descriccionCorta,
-        String imagenCurso) implements Serializable {
+                Long idCurso,
+                String nombreCurso,
+                List<Long> profesoresCurso,
+                String descripcionCorta,
+                String imagenCurso) implements Serializable {
 }

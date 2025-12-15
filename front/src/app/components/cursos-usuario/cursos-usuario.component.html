@@ -11,7 +11,7 @@
 						<div class="relative m-2 flex grow rounded-lg border border-black p-2 dark:border-gray-400">
 							<div style="background-image: url('{{ curso.imagenCurso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
 							<p>{{ curso.nombreCurso }}</p>
-							<p class="ml-2 grow text-gray-500">{{ curso.descriccionCorta }}</p>
+							<p class="ml-2 grow text-gray-500">{{ curso.descripcionCorta }}</p>
 						</div>
 						@if (this.loginService.usuario.idUsuario !== null) {
 							<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + curso.idCurso + '/0'])">Ir al curso</button>
@@ -28,7 +28,7 @@
 						<div class="relative m-2 flex grow items-center rounded-lg border border-black p-2 dark:border-gray-400">
 							<div style="background-image: url('{{ curso.imagenCurso }}')" class="absolute inset-0 bg-cover bg-center opacity-20 transition-opacity duration-300 hover:opacity-30"></div>
 							<p>{{ curso.nombreCurso }}</p>
-							<p class="ml-2 grow text-sm text-gray-500">{{ curso.descriccionCorta }}</p>
+							<p class="ml-2 grow text-sm text-gray-500">{{ curso.descripcionCorta }}</p>
 						</div>
 						@if (this.loginService.usuario.idUsuario !== null) {
 							<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/editorCurso/' + curso.idCurso])">Editar <span class="hidden md:inline">este curso</span></button>

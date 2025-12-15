@@ -2,6 +2,7 @@ package com.sovereingschool.back_common.Models;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -46,7 +47,7 @@ public class Curso implements Serializable {
 
 	private Date fechaPublicacionCurso;
 
-	@OneToMany(mappedBy = "cursoClase", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "cursoClase", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
 	@JsonManagedReference
 	@JsonIgnoreProperties({ "cursoClase" }) // evita recursión infinita
 	private List<Clase> clasesCurso;
@@ -56,12 +57,26 @@ public class Curso implements Serializable {
 	@JsonIgnoreProperties({ "precioPlan", "cursosPlan" })
 	private List<Plan> planesCurso;
 
-	private String descriccionCorta;
+	private String descripcionCorta;
 
 	@Column(length = 1500)
-	private String descriccionLarga;
+	private String descripcionLarga;
 
 	private String imagenCurso;
 
 	private BigDecimal precioCurso;
+
+	public void addClase(Clase clase) {
+		if (clasesCurso == null) {
+			clasesCurso = new ArrayList<>();
+		}
+		clasesCurso.add(clase);
+		clase.setCursoClase(this);
+	}
+
+	public void removeClase(Clase clase) {
+		clasesCurso.remove(clase);
+		clase.setCursoClase(null);
+	}
+
 }

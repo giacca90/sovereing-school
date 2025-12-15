@@ -193,4 +193,11 @@ export class AdministracionComponent {
 			}
 		}
 	}
+
+	getProfessorPhoto(idProfe: number) {
+		return this.usuariosService.profes.find((profe) => profe.idUsuario === idProfe)?.fotoUsuario[0];
+	}
+	getProfessorName(idProfe: number) {
+		return this.usuariosService.profes.find((profe) => profe.idUsuario === idProfe)?.nombreUsuario;
+	}
 }

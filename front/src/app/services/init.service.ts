@@ -115,8 +115,8 @@ export class InitService {
 	private cargarEnServicios(data: Init) {
 		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.idUsuario, profe.nombreUsuario, profe.fotoUsuario, profe.presentacion));
 		this.cursoService.cursos = data.cursosInit.map((curso) => {
-			const profes = curso.profesoresCurso.map((id) => this.usuarioService.profes.find((p) => p.idUsuario === id)).filter(Boolean) as Usuario[];
-			return new Curso(curso.idCurso, curso.nombreCurso, profes, curso.descriccionCorta, curso.imagenCurso);
+			const profes: number[] = curso.profesoresCurso.map((id) => this.usuarioService.profes.find((p) => p.idUsuario === id)?.idUsuario ?? 0);
+			return new Curso(curso.idCurso, curso.nombreCurso, profes, curso.descripcionCorta, curso.imagenCurso);
 		});
 
 		this.estadistica = data.estadistica;

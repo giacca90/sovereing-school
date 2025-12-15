@@ -3,8 +3,8 @@ CREATE TABLE IF NOT EXISTS curso (
 	id_curso SERIAL PRIMARY KEY,
 	fecha_publicacion_curso TIMESTAMP NOT NULL,
 	nombre_curso VARCHAR(255) NOT NULL,
-	descriccion_corta TEXT,
-	descriccion_larga TEXT,
+	descripcion_corta TEXT,
+	descripcion_larga TEXT,
 	imagen_curso VARCHAR(255),
 	precio_curso DECIMAL(10, 2)
 );
@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS cursos_plan (
 INSERT INTO curso (
 		fecha_publicacion_curso,
 		nombre_curso,
-		descriccion_corta,
-		descriccion_larga,
+		descripcion_corta,
+		descripcion_larga,
 		imagen_curso,
 		precio_curso
 	)

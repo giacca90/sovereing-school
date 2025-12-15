@@ -37,7 +37,7 @@ export class SearchComponent {
 			const cortina: HTMLDivElement = document.getElementById('cortina') as HTMLDivElement;
 			cortina.innerHTML = '';
 			const porNombre: Curso[] = this.cursoService.cursos.filter((curso) => this.normalize(curso.nombreCurso).includes(this.normalize(buscador.value)));
-			const porDescriccion: Curso[] = this.cursoService.cursos.filter((curso) => this.normalize(curso.descriccionCorta).includes(this.normalize(buscador.value)));
+			const pordescripcion: Curso[] = this.cursoService.cursos.filter((curso) => this.normalize(curso.descripcionCorta).includes(this.normalize(buscador.value)));
 			if (porNombre.length > 0) {
 				const p: HTMLParagraphElement = document.createElement('p');
 				p.classList.add('text-gray-400');
@@ -48,27 +48,27 @@ export class SearchComponent {
 					row.classList.add('hover:bg-white', 'whitespace-nowrap', 'rounded-lg', 'pr-2', 'pl-2');
 					row.tabIndex = 0;
 					this.addEvent(row, curso.idCurso);
-					row.innerHTML = curso.nombreCurso.substring(0, this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value))) + '<b>' + curso.nombreCurso.substring(this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value)), this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value)) + buscador.value.length) + '</b>' + curso.nombreCurso.substring(this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value)) + buscador.value.length) + ' - ' + curso.descriccionCorta;
+					row.innerHTML = curso.nombreCurso.substring(0, this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value))) + '<b>' + curso.nombreCurso.substring(this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value)), this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value)) + buscador.value.length) + '</b>' + curso.nombreCurso.substring(this.normalize(curso.nombreCurso).indexOf(this.normalize(buscador.value)) + buscador.value.length) + ' - ' + curso.descripcionCorta;
 					cortina.appendChild(row);
 				}
-				if (porDescriccion.length > 0) cortina.appendChild(document.createElement('hr'));
+				if (pordescripcion.length > 0) cortina.appendChild(document.createElement('hr'));
 			}
-			if (porDescriccion.length > 0) {
+			if (pordescripcion.length > 0) {
 				const p: HTMLParagraphElement = document.createElement('p');
 				p.classList.add('text-gray-400');
 				p.textContent = 'Coincidencias por descripción:';
 				cortina.appendChild(p);
-				for (const curso of porDescriccion) {
+				for (const curso of pordescripcion) {
 					const row: HTMLParagraphElement = document.createElement('p');
 					row.classList.add('hover:bg-white', 'whitespace-nowrap', 'rounded-lg', 'pr-2', 'pl-2');
 					row.tabIndex = 0;
 					this.addEvent(row, curso.idCurso);
-					row.innerHTML = curso.nombreCurso + ' - ' + curso.descriccionCorta.substring(0, this.normalize(curso.descriccionCorta).indexOf(this.normalize(buscador.value))) + '<b>' + curso.descriccionCorta.substring(this.normalize(curso.descriccionCorta).indexOf(this.normalize(buscador.value)), this.normalize(curso.descriccionCorta).indexOf(this.normalize(buscador.value)) + buscador.value.length) + '</b>' + curso.descriccionCorta.substring(this.normalize(curso.descriccionCorta).indexOf(this.normalize(buscador.value)) + buscador.value.length);
+					row.innerHTML = curso.nombreCurso + ' - ' + curso.descripcionCorta.substring(0, this.normalize(curso.descripcionCorta).indexOf(this.normalize(buscador.value))) + '<b>' + curso.descripcionCorta.substring(this.normalize(curso.descripcionCorta).indexOf(this.normalize(buscador.value)), this.normalize(curso.descripcionCorta).indexOf(this.normalize(buscador.value)) + buscador.value.length) + '</b>' + curso.descripcionCorta.substring(this.normalize(curso.descripcionCorta).indexOf(this.normalize(buscador.value)) + buscador.value.length);
 					cortina.appendChild(row);
 				}
 			}
 
-			if (porNombre.length == 0 && porDescriccion.length == 0) {
+			if (porNombre.length == 0 && pordescripcion.length == 0) {
 				const p: HTMLParagraphElement = document.createElement('p');
 				p.classList.add('text-grey-400');
 				p.textContent = 'No se han encontrado coincidencias...';

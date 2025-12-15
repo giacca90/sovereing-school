@@ -46,6 +46,8 @@ import com.sovereingschool.back_common.Models.Plan;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_common.Repositories.CursoRepository;
+import com.sovereingschool.back_common.Repositories.PlanRepository;
+import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -62,14 +64,14 @@ class CursoServiceTest {
         void createCurso_SuccessfulCreation() throws RepositoryException {
             Curso curso = new Curso();
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
 
             // Simular que el repo asigna un ID
             Curso savedCurso = new Curso();
             savedCurso.setIdCurso(10L);
             savedCurso.setNombreCurso("curso");
-            savedCurso.setDescriccionCorta("descripcion corta");
+            savedCurso.setDescripcionCorta("descripcion corta");
             savedCurso.setFechaPublicacionCurso(curso.getFechaPublicacionCurso());
 
             when(cursoRepo.save(curso)).thenReturn(savedCurso);
@@ -86,7 +88,7 @@ class CursoServiceTest {
         void createCurso_ThrowsRepositoryException_WhenSavedCursoHasNullId() {
             Curso curso = new Curso();
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
 
             when(cursoRepo.save(curso)).thenThrow(new IllegalArgumentException());
@@ -109,7 +111,7 @@ class CursoServiceTest {
             Long cursoId = 1L;
             Curso curso = new Curso();
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
 
             when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
@@ -118,7 +120,7 @@ class CursoServiceTest {
 
             assertNotNull(resp);
             assertEquals(curso.getNombreCurso(), resp.getNombreCurso());
-            assertEquals(curso.getDescriccionCorta(), resp.getDescriccionCorta());
+            assertEquals(curso.getDescripcionCorta(), resp.getDescripcionCorta());
             assertEquals(curso.getFechaPublicacionCurso(), resp.getFechaPublicacionCurso());
 
             verify(cursoRepo).findById(cursoId);
@@ -153,7 +155,7 @@ class CursoServiceTest {
             String nombreCurso = "curso";
             Curso curso = new Curso();
             curso.setNombreCurso(nombreCurso);
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
 
             when(cursoRepo.findNombreCursoById(cursoId)).thenReturn(Optional.of(nombreCurso));
@@ -399,14 +401,14 @@ class CursoServiceTest {
             Curso curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
             Curso cursoGuardado = new Curso();
             cursoGuardado.setIdCurso(1l);
             cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescriccionCorta("descripcion corta");
+            cursoGuardado.setDescripcionCorta("descripcion corta");
             cursoGuardado.setFechaPublicacionCurso(new Date());
             cursoGuardado.setClasesCurso(clases);
 
@@ -437,7 +439,7 @@ class CursoServiceTest {
             Curso curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
@@ -466,14 +468,14 @@ class CursoServiceTest {
             Curso curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
             Curso cursoGuardado = new Curso();
             cursoGuardado.setIdCurso(1l);
             cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescriccionCorta("descripcion corta");
+            cursoGuardado.setDescripcionCorta("descripcion corta");
             cursoGuardado.setFechaPublicacionCurso(new Date());
             cursoGuardado.setClasesCurso(clases);
 
@@ -500,14 +502,14 @@ class CursoServiceTest {
             Curso curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
             Curso cursoGuardado = new Curso();
             cursoGuardado.setIdCurso(1l);
             cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescriccionCorta("descripcion corta");
+            cursoGuardado.setDescripcionCorta("descripcion corta");
             cursoGuardado.setFechaPublicacionCurso(new Date());
             cursoGuardado.setClasesCurso(clases);
 
@@ -536,14 +538,14 @@ class CursoServiceTest {
             Curso curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
             Curso cursoGuardado = new Curso();
             cursoGuardado.setIdCurso(1l);
             cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescriccionCorta("descripcion corta");
+            cursoGuardado.setDescripcionCorta("descripcion corta");
             cursoGuardado.setFechaPublicacionCurso(new Date());
             cursoGuardado.setClasesCurso(clases);
 
@@ -573,14 +575,14 @@ class CursoServiceTest {
             Curso curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
             Curso cursoGuardado = new Curso();
             cursoGuardado.setIdCurso(1l);
             cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescriccionCorta("descripcion corta");
+            cursoGuardado.setDescripcionCorta("descripcion corta");
             cursoGuardado.setFechaPublicacionCurso(new Date());
             cursoGuardado.setClasesCurso(clases);
 
@@ -611,14 +613,14 @@ class CursoServiceTest {
             Curso curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setNombreCurso("curso");
-            curso.setDescriccionCorta("descripcion corta");
+            curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
             Curso cursoGuardado = new Curso();
             cursoGuardado.setIdCurso(1l);
             cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescriccionCorta("descripcion corta");
+            cursoGuardado.setDescripcionCorta("descripcion corta");
             cursoGuardado.setFechaPublicacionCurso(new Date());
             cursoGuardado.setClasesCurso(clases);
 
@@ -785,6 +787,10 @@ class CursoServiceTest {
     @Mock
     private ClaseRepository claseRepo;
     @Mock
+    private UsuarioRepository usuarioRepo;
+    @Mock
+    private PlanRepository planRepo;
+    @Mock
     private InitAppService initAppService;
 
     private CursoService cursoService;
@@ -803,6 +809,8 @@ class CursoServiceTest {
                 backChatURL,
                 cursoRepo,
                 claseRepo,
+                usuarioRepo,
+                planRepo,
                 initAppService,
                 webClientConfig);
     }
