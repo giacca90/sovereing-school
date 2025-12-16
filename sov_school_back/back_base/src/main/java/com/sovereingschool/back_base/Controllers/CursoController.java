@@ -1,6 +1,7 @@
 package com.sovereingschool.back_base.Controllers;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -20,8 +21,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.sovereingschool.back_base.DTOs.CursoDTO;
 import com.sovereingschool.back_base.Interfaces.ICursoService;
+import com.sovereingschool.back_common.DTOs.ClaseDTO;
+import com.sovereingschool.back_common.DTOs.CursoDTO;
 import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
 import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Exceptions.NotFoundException;
@@ -30,6 +32,7 @@ import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
 import com.sovereingschool.back_common.Models.Usuario;
+import com.sovereingschool.back_common.Utils.CursoUtil;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -38,14 +41,16 @@ import jakarta.persistence.EntityNotFoundException;
 @PreAuthorize("hasAnyRole('GUEST', 'USER', 'PROF', 'ADMIN')")
 public class CursoController {
 	private ICursoService cursoService;
+	private CursoUtil cursoUtil;
 
 	/**
 	 * Constructor de CursoController
 	 *
 	 * @param cursoService Servicio de cursos
 	 */
-	public CursoController(ICursoService cursoService) {
+	public CursoController(ICursoService cursoService, CursoUtil cursoUtil) {
 		this.cursoService = cursoService;
+		this.cursoUtil = cursoUtil;
 	}
 
 	/* Parte de gestión de cursos */
@@ -59,7 +64,11 @@ public class CursoController {
 	public ResponseEntity<?> getAll() {
 		Object response = new Object();
 		try {
-			response = this.cursoService.getAll();
+			List<CursoDTO> cursosDTO = new ArrayList<>();
+			for (Curso curso : this.cursoService.getAll()) {
+				cursosDTO.add(this.cursoUtil.cursoToCursoDTO(curso));
+			}
+			response = cursosDTO;
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
 			response = "Error en obtener los cursos: " + e.getMessage();
@@ -78,7 +87,7 @@ public class CursoController {
 		Object response = new Object();
 		try {
 			Curso curso = this.cursoService.getCurso(id);
-			response = curso;
+			response = this.cursoUtil.cursoToCursoDTO(curso);
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (EntityNotFoundException ex) {
 			return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
@@ -170,7 +179,11 @@ public class CursoController {
 				response = "Curso no encontrado";
 				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
 			}
-			response = clases;
+			List<ClaseDTO> clasesDTO = new ArrayList<>();
+			for (Clase clase : clases) {
+				clasesDTO.add(this.cursoUtil.claseToClaseDTO(clase));
+			}
+			response = clasesDTO;
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (Exception e) {
 			response = "Error en obtener las clases del curso: " + e.getMessage();
@@ -233,7 +246,9 @@ public class CursoController {
 	public ResponseEntity<?> updateCurso(@RequestBody CursoDTO cursoDTO) {
 		Object response = new Object();
 		try {
-			response = this.cursoService.updateCurso(this.cursoService.cursoDTOToCurso(cursoDTO));
+
+			response = this.cursoUtil
+					.cursoToCursoDTO(this.cursoService.updateCurso(this.cursoUtil.cursoDTOToCurso(cursoDTO)));
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (NotFoundException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
@@ -292,7 +307,7 @@ public class CursoController {
 					.findFirst();
 
 			return claseOpt
-					.<ResponseEntity<?>>map(ResponseEntity::ok)
+					.<ResponseEntity<?>>map(clase -> ResponseEntity.ok(this.cursoUtil.claseToClaseDTO(clase)))
 					.orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
 							.body("Clase no encontrada"));
 

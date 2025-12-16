@@ -810,7 +810,6 @@ class CursoServiceTest {
                 cursoRepo,
                 claseRepo,
                 usuarioRepo,
-                planRepo,
                 initAppService,
                 webClientConfig);
     }

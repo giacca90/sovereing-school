@@ -9,11 +9,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.sovereingschool.back_base.Configurations.WebClientConfig;
-import com.sovereingschool.back_base.DTOs.ClaseDTO;
-import com.sovereingschool.back_base.DTOs.CursoDTO;
 import com.sovereingschool.back_base.Interfaces.ICursoService;
 import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
 import com.sovereingschool.back_common.Exceptions.InternalServerException;
@@ -42,7 +38,6 @@ import com.sovereingschool.back_common.Models.Plan;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_common.Repositories.CursoRepository;
-import com.sovereingschool.back_common.Repositories.PlanRepository;
 import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -60,8 +55,6 @@ public class CursoService implements ICursoService {
 
     private CursoRepository cursoRepo;
     private ClaseRepository claseRepo;
-    private UsuarioRepository usuarioRepo;
-    private PlanRepository planRepo;
     private InitAppService initAppService;
     private WebClientConfig webClientConfig;
 
@@ -92,7 +85,6 @@ public class CursoService implements ICursoService {
             CursoRepository cursoRepo,
             ClaseRepository claseRepo,
             UsuarioRepository usuarioRepo,
-            PlanRepository planRepo,
             InitAppService initAppService,
             WebClientConfig webClientConfig) {
         this.backStreamURL = backStreamURL;
@@ -100,8 +92,6 @@ public class CursoService implements ICursoService {
         this.baseUploadDir = Paths.get(uploadDir);
         this.cursoRepo = cursoRepo;
         this.claseRepo = claseRepo;
-        this.usuarioRepo = usuarioRepo;
-        this.planRepo = planRepo;
         this.initAppService = initAppService;
         this.webClientConfig = webClientConfig;
     }
@@ -391,58 +381,6 @@ public class CursoService implements ICursoService {
         } catch (RuntimeException e) {
             throw new InternalServerException("Error inesperado al subir el video: " + e.getMessage(), e);
         }
-    }
-
-    public Curso cursoDTOToCurso(CursoDTO cursoDTO) throws NotFoundException {
-
-        // Profesores → lista mutable
-        List<Usuario> profesores = new ArrayList<>();
-        for (Long idProfesor : cursoDTO.profesoresCurso()) {
-            profesores.add(
-                    this.usuarioRepo.findById(idProfesor)
-                            .orElseThrow(() -> {
-                                logger.error("Error al obtener el profesor con ID {}", idProfesor);
-                                return new NotFoundException("Error al obtener el profesor con ID " + idProfesor);
-                            }));
-        }
-
-        // Clases → ¡importantísimo! convertir a lista MUTABLE
-        List<Clase> clases = cursoDTO.clasesCurso().stream()
-                .map(this::claseDTOToClase)
-                .collect(Collectors.toCollection(ArrayList::new)); // 🔥 LISTA MUTABLE 🔥
-
-        // Planes → lista mutable también
-        List<Plan> planes = cursoDTO.planesCurso().stream()
-                .map(idPlan -> this.planRepo.findById(idPlan).orElse(null))
-                .collect(Collectors.toCollection(ArrayList::new));
-
-        return new Curso(
-                cursoDTO.idCurso(),
-                cursoDTO.nombreCurso(),
-                profesores,
-                cursoDTO.fechaPublicacionCurso(),
-                clases,
-                planes,
-                cursoDTO.descripcionCorta(),
-                cursoDTO.descripcionLarga(),
-                cursoDTO.imagenCurso(),
-                cursoDTO.precioCurso());
-    }
-
-    public Clase claseDTOToClase(ClaseDTO claseDTO) {
-        Clase clase = new Clase();
-        clase.setIdClase(claseDTO.idClase());
-        clase.setNombreClase(claseDTO.nombreClase());
-        clase.setDescripcionClase(claseDTO.descripcionClase());
-        clase.setContenidoClase(claseDTO.contenidoClase());
-        clase.setTipoClase(claseDTO.tipoClase());
-        clase.setDireccionClase(claseDTO.direccionClase());
-        clase.setPosicionClase(claseDTO.posicionClase());
-
-        // El curso se asigna LUEGO en creaClasesCurso()
-        clase.setCursoClase(null);
-
-        return clase;
     }
 
     /**

@@ -47,7 +47,7 @@ public class Curso implements Serializable {
 
 	private Date fechaPublicacionCurso;
 
-	@OneToMany(mappedBy = "cursoClase", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
+	@OneToMany(mappedBy = "cursoClase", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference
 	@JsonIgnoreProperties({ "cursoClase" }) // evita recursión infinita
 	private List<Clase> clasesCurso;
