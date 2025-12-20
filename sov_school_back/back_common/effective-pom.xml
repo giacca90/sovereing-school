@@ -9375,41 +9375,16 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.datatype</groupId>
-      <artifactId>jackson-datatype-hibernate6</artifactId>
-      <version>2.20.1</version>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <version>4.0.0</version>
       <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hibernate.orm</groupId>
-      <artifactId>hibernate-core</artifactId>
-      <version>6.6.36.Final</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-test</artifactId>
-      <version>7.0.0</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>1.18.42</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.vladmihalcea</groupId>
-      <artifactId>hibernate-types-60</artifactId>
-      <version>2.21.1</version>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-devtools</artifactId>
-      <version>4.0.0</version>
-      <scope>runtime</scope>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
@@ -9421,6 +9396,12 @@
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
       <version>4.5.0</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>2.20.1</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -9802,25 +9783,6 @@
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>0.8.14</version>
-          <executions>
-            <execution>
-              <id>prepare-agent</id>
-              <goals>
-                <goal>prepare-agent</goal>
-              </goals>
-            </execution>
-            <execution>
-              <id>report</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>report</goal>
-              </goals>
-              <configuration>
-                <dataFile>/home/matt/Escritorio/Proyectos/SovereingSchool/sov_school_back/back_common/target/jacoco.exec</dataFile>
-                <outputDirectory>/home/matt/Escritorio/Proyectos/SovereingSchool/sov_school_back/back_common/target/site/jacoco</outputDirectory>
-              </configuration>
-            </execution>
-          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -9882,25 +9844,6 @@
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
         <version>0.8.14</version>
-        <executions>
-          <execution>
-            <id>prepare-agent</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>report</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>report</goal>
-            </goals>
-            <configuration>
-              <dataFile>/home/matt/Escritorio/Proyectos/SovereingSchool/sov_school_back/back_common/target/jacoco.exec</dataFile>
-              <outputDirectory>/home/matt/Escritorio/Proyectos/SovereingSchool/sov_school_back/back_common/target/site/jacoco</outputDirectory>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-clean-plugin</artifactId>
@@ -10040,10 +9983,6 @@
                 <reportPlugin>
                   <groupId>org.apache.maven.plugins</groupId>
                   <artifactId>maven-project-info-reports-plugin</artifactId>
-                  <version>3.4.2</version>
-                  <configuration>
-                    <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-                  </configuration>
                 </reportPlugin>
               </reportPlugins>
             </configuration>
@@ -10060,10 +9999,6 @@
                 <reportPlugin>
                   <groupId>org.apache.maven.plugins</groupId>
                   <artifactId>maven-project-info-reports-plugin</artifactId>
-                  <version>3.4.2</version>
-                  <configuration>
-                    <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-                  </configuration>
                 </reportPlugin>
               </reportPlugins>
             </configuration>
@@ -10075,10 +10010,6 @@
             <reportPlugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-project-info-reports-plugin</artifactId>
-              <version>3.4.2</version>
-              <configuration>
-                <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-              </configuration>
             </reportPlugin>
           </reportPlugins>
         </configuration>
@@ -10087,14 +10018,5 @@
   </build>
   <reporting>
     <outputDirectory>/home/matt/Escritorio/Proyectos/SovereingSchool/sov_school_back/back_common/target/site</outputDirectory>
-    <plugins>
-      <plugin>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>3.4.2</version>
-        <configuration>
-          <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-        </configuration>
-      </plugin>
-    </plugins>
   </reporting>
 </project>

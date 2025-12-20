@@ -60,13 +60,18 @@ class CursoServiceTest {
     @Nested
     class CreateCursoTests {
 
-        @Test
-        void createCurso_SuccessfulCreation() throws RepositoryException {
-            Curso curso = new Curso();
+        private Curso curso;
+
+        @BeforeEach
+        void setUp() {
+            curso = new Curso();
             curso.setNombreCurso("curso");
             curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
+        }
 
+        @Test
+        void createCurso_SuccessfulCreation() throws RepositoryException {
             // Simular que el repo asigna un ID
             Curso savedCurso = new Curso();
             savedCurso.setIdCurso(10L);
@@ -86,11 +91,6 @@ class CursoServiceTest {
 
         @Test
         void createCurso_ThrowsRepositoryException_WhenSavedCursoHasNullId() {
-            Curso curso = new Curso();
-            curso.setNombreCurso("curso");
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-
             when(cursoRepo.save(curso)).thenThrow(new IllegalArgumentException());
 
             RepositoryException ex = assertThrows(RepositoryException.class,
@@ -106,14 +106,21 @@ class CursoServiceTest {
     // ==========================
     @Nested
     class GetCursoTests {
-        @Test
-        void getCurso_SuccessfulRetrieval() throws NotFoundException {
-            Long cursoId = 1L;
-            Curso curso = new Curso();
+
+        private Long cursoId;
+        private Curso curso;
+
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            curso = new Curso();
             curso.setNombreCurso("curso");
             curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
+        }
 
+        @Test
+        void getCurso_SuccessfulRetrieval() throws NotFoundException {
             when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
 
             Curso resp = cursoService.getCurso(cursoId);
@@ -128,8 +135,6 @@ class CursoServiceTest {
 
         @Test
         void getCurso_Error() {
-            Long cursoId = 1L;
-
             // Simular que el curso no existe
             when(cursoRepo.findById(cursoId)).thenReturn(Optional.empty());
 
@@ -149,15 +154,17 @@ class CursoServiceTest {
     @Nested
     class GetNombreCursoTests {
 
+        private Long cursoId;
+        private String nombreCurso;
+
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            nombreCurso = "curso";
+        }
+
         @Test
         void getNombreCurso_SuccessfulRetrieval() throws NotFoundException {
-            Long cursoId = 1L;
-            String nombreCurso = "curso";
-            Curso curso = new Curso();
-            curso.setNombreCurso(nombreCurso);
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-
             when(cursoRepo.findNombreCursoById(cursoId)).thenReturn(Optional.of(nombreCurso));
 
             String resp = cursoService.getNombreCurso(cursoId);
@@ -170,8 +177,6 @@ class CursoServiceTest {
 
         @Test
         void getNombreCurso_Error() {
-            Long cursoId = 1L;
-
             // Simular que el curso no existe
             when(cursoRepo.findNombreCursoById(cursoId)).thenReturn(Optional.empty());
 
@@ -190,13 +195,18 @@ class CursoServiceTest {
     // ==========================
     @Nested
     class GetProfesoresCursoTests {
+
+        private Long cursoId;
+        private List<Usuario> profesores;
+
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            profesores = List.of(new Usuario(), new Usuario());
+        }
+
         @Test
         void getProfesoresCurso_SuccessfulRetrieval() throws NotFoundException {
-            Long cursoId = 1L;
-            List<Usuario> profesores = List.of(new Usuario(), new Usuario());
-            Curso curso = new Curso();
-            curso.setProfesoresCurso(profesores);
-
             when(cursoRepo.findProfesoresCursoById(cursoId)).thenReturn(profesores);
 
             List<Usuario> resp = cursoService.getProfesoresCurso(cursoId);
@@ -209,8 +219,6 @@ class CursoServiceTest {
 
         @Test
         void getProfesoresCurso_Error() {
-            Long cursoId = 1L;
-
             // Simular que el curso no existe
             when(cursoRepo.findProfesoresCursoById(cursoId)).thenReturn(null);
 
@@ -230,13 +238,17 @@ class CursoServiceTest {
     @Nested
     class GetFechaCreacionCursoTests {
 
+        private Long cursoId;
+        private Date fechaCreacionCurso;
+
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            fechaCreacionCurso = new Date();
+        }
+
         @Test
         void getFechaCreacionCurso_SuccessfulRetrieval() throws NotFoundException {
-            Long cursoId = 1L;
-            Date fechaCreacionCurso = new Date();
-            Curso curso = new Curso();
-            curso.setFechaPublicacionCurso(fechaCreacionCurso);
-
             when(cursoRepo.findFechaCreacionCursoById(cursoId)).thenReturn(Optional.of(fechaCreacionCurso));
 
             Date resp = cursoService.getFechaCreacionCurso(cursoId);
@@ -249,8 +261,6 @@ class CursoServiceTest {
 
         @Test
         void getFechaCreacionCurso_Error() {
-            Long cursoId = 1L;
-
             // Simular que el curso no existe
             when(cursoRepo.findFechaCreacionCursoById(cursoId)).thenReturn(Optional.empty());
 
@@ -270,13 +280,17 @@ class CursoServiceTest {
     @Nested
     class GetClasesDelCursoTests {
 
+        private Long cursoId;
+        private List<Clase> clases;
+
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            clases = List.of(new Clase(), new Clase());
+        }
+
         @Test
         void getClasesDelCurso_SuccessfulRetrieval() throws NotFoundException {
-            Long cursoId = 1L;
-            List<Clase> clases = List.of(new Clase(), new Clase());
-            Curso curso = new Curso();
-            curso.setClasesCurso(clases);
-
             when(cursoRepo.findClasesCursoById(cursoId)).thenReturn(clases);
 
             List<Clase> resp = cursoService.getClasesDelCurso(cursoId);
@@ -289,8 +303,6 @@ class CursoServiceTest {
 
         @Test
         void getClasesDelCurso_Error() {
-            Long cursoId = 1L;
-
             // Simular que el curso no existe
             when(cursoRepo.findClasesCursoById(cursoId)).thenReturn(null);
 
@@ -310,13 +322,17 @@ class CursoServiceTest {
     @Nested
     class GetPlanesDelCursoTests {
 
+        private Long cursoId;
+        private List<Plan> planes;
+
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            planes = List.of(new Plan(), new Plan());
+        }
+
         @Test
         void getPlanesDelCurso_SuccessfulRetrieval() throws NotFoundException {
-            Long cursoId = 1L;
-            List<Plan> planes = List.of(new Plan(), new Plan());
-            Curso curso = new Curso();
-            curso.setPlanesCurso(planes);
-
             when(cursoRepo.findPlanesCursoById(cursoId)).thenReturn(planes);
 
             List<Plan> resp = cursoService.getPlanesDelCurso(cursoId);
@@ -329,8 +345,6 @@ class CursoServiceTest {
 
         @Test
         void getPlanesDelCurso_Error() {
-            Long cursoId = 1L;
-
             // Simular que el curso no existe
             when(cursoRepo.findPlanesCursoById(cursoId)).thenReturn(null);
 
@@ -350,13 +364,17 @@ class CursoServiceTest {
     @Nested
     class GetPrecioCursoTests {
 
+        private Long cursoId;
+        private BigDecimal precioCurso;
+
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            precioCurso = new BigDecimal(100);
+        }
+
         @Test
         void getPrecioCurso_SuccessfulRetrieval() throws NotFoundException {
-            Long cursoId = 1L;
-            BigDecimal precioCurso = new BigDecimal(100);
-            Curso curso = new Curso();
-            curso.setPrecioCurso(precioCurso);
-
             when(cursoRepo.findPrecioCursoById(cursoId)).thenReturn(Optional.of(precioCurso));
 
             BigDecimal resp = cursoService.getPrecioCurso(cursoId);
@@ -369,8 +387,6 @@ class CursoServiceTest {
 
         @Test
         void getPrecioCurso_Error() {
-            Long cursoId = 1L;
-
             // Simular que el curso no existe
             when(cursoRepo.findPrecioCursoById(cursoId)).thenReturn(Optional.empty());
 
@@ -389,33 +405,63 @@ class CursoServiceTest {
     // ==========================
     @Nested
     class UpdateCursoTests {
-        @Test
-        void updateCurso_NewCurso_SuccessfulUpdate()
+
+        private Curso curso;
+        private Curso cursoGuardado;
+        private Clase clase1;
+        private Clase clase2;
+        private List<Clase> clases;
+        private Clase claseGuardada1;
+        private Clase claseGuardada2;
+        private List<Clase> clasesGuardadas;
+
+        @BeforeEach
+        void setUp()
                 throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
-            Long cursoId = 0L;
-            Clase clase1 = new Clase();
+
+            clase1 = new Clase();
             clase1.setIdClase(0L);
-            Clase clase2 = new Clase();
+            clase1.setNombreClase("clase1");
+            clase1.setPosicionClase(1);
+            clase2 = new Clase();
             clase2.setIdClase(0L);
-            List<Clase> clases = List.of(clase1, clase2);
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
+            clase2.setNombreClase("clase2");
+            clase2.setPosicionClase(2);
+            clases = List.of(clase1, clase2);
+            claseGuardada1 = new Clase();
+            claseGuardada1.setIdClase(1L);
+            claseGuardada2 = new Clase();
+            claseGuardada2.setIdClase(2L);
+            clasesGuardadas = List.of(claseGuardada1, claseGuardada2);
+
+            curso = new Curso();
+            curso.setIdCurso(0L);
             curso.setNombreCurso("curso");
             curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
             curso.setClasesCurso(clases);
 
-            Curso cursoGuardado = new Curso();
+            cursoGuardado = new Curso();
             cursoGuardado.setIdCurso(1l);
             cursoGuardado.setNombreCurso("curso");
             cursoGuardado.setDescripcionCorta("descripcion corta");
             cursoGuardado.setFechaPublicacionCurso(new Date());
-            cursoGuardado.setClasesCurso(clases);
+            cursoGuardado.setClasesCurso(clasesGuardadas);
+
+            // Mocks para claseRepo.save
+            lenient().when(claseRepo.save(clase1)).thenReturn(claseGuardada1);
+            lenient().when(claseRepo.save(clase2)).thenReturn(claseGuardada2);
+        }
+
+        @Test
+        void updateCurso_NewCurso_SuccessfulUpdate()
+                throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
 
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
-            when(claseRepo.save(any(Clase.class))).thenReturn(new Clase());
+            when(claseRepo.save(clase1)).thenReturn(claseGuardada1);
+            when(claseRepo.save(clase2)).thenReturn(claseGuardada2);
 
             // Act
             Curso resp = spyService.updateCurso(curso);
@@ -435,13 +481,7 @@ class CursoServiceTest {
         void updateCurso_OldCurso_SuccessfulUpdate()
                 throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
             Long cursoId = 10L;
-            List<Clase> clases = List.of(new Clase(), new Clase());
-            Curso curso = new Curso();
             curso.setIdCurso(cursoId);
-            curso.setNombreCurso("curso");
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-            curso.setClasesCurso(clases);
 
             CursoService spyService = spy(cursoService);
 
@@ -463,22 +503,6 @@ class CursoServiceTest {
         @Test
         void updateCurso_NewCurso_ErrorCrearCarpeta()
                 throws InternalServerException {
-            Long cursoId = 0L;
-            List<Clase> clases = List.of(new Clase(), new Clase());
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
-            curso.setNombreCurso("curso");
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-            curso.setClasesCurso(clases);
-
-            Curso cursoGuardado = new Curso();
-            cursoGuardado.setIdCurso(1l);
-            cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescripcionCorta("descripcion corta");
-            cursoGuardado.setFechaPublicacionCurso(new Date());
-            cursoGuardado.setClasesCurso(clases);
-
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
@@ -497,22 +521,6 @@ class CursoServiceTest {
         @Test
         void updateCurso_NewCurso_ErrorCrearClasesCurso()
                 throws InternalServerException, RepositoryException, NotFoundException {
-            Long cursoId = 0L;
-            List<Clase> clases = List.of(new Clase(), new Clase());
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
-            curso.setNombreCurso("curso");
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-            curso.setClasesCurso(clases);
-
-            Curso cursoGuardado = new Curso();
-            cursoGuardado.setIdCurso(1l);
-            cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescripcionCorta("descripcion corta");
-            cursoGuardado.setFechaPublicacionCurso(new Date());
-            cursoGuardado.setClasesCurso(clases);
-
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
@@ -533,22 +541,6 @@ class CursoServiceTest {
         @Test
         void updateCurso_NewCurso_ErrorActualizarChatCurso()
                 throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
-            Long cursoId = 0L;
-            List<Clase> clases = List.of(new Clase(), new Clase());
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
-            curso.setNombreCurso("curso");
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-            curso.setClasesCurso(clases);
-
-            Curso cursoGuardado = new Curso();
-            cursoGuardado.setIdCurso(1l);
-            cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescripcionCorta("descripcion corta");
-            cursoGuardado.setFechaPublicacionCurso(new Date());
-            cursoGuardado.setClasesCurso(clases);
-
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
@@ -570,22 +562,6 @@ class CursoServiceTest {
         @Test
         void updateCurso_NewCurso_ErrorActualizarStreamCurso()
                 throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
-            Long cursoId = 0L;
-            List<Clase> clases = List.of(new Clase(), new Clase());
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
-            curso.setNombreCurso("curso");
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-            curso.setClasesCurso(clases);
-
-            Curso cursoGuardado = new Curso();
-            cursoGuardado.setIdCurso(1l);
-            cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescripcionCorta("descripcion corta");
-            cursoGuardado.setFechaPublicacionCurso(new Date());
-            cursoGuardado.setClasesCurso(clases);
-
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
@@ -608,22 +584,6 @@ class CursoServiceTest {
         @Test
         void updateCurso_NewCurso_ErrorUpdateSSR()
                 throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
-            Long cursoId = 0L;
-            List<Clase> clases = List.of(new Clase(), new Clase());
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
-            curso.setNombreCurso("curso");
-            curso.setDescripcionCorta("descripcion corta");
-            curso.setFechaPublicacionCurso(new Date());
-            curso.setClasesCurso(clases);
-
-            Curso cursoGuardado = new Curso();
-            cursoGuardado.setIdCurso(1l);
-            cursoGuardado.setNombreCurso("curso");
-            cursoGuardado.setDescripcionCorta("descripcion corta");
-            cursoGuardado.setFechaPublicacionCurso(new Date());
-            cursoGuardado.setClasesCurso(clases);
-
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
@@ -651,20 +611,25 @@ class CursoServiceTest {
     @Nested
     class DeleteCursoTests {
 
-        @Test
-        void deleteCurso_SuccessfulDeletion() throws ServiceException {
-            Long cursoId = 1L;
+        private Long cursoId;
+        private Curso curso;
+        private Clase clase1;
+        private Clase clase2;
 
-            // Preparar curso con clases
-            Clase clase1 = new Clase();
+        @BeforeEach
+        void setUp() {
+            cursoId = 1L;
+            clase1 = new Clase();
             clase1.setIdClase(10L);
-            Clase clase2 = new Clase();
+            clase2 = new Clase();
             clase2.setIdClase(20L);
-
-            Curso curso = new Curso();
+            curso = new Curso();
             curso.setIdCurso(cursoId);
             curso.setClasesCurso(List.of(clase1, clase2));
+        }
 
+        @Test
+        void deleteCurso_SuccessfulDeletion() throws ServiceException {
             // Spy
             CursoService spyService = spy(cursoService);
 
@@ -693,18 +658,6 @@ class CursoServiceTest {
 
         @Test
         void deleteCurso_ErrorCursoNoEncontrado() throws ServiceException {
-            Long cursoId = 1L;
-
-            // Preparar curso con clases
-            Clase clase1 = new Clase();
-            clase1.setIdClase(10L);
-            Clase clase2 = new Clase();
-            clase2.setIdClase(20L);
-
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
-            curso.setClasesCurso(List.of(clase1, clase2));
-
             // Spy
             CursoService spyService = spy(cursoService);
 
@@ -720,18 +673,6 @@ class CursoServiceTest {
 
         @Test
         void deleteCurso_ErrorDeleteClase() throws ServiceException {
-            Long cursoId = 1L;
-
-            // Preparar curso con clases
-            Clase clase1 = new Clase();
-            clase1.setIdClase(10L);
-            Clase clase2 = new Clase();
-            clase2.setIdClase(20L);
-
-            Curso curso = new Curso();
-            curso.setIdCurso(cursoId);
-            curso.setClasesCurso(List.of(clase1, clase2));
-
             // Spy
             CursoService spyService = spy(cursoService);
 
