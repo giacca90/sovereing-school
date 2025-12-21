@@ -261,7 +261,7 @@ public class CursoService implements ICursoService {
         this.creaCarpetaCurso(curso);
 
         // Crear las clases del curso si no existen
-        this.creaClasesCurso(curso, clases);
+        curso = this.creaClasesCurso(curso, clases);
         // Actualizar el chat del curso
         this.actualizarChatCurso(curso);
 
@@ -411,29 +411,30 @@ public class CursoService implements ICursoService {
      * @throws InternalServerException
      * @throws NotFoundException
      */
-    protected void creaClasesCurso(Curso curso, List<Clase> clases)
+    protected Curso creaClasesCurso(Curso curso, List<Clase> clases)
             throws RepositoryException, InternalServerException {
-        if (!clases.isEmpty()) {
-            for (Clase clase : clases) {
-                clase.setCursoClase(curso);
-                if (clase.getIdClase().equals(0L)) {
-                    clase.setIdClase(null);
-                }
-                try {
-                    clase = this.claseRepo.save(clase);
-                } catch (IllegalArgumentException e) {
-                    throw new RepositoryException("Error en guardar la clase: " + e.getMessage(), e);
-                }
-
-                // Crea la carpeta de la clase si no existe
-                this.creaCarpetaClase(curso, clase);
+        if (clases == null || clases.isEmpty()) {
+            return curso;
+        }
+        for (Clase clase : clases) {
+            clase.setCursoClase(curso);
+            if (clase.getIdClase() == null || clase.getIdClase().equals(0L)) {
+                clase.setIdClase(null);
             }
-            curso.setClasesCurso(clases);
             try {
-                curso = this.cursoRepo.save(curso);
+                clase = this.claseRepo.save(clase);
             } catch (IllegalArgumentException e) {
-                throw new RepositoryException("Error en actualizar el curso: " + e.getMessage());
+                throw new RepositoryException("Error en guardar la clase: " + e.getMessage(), e);
             }
+
+            // Crea la carpeta de la clase si no existe
+            this.creaCarpetaClase(curso, clase);
+        }
+        curso.setClasesCurso(clases);
+        try {
+            return this.cursoRepo.save(curso);
+        } catch (IllegalArgumentException e) {
+            throw new RepositoryException("Error en actualizar el curso: " + e.getMessage());
         }
     }
 
@@ -765,14 +766,4 @@ public class CursoService implements ICursoService {
             throw new InternalComunicationException("Error en borrar la clase en el chat: " + e.getMessage(), e);
         }
     }
-
-    private void copiarClase(Clase origen, Clase destino) {
-        destino.setNombreClase(origen.getNombreClase());
-        destino.setDescripcionClase(origen.getDescripcionClase());
-        destino.setContenidoClase(origen.getContenidoClase());
-        destino.setTipoClase(origen.getTipoClase());
-        destino.setDireccionClase(origen.getDireccionClase());
-        destino.setPosicionClase(origen.getPosicionClase());
-    }
-
 }

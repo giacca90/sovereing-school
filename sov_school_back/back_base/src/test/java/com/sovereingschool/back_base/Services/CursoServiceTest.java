@@ -10,11 +10,13 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -32,6 +34,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.sovereingschool.back_base.Configurations.WebClientConfig;
@@ -218,9 +221,9 @@ class CursoServiceTest {
         }
 
         @Test
-        void getProfesoresCurso_Error() {
-            // Simular que el curso no existe
-            when(cursoRepo.findProfesoresCursoById(cursoId)).thenReturn(null);
+        void getProfesoresCurso_ErrorEmptyList() {
+            // Simular que la lista está vacía
+            when(cursoRepo.findProfesoresCursoById(cursoId)).thenReturn(List.of());
 
             // Verificar que lanza la excepción esperada
             NotFoundException thrown = assertThrows(NotFoundException.class,
@@ -302,9 +305,9 @@ class CursoServiceTest {
         }
 
         @Test
-        void getClasesDelCurso_Error() {
-            // Simular que el curso no existe
-            when(cursoRepo.findClasesCursoById(cursoId)).thenReturn(null);
+        void getClasesDelCurso_ErrorEmptyList() {
+            // Simular que la lista está vacía
+            when(cursoRepo.findClasesCursoById(cursoId)).thenReturn(List.of());
 
             // Verificar que lanza la excepción esperada
             NotFoundException thrown = assertThrows(NotFoundException.class,
@@ -344,9 +347,9 @@ class CursoServiceTest {
         }
 
         @Test
-        void getPlanesDelCurso_Error() {
-            // Simular que el curso no existe
-            when(cursoRepo.findPlanesCursoById(cursoId)).thenReturn(null);
+        void getPlanesDelCurso_ErrorEmptyList() {
+            // Simular que la lista está vacía
+            when(cursoRepo.findPlanesCursoById(cursoId)).thenReturn(List.of());
 
             // Verificar que lanza la excepción esperada
             NotFoundException thrown = assertThrows(NotFoundException.class,
@@ -416,9 +419,7 @@ class CursoServiceTest {
         private List<Clase> clasesGuardadas;
 
         @BeforeEach
-        void setUp()
-                throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
-
+        void setUp() {
             clase1 = new Clase();
             clase1.setIdClase(0L);
             clase1.setNombreClase("clase1");
@@ -460,6 +461,7 @@ class CursoServiceTest {
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
+            when(cursoRepo.save(cursoGuardado)).thenReturn(cursoGuardado);
             when(claseRepo.save(clase1)).thenReturn(claseGuardada1);
             when(claseRepo.save(clase2)).thenReturn(claseGuardada2);
 
@@ -472,8 +474,25 @@ class CursoServiceTest {
             verify(cursoRepo).save(curso);
             verify(spyService).creaCarpetaCurso(cursoGuardado);
             verify(spyService).creaClasesCurso(cursoGuardado, clases);
+            // Fetch asíncrono al microservicio de chat: Se envía un POST con el curso
+            // actualizado en el body.
+            // El método actualizarChatCurso usa WebClient para hacer una llamada HTTP
+            // asíncrona al backChatURL.
+            // Se construye la URI con el ID del curso, se envía el curso como JSON en el
+            // body, y se espera una respuesta sin cuerpo.
+            // El .block() hace que la operación sea síncrona, esperando la finalización del
+            // fetch antes de continuar.
+            // En este test, el mock RETURNS_DEEP_STUBS permite que la cadena de llamadas se
+            // complete sin error, simulando una respuesta exitosa.
             verify(spyService).actualizarChatCurso(cursoGuardado);
+            // Fetch asíncrono al microservicio de streaming: Similar al chat, POST con el
+            // curso en el body a backStreamURL.
+            // Actualiza la información del curso en el sistema de streaming.
             verify(spyService).actualizarStreamCurso(cursoGuardado);
+            // Fetch asíncrono al servicio SSR: POST sin body para actualizar el Server-Side
+            // Rendering o cache.
+            // Envía una solicitud a una URL específica para refrescar el estado del
+            // sistema.
             verify(spyService).updateSSR();
         }
 
@@ -485,6 +504,7 @@ class CursoServiceTest {
 
             CursoService spyService = spy(cursoService);
 
+            when(cursoRepo.save(curso)).thenReturn(curso);
             doNothing().when(spyService).creaCarpetaCurso(curso);
 
             // Act
@@ -520,7 +540,7 @@ class CursoServiceTest {
 
         @Test
         void updateCurso_NewCurso_ErrorCrearClasesCurso()
-                throws InternalServerException, RepositoryException, NotFoundException {
+                throws InternalServerException, RepositoryException {
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
@@ -540,10 +560,11 @@ class CursoServiceTest {
 
         @Test
         void updateCurso_NewCurso_ErrorActualizarChatCurso()
-                throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
+                throws InternalServerException, InternalComunicationException, RepositoryException {
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
+            when(cursoRepo.save(cursoGuardado)).thenReturn(cursoGuardado);
             doNothing().when(spyService).creaCarpetaCurso(cursoGuardado);
             doThrow(new InternalComunicationException("Error")).when(spyService).actualizarChatCurso(cursoGuardado);
 
@@ -561,10 +582,11 @@ class CursoServiceTest {
 
         @Test
         void updateCurso_NewCurso_ErrorActualizarStreamCurso()
-                throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
+                throws InternalServerException, InternalComunicationException, RepositoryException {
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
+            when(cursoRepo.save(cursoGuardado)).thenReturn(cursoGuardado);
             doNothing().when(spyService).creaCarpetaCurso(cursoGuardado);
             doThrow(new InternalComunicationException("Error")).when(spyService).actualizarStreamCurso(cursoGuardado);
 
@@ -583,10 +605,11 @@ class CursoServiceTest {
 
         @Test
         void updateCurso_NewCurso_ErrorUpdateSSR()
-                throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
+                throws InternalServerException, InternalComunicationException, RepositoryException {
             CursoService spyService = spy(cursoService);
 
             when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
+            when(cursoRepo.save(cursoGuardado)).thenReturn(cursoGuardado);
             doNothing().when(spyService).creaCarpetaCurso(cursoGuardado);
             doThrow(new InternalComunicationException("Error")).when(spyService).updateSSR();
 
@@ -602,6 +625,48 @@ class CursoServiceTest {
             verify(spyService).actualizarChatCurso(cursoGuardado);
             verify(spyService).actualizarStreamCurso(cursoGuardado);
             verify(spyService).updateSSR();
+        }
+
+        @Test
+        void updateCurso_NewCurso_WithNullClases_SuccessfulUpdate()
+                throws InternalServerException, InternalComunicationException, RepositoryException, NotFoundException {
+            curso.setClasesCurso(null);
+
+            CursoService spyService = spy(cursoService);
+
+            when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
+
+            // Act
+            Curso resp = spyService.updateCurso(curso);
+
+            // Assert
+            assertNotNull(resp);
+            assertEquals(cursoGuardado, resp);
+            verify(cursoRepo).save(curso);
+            verify(spyService).creaCarpetaCurso(cursoGuardado);
+            verify(spyService).creaClasesCurso(cursoGuardado, null);
+            verify(spyService).actualizarChatCurso(cursoGuardado);
+            verify(spyService).actualizarStreamCurso(cursoGuardado);
+            verify(spyService).updateSSR();
+        }
+
+        @Test
+        void updateCurso_NewCurso_ErrorRepositoryInCrearClases()
+                throws InternalServerException, RepositoryException {
+            CursoService spyService = spy(cursoService);
+
+            when(cursoRepo.save(curso)).thenReturn(cursoGuardado);
+            when(claseRepo.save(any())).thenThrow(new IllegalArgumentException("save error"));
+
+            // Act
+            RepositoryException ex = assertThrows(RepositoryException.class,
+                    () -> spyService.updateCurso(curso));
+
+            // Assert
+            assertTrue(ex.getMessage().contains("Error en guardar la clase"));
+            verify(cursoRepo).save(curso);
+            verify(spyService).creaCarpetaCurso(cursoGuardado);
+            verify(spyService).creaClasesCurso(cursoGuardado, clases);
         }
     }
 
@@ -692,6 +757,112 @@ class CursoServiceTest {
             verify(spyService).getCurso(cursoId);
         }
 
+        @Test
+        void deleteCurso_ErrorDeleteCarpeta() throws ServiceException {
+            // Spy
+            CursoService spyService = spy(cursoService);
+
+            // Mock: getCurso() debe devolver el curso
+            doReturn(curso).when(spyService).getCurso(cursoId);
+
+            // Mock: deleteClase()
+            doNothing().when(spyService).deleteClase(any(Clase.class));
+
+            // Mock: deleteCarpetaCurso() lanza excepción
+            doThrow(new InternalServerException("Error carpeta")).when(spyService).deleteCarpetaCurso(cursoId);
+
+            // Act
+            ServiceException ex = assertThrows(ServiceException.class,
+                    () -> spyService.deleteCurso(cursoId));
+
+            // Assert
+            assertTrue(ex.getMessage().contains("Error"));
+            verify(spyService).getCurso(cursoId);
+            verify(spyService, times(2)).deleteClase(any(Clase.class));
+            verify(spyService).deleteCarpetaCurso(cursoId);
+        }
+
+        @Test
+        void deleteCurso_ErrorDeleteStream() throws ServiceException {
+            // Spy
+            CursoService spyService = spy(cursoService);
+
+            // Mock: getCurso() debe devolver el curso
+            doReturn(curso).when(spyService).getCurso(cursoId);
+
+            // Mock: deleteClase()
+            doNothing().when(spyService).deleteClase(any(Clase.class));
+
+            // Mock: deleteCursoStream() lanza excepción
+            doThrow(new InternalComunicationException("Error stream")).when(spyService).deleteCursoStream(cursoId);
+
+            // Act
+            ServiceException ex = assertThrows(ServiceException.class,
+                    () -> spyService.deleteCurso(cursoId));
+
+            // Assert
+            assertTrue(ex.getMessage().contains("Error"));
+            verify(spyService).getCurso(cursoId);
+            verify(spyService, times(2)).deleteClase(any(Clase.class));
+            verify(spyService).deleteCarpetaCurso(cursoId);
+            verify(spyService).deleteCursoStream(cursoId);
+        }
+
+        @Test
+        void deleteCurso_ErrorDeleteChat() throws ServiceException {
+            // Spy
+            CursoService spyService = spy(cursoService);
+
+            // Mock: getCurso() debe devolver el curso
+            doReturn(curso).when(spyService).getCurso(cursoId);
+
+            // Mock: deleteClase()
+            doNothing().when(spyService).deleteClase(any(Clase.class));
+
+            // Mock: deleteCursoChat() lanza excepción
+            doThrow(new InternalComunicationException("Error chat")).when(spyService).deleteCursoChat(cursoId);
+
+            // Act
+            ServiceException ex = assertThrows(ServiceException.class,
+                    () -> spyService.deleteCurso(cursoId));
+
+            // Assert
+            assertTrue(ex.getMessage().contains("Error"));
+            verify(spyService).getCurso(cursoId);
+            verify(spyService, times(2)).deleteClase(any(Clase.class));
+            verify(spyService).deleteCarpetaCurso(cursoId);
+            verify(spyService).deleteCursoStream(cursoId);
+            verify(spyService).deleteCursoChat(cursoId);
+        }
+
+        @Test
+        void deleteCurso_ErrorUpdateSSR() throws ServiceException {
+            // Spy
+            CursoService spyService = spy(cursoService);
+
+            // Mock: getCurso() debe devolver el curso
+            doReturn(curso).when(spyService).getCurso(cursoId);
+
+            // Mock: deleteClase()
+            doNothing().when(spyService).deleteClase(any(Clase.class));
+
+            // Mock: updateSSR() lanza excepción
+            doThrow(new InternalComunicationException("Error SSR")).when(spyService).updateSSR();
+
+            // Act
+            ServiceException ex = assertThrows(ServiceException.class,
+                    () -> spyService.deleteCurso(cursoId));
+
+            // Assert
+            assertTrue(ex.getMessage().contains("Error"));
+            verify(spyService).getCurso(cursoId);
+            verify(spyService, times(2)).deleteClase(any(Clase.class));
+            verify(spyService).deleteCarpetaCurso(cursoId);
+            verify(spyService).deleteCursoStream(cursoId);
+            verify(spyService).deleteCursoChat(cursoId);
+            verify(spyService).updateSSR();
+        }
+
     }
 
     // ==========================
@@ -699,6 +870,18 @@ class CursoServiceTest {
     // ==========================
     @Nested
     class GetAllTests {
+
+        @Test
+        void getAll_SuccessfulRetrieval() {
+            List<Curso> cursos = List.of(new Curso(), new Curso());
+            when(cursoRepo.findAll()).thenReturn(cursos);
+
+            List<Curso> resp = cursoService.getAll();
+
+            assertNotNull(resp);
+            assertEquals(cursos, resp);
+            verify(cursoRepo).findAll();
+        }
     }
 
     // ==========================
@@ -706,6 +889,161 @@ class CursoServiceTest {
     // ==========================
     @Nested
     class DeleteClaseTests {
+
+        private Clase clase;
+
+        @BeforeEach
+        void setUp() {
+            clase = new Clase();
+            clase.setIdClase(1L);
+        }
+
+        @Test
+        void deleteClase_SuccessfulDeletion() throws ServiceException {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
+
+            CursoService spyService = spy(cursoService);
+            doNothing().when(spyService).deleteCarpetaClase(clase);
+            doNothing().when(spyService).deleteClaseStream(clase);
+            doNothing().when(spyService).deleteClaseChat(clase);
+            doNothing().when(spyService).updateSSR();
+
+            spyService.deleteClase(clase);
+
+            verify(claseRepo).findById(clase.getIdClase());
+            verify(claseRepo).delete(clase);
+            verify(spyService).deleteCarpetaClase(clase);
+            verify(spyService).deleteClaseStream(clase);
+            verify(spyService).deleteClaseChat(clase);
+            verify(spyService).updateSSR();
+        }
+
+        @Test
+        void deleteClase_ErrorClaseNotFound() {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.empty());
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> cursoService.deleteClase(clase));
+
+            assertEquals("Clase no encontrada con id " + clase.getIdClase(), ex.getMessage());
+            verify(claseRepo).findById(clase.getIdClase());
+        }
+
+        @Test
+        void deleteClase_ErrorDeleteCarpeta() throws ServiceException {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
+
+            CursoService spyService = spy(cursoService);
+            doThrow(new InternalServerException("Error carpeta")).when(spyService).deleteCarpetaClase(clase);
+
+            InternalServerException ex = assertThrows(InternalServerException.class,
+                    () -> spyService.deleteClase(clase));
+
+            assertTrue(ex.getMessage().contains("Error carpeta"));
+            verify(claseRepo).findById(clase.getIdClase());
+            verify(claseRepo).delete(clase);
+            verify(spyService).deleteCarpetaClase(clase);
+        }
+
+        @Test
+        void deleteClase_ErrorDeleteStream() throws ServiceException {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
+
+            CursoService spyService = spy(cursoService);
+            doThrow(new InternalComunicationException("Error stream")).when(spyService).deleteClaseStream(clase);
+
+            InternalComunicationException ex = assertThrows(InternalComunicationException.class,
+                    () -> spyService.deleteClase(clase));
+
+            assertTrue(ex.getMessage().contains("Error stream"));
+            verify(claseRepo).findById(clase.getIdClase());
+            verify(claseRepo).delete(clase);
+            verify(spyService).deleteCarpetaClase(clase);
+            verify(spyService).deleteClaseStream(clase);
+        }
+
+        @Test
+        void deleteClase_ErrorDeleteChat() throws ServiceException {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
+
+            CursoService spyService = spy(cursoService);
+            lenient().doNothing().when(spyService).deleteCarpetaClase(clase);
+            lenient().doNothing().when(spyService).deleteClaseStream(clase);
+            lenient().doNothing().when(spyService).updateSSR();
+            lenient().doThrow(new InternalComunicationException("Error chat")).when(spyService).deleteClaseChat(clase);
+
+            InternalComunicationException ex = assertThrows(InternalComunicationException.class,
+                    () -> spyService.deleteClase(clase));
+
+            assertEquals("Error chat", ex.getMessage());
+            verify(claseRepo).findById(clase.getIdClase());
+            verify(claseRepo).delete(clase);
+            verify(spyService).deleteCarpetaClase(clase);
+            verify(spyService).deleteClaseStream(clase);
+            verify(spyService).deleteClaseChat(clase);
+        }
+
+        @Test
+        void deleteClase_ErrorUpdateSSR() throws ServiceException {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
+
+            CursoService spyService = spy(cursoService);
+            lenient().doNothing().when(spyService).deleteCarpetaClase(clase);
+            lenient().doNothing().when(spyService).deleteClaseStream(clase);
+            lenient().doNothing().when(spyService).deleteClaseChat(clase);
+            lenient().doThrow(new RuntimeException("Error")).when(spyService).updateSSR();
+
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> spyService.deleteClase(clase));
+
+            assertEquals("Error", ex.getMessage());
+            verify(claseRepo).findById(clase.getIdClase());
+            verify(claseRepo).delete(clase);
+            verify(spyService).deleteCarpetaClase(clase);
+            verify(spyService).deleteClaseStream(clase);
+            verify(spyService).deleteClaseChat(clase);
+        }
+
+        @Test
+        void deleteClase_ErrorDeleteClaseStream() throws ServiceException {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
+
+            CursoService spyService = spy(cursoService);
+            lenient().doNothing().when(spyService).deleteCarpetaClase(clase);
+            lenient().doNothing().when(spyService).deleteClaseChat(clase);
+            lenient().doNothing().when(spyService).updateSSR();
+            lenient().doThrow(new RuntimeException("Error deleting stream")).when(spyService).deleteClaseStream(clase);
+
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> spyService.deleteClase(clase));
+
+            assertEquals("Error deleting stream", ex.getMessage());
+            verify(claseRepo).findById(clase.getIdClase());
+            verify(claseRepo).delete(clase);
+            verify(spyService).deleteCarpetaClase(clase);
+            verify(spyService).deleteClaseStream(clase);
+        }
+
+        @Test
+        void deleteClase_ErrorDeleteCarpetaClase() throws ServiceException {
+            when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
+
+            CursoService spyService = spy(cursoService);
+            lenient().doNothing().when(spyService).deleteClaseStream(clase);
+            lenient().doNothing().when(spyService).deleteClaseChat(clase);
+            lenient().doNothing().when(spyService).updateSSR();
+            lenient().doThrow(new RuntimeException("Error deleting carpeta clase")).when(spyService)
+                    .deleteCarpetaClase(clase);
+
+            RuntimeException ex = assertThrows(RuntimeException.class,
+                    () -> spyService.deleteClase(clase));
+
+            assertEquals("Error deleting carpeta clase", ex.getMessage());
+            verify(claseRepo).findById(clase.getIdClase());
+            verify(claseRepo).delete(clase);
+            verify(spyService).deleteCarpetaClase(clase);
+        }
+
     }
 
     // ==========================
@@ -713,6 +1051,66 @@ class CursoServiceTest {
     // ==========================
     @Nested
     class SubeVideoTests {
+
+        @Test
+        void subeVideo_SuccessfulUpload() throws InternalServerException, IOException {
+            MultipartFile file = mock(MultipartFile.class);
+            when(file.getOriginalFilename()).thenReturn("video.mp4");
+            when(file.getBytes()).thenReturn("test content".getBytes());
+
+            String resp = cursoService.subeVideo(file);
+
+            assertNotNull(resp);
+            assertTrue(resp.contains("video.mp4"));
+        }
+
+        @Test
+        void subeVideo_ErrorIOException() throws IOException {
+            MultipartFile file = mock(MultipartFile.class);
+            when(file.getOriginalFilename()).thenReturn("video.mp4");
+            when(file.getBytes()).thenThrow(new IOException("io error"));
+
+            InternalServerException ex = assertThrows(InternalServerException.class,
+                    () -> cursoService.subeVideo(file));
+
+            assertTrue(ex.getMessage().contains("Error de IO al subir el video"));
+        }
+
+        @Test
+        void subeVideo_ErrorIllegalArgumentException() throws IOException {
+            MultipartFile file = mock(MultipartFile.class);
+            when(file.getOriginalFilename()).thenReturn("video.mp4");
+            when(file.getBytes()).thenThrow(new IllegalArgumentException("arg error"));
+
+            InternalServerException ex = assertThrows(InternalServerException.class,
+                    () -> cursoService.subeVideo(file));
+
+            assertTrue(ex.getMessage().contains("Error al subir el video"));
+        }
+
+        @Test
+        void subeVideo_ErrorIllegalStateException() throws IOException {
+            MultipartFile file = mock(MultipartFile.class);
+            when(file.getOriginalFilename()).thenReturn("video.mp4");
+            when(file.getBytes()).thenThrow(new IllegalStateException("state error"));
+
+            InternalServerException ex = assertThrows(InternalServerException.class,
+                    () -> cursoService.subeVideo(file));
+
+            assertTrue(ex.getMessage().contains("Error al subir el video"));
+        }
+
+        @Test
+        void subeVideo_ErrorRuntimeException() throws IOException {
+            MultipartFile file = mock(MultipartFile.class);
+            when(file.getOriginalFilename()).thenReturn("video.mp4");
+            when(file.getBytes()).thenThrow(new RuntimeException("runtime error"));
+
+            InternalServerException ex = assertThrows(InternalServerException.class,
+                    () -> cursoService.subeVideo(file));
+
+            assertTrue(ex.getMessage().contains("Error inesperado al subir el video"));
+        }
     }
 
     @Mock
