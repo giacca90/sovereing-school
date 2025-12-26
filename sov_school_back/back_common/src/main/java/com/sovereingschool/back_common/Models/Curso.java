@@ -2,7 +2,6 @@ package com.sovereingschool.back_common.Models;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -65,18 +64,5 @@ public class Curso implements Serializable {
 	private String imagenCurso;
 
 	private BigDecimal precioCurso;
-
-	public void addClase(Clase clase) {
-		if (clasesCurso == null) {
-			clasesCurso = new ArrayList<>();
-		}
-		clasesCurso.add(clase);
-		clase.setCursoClase(this);
-	}
-
-	public void removeClase(Clase clase) {
-		clasesCurso.remove(clase);
-		clase.setCursoClase(null);
-	}
 
 }

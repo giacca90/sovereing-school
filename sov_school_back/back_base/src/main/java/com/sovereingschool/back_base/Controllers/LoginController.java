@@ -56,7 +56,7 @@ public class LoginController {
 	 * @return ResponseEntity<Object> con el resultado de la operación
 	 */
 	@GetMapping("/{correo}")
-	public ResponseEntity<?> conpruebaCorreo(@PathVariable String correo) {
+	public ResponseEntity<?> compruebaCorreo(@PathVariable String correo) {
 		Object response = new Object();
 		try {
 			response = this.loginService.compruebaCorreo(correo);

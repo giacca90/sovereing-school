@@ -295,7 +295,8 @@ public class CursoService implements ICursoService {
             }
         } catch (Exception e) {
             logger.error("CursoService: deleteCurso: Error en obtener el curso con ID {}: ", idCurso);
-            throw new EntityNotFoundException("Error borrar las clases del curso con ID " + idCurso);
+            throw new EntityNotFoundException(
+                    "Error borrar las clases del curso con ID " + idCurso + ": " + e.getMessage());
         }
         this.cursoRepo.deleteById(idCurso);
 
@@ -368,9 +369,6 @@ public class CursoService implements ICursoService {
             Files.write(filePath, file.getBytes());
 
             return filePath.normalize().toString();
-
-        } catch (AccessDeniedException e) {
-            throw new InternalServerException("Permiso denegado al subir el video: " + file.getOriginalFilename(), e);
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new InternalServerException("Error al subir el video: " + file.getOriginalFilename(), e);

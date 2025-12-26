@@ -17,12 +17,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.sovereingschool.back_base.DTOs.ChangePassword;
 import com.sovereingschool.back_common.Models.Login;
 import com.sovereingschool.back_common.Models.RoleEnum;
 import com.sovereingschool.back_common.Models.Usuario;
 import com.sovereingschool.back_common.Repositories.LoginRepository;
 import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 import com.sovereingschool.back_common.Utils.JwtUtil;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class LoginServiceTest {
@@ -65,6 +68,29 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class CreateNuevoLoginTests {
+        @Test
+        void createNuevoLoginTest() {
+            Login login = new Login();
+            login.setIdUsuario(1L);
+            login.setCorreoElectronico("correo@ejemplo.com");
+            login.setPassword("password");
+            when(loginRepository.save(login)).thenReturn(login);
+
+            assertEquals("Nuevo Usuario creado con éxito!!!", loginService.createNuevoLogin(login));
+            verify(loginRepository).save(login);
+        }
+
+        @Test
+        void createNuevoLoginTest_Error() {
+            Login login = new Login();
+            login.setIdUsuario(1L);
+            login.setCorreoElectronico("correo@ejemplo.com");
+            login.setPassword("password");
+            when(loginRepository.save(login)).thenThrow(new RuntimeException("Error"));
+
+            assertThrows(RuntimeException.class, () -> loginService.createNuevoLogin(login));
+            verify(loginRepository).save(login);
+        }
     }
 
     // ==========================
@@ -72,6 +98,33 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class GetCorreoLoginTests {
+        @Test
+        void getCorreoLoginTest() {
+            String correo = "correo@ejemplo.com";
+            Long idUsuario = 1L;
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
+
+            assertEquals(correo, loginService.getCorreoLogin(1L));
+            verify(loginRepository).findCorreoLoginForId(idUsuario);
+        }
+
+        @Test
+        void getCorreoLoginTest_Empty() {
+            Long idUsuario = 1L;
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> loginService.getCorreoLogin(1L));
+            verify(loginRepository).findCorreoLoginForId(idUsuario);
+        }
+
+        @Test
+        void getCorreoLoginTest_Error() {
+            Long idUsuario = 1L;
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenThrow(new RuntimeException("Error"));
+
+            assertThrows(RuntimeException.class, () -> loginService.getCorreoLogin(1L));
+            verify(loginRepository).findCorreoLoginForId(idUsuario);
+        }
     }
 
     // ==========================
@@ -79,6 +132,34 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class GetPasswordLoginTests {
+
+        @Test
+        void getPasswordLoginTest() {
+            String password = "password";
+            Long idUsuario = 1L;
+            when(loginRepository.findPasswordLoginForId(idUsuario)).thenReturn(Optional.of(password));
+
+            assertEquals(password, loginService.getPasswordLogin(1L));
+            verify(loginRepository).findPasswordLoginForId(idUsuario);
+        }
+
+        @Test
+        void getPasswordLoginTest_Empty() {
+            Long idUsuario = 1L;
+            when(loginRepository.findPasswordLoginForId(idUsuario)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> loginService.getPasswordLogin(1L));
+            verify(loginRepository).findPasswordLoginForId(idUsuario);
+        }
+
+        @Test
+        void getPasswordLoginTest_Error() {
+            Long idUsuario = 1L;
+            when(loginRepository.findPasswordLoginForId(idUsuario)).thenThrow(new RuntimeException("Error"));
+
+            assertThrows(RuntimeException.class, () -> loginService.getPasswordLogin(1L));
+            verify(loginRepository).findPasswordLoginForId(idUsuario);
+        }
     }
 
     // ==========================
@@ -86,6 +167,31 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class ChangeCorreoLoginTests {
+
+        @Test
+        void changeCorreoLoginTest() {
+            Login login = new Login();
+            login.setIdUsuario(1L);
+            login.setCorreoElectronico("correo@ejemplo.com");
+            login.setPassword("password");
+            when(loginRepository.changeCorreoLoginForId(1L, "correo@ejemplo.com")).thenReturn(Optional.of(1));
+
+            assertEquals("Correo cambiado con éxito!!!", loginService.changeCorreoLogin(login));
+            verify(loginRepository).changeCorreoLoginForId(1L, "correo@ejemplo.com");
+        }
+
+        @Test
+        void changeCorreoLoginTest_Error() {
+            Login login = new Login();
+            login.setIdUsuario(1L);
+            login.setCorreoElectronico("correo@ejemplo.com");
+            login.setPassword("password");
+            when(loginRepository.changeCorreoLoginForId(1L, "correo@ejemplo.com"))
+                    .thenThrow(new RuntimeException("Error"));
+
+            assertThrows(RuntimeException.class, () -> loginService.changeCorreoLogin(login));
+            verify(loginRepository).changeCorreoLoginForId(1L, "correo@ejemplo.com");
+        }
     }
 
     // ==========================
@@ -93,6 +199,54 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class ChangePasswordLoginTests {
+
+        @Test
+        void changePasswordLoginTest() {
+            ChangePassword changepassword = new ChangePassword(
+                    1L,
+                    "password",
+                    "newPassword");
+
+            when(loginRepository.findPasswordLoginForId(1L)).thenReturn(Optional.of("password"));
+            when(loginRepository.changePasswordLoginForId(1L, "newPassword")).thenReturn(Optional.of(1));
+
+            assertEquals(1, loginService.changePasswordLogin(changepassword));
+            verify(loginRepository).findPasswordLoginForId(1L);
+            verify(loginRepository).changePasswordLoginForId(1L, "newPassword");
+        }
+
+        @Test
+        void changePasswordLoginTest_newPasswordEmpty() {
+            ChangePassword changepassword = new ChangePassword(
+                    1L,
+                    "",
+                    "newPassword");
+
+            assertEquals(null, loginService.changePasswordLogin(changepassword));
+        }
+
+        @Test
+        void changePasswordLoginTest_oldPasswordEmpty() {
+            ChangePassword changepassword = new ChangePassword(
+                    1L,
+                    "password",
+                    "");
+
+            assertEquals(null, loginService.changePasswordLogin(changepassword));
+        }
+
+        @Test
+        void changePasswordLoginTest_differentOldPassword() {
+            ChangePassword changepassword = new ChangePassword(
+                    1L,
+                    "password",
+                    "newPassword");
+
+            when(loginRepository.findPasswordLoginForId(1L)).thenReturn(Optional.of("differentPassword"));
+
+            assertEquals(0, loginService.changePasswordLogin(changepassword));
+        }
+
     }
 
     // ==========================
@@ -100,6 +254,13 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class DeleteLoginTests {
+        @Test
+        void deleteLoginTest() {
+            Long idUsuario = 1L;
+            assertEquals("Login eliminado con éxito!!!", loginService.deleteLogin(idUsuario));
+            verify(loginRepository).deleteById(idUsuario);
+        }
+
     }
 
     // ==========================
@@ -135,6 +296,25 @@ class LoginServiceTest {
             assertThrows(UsernameNotFoundException.class,
                     () -> loginService.loadUserByUsername("nonexistent@example.com"));
         }
+
+        @Test
+        void loadUserByUsernameTest_Visitante() {
+            assertEquals("Visitante", loginService.loadUserByUsername("Visitante").getUsername());
+            assertEquals("visitante", loginService.loadUserByUsername("Visitante").getPassword());
+        }
+
+        @Test
+        void loadUserByUsernameTest_UserNotFound() {
+            Login login = new Login();
+            login.setIdUsuario(1L);
+            login.setCorreoElectronico("user@example.com");
+            login.setPassword("encodedPassword");
+            when(loginRepository.getLoginForCorreo("user@example.com")).thenReturn(Optional.of(login));
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThrows(UsernameNotFoundException.class,
+                    () -> loginService.loadUserByUsername("user@example.com"));
+        }
     }
 
     // ==========================
@@ -142,6 +322,30 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class LoginUserTests {
+        private Long idUsuario;
+        private String correo;
+        private String password;
+        private Usuario usuario;
+        private Login login;
+
+        @BeforeEach
+        void setUp() {
+            idUsuario = 1L;
+            correo = "correo@ejemplo.com";
+            password = "password";
+            login = new Login();
+            login.setIdUsuario(idUsuario);
+            login.setCorreoElectronico(correo);
+            login.setPassword(password);
+            usuario = new Usuario();
+            usuario.setIdUsuario(idUsuario);
+            usuario.setNombreUsuario("Tester");
+            usuario.setRollUsuario(RoleEnum.USER);
+            usuario.setIsEnabled(true);
+            usuario.setAccountNoExpired(true);
+            usuario.setCredentialsNoExpired(true);
+            usuario.setAccountNoLocked(true);
+        }
     }
 
     // ==========================

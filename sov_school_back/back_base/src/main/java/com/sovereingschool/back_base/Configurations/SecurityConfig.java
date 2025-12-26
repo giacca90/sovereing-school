@@ -68,7 +68,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-            CustomOAuth2SuccessHandler customOAuth2SuccessHandler) throws Exception {
+            CustomOAuth2SuccessHandler customOAuth2SuccessHandler) {
         return http
                 .csrf(csrf -> csrf.disable())
                 // .redirectToHttps(Customizer.withDefaults())
@@ -106,8 +106,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
-            throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
