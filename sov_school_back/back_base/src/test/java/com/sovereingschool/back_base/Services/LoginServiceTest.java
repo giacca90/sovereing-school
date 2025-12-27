@@ -2,10 +2,19 @@ package com.sovereingschool.back_base.Services;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,9 +23,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.ChangePassword;
 import com.sovereingschool.back_common.Models.Login;
 import com.sovereingschool.back_common.Models.RoleEnum;
@@ -346,13 +360,100 @@ class LoginServiceTest {
             usuario.setCredentialsNoExpired(true);
             usuario.setAccountNoLocked(true);
         }
+
+        @Test
+        void loginUser_SuccessfulLogin() {
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
+            when(loginRepository.getLoginForCorreo(correo)).thenReturn(Optional.of(login));
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+            LoginService spyService = spy(loginService);
+            AuthResponse authResponse = spyService.loginUser(idUsuario, password);
+
+            assertNotNull(authResponse);
+            verify(spyService).loginUser(idUsuario, password);
+            verify(loginRepository).findCorreoLoginForId(idUsuario);
+            verify(loginRepository, times(2)).getLoginForCorreo(correo);
+            verify(usuarioRepository, times(2)).findById(1L);
+        }
     }
 
-    // ==========================
-    // Tests refreshAccessToken()
-    // ==========================
     @Nested
     class RefreshAccessTokenTests {
+
+        @Test
+        void refreshAccessToken_Success() {
+            // GIVEN
+            Long userId = 1L;
+            String correo = "test@example.com";
+            String password = "hashed_password";
+
+            // Mock del loginRepository
+            when(loginRepository.findCorreoLoginForId(userId))
+                    .thenReturn(Optional.of(correo));
+
+            // Mock de userDetails
+            UserDetails mockUserDetails = mock(UserDetails.class);
+            when(mockUserDetails.getPassword()).thenReturn(password);
+            when(mockUserDetails.getAuthorities()).thenReturn(Collections.emptyList());
+
+            // Spy o Mock del método loadUserByUsername (asumiendo que está en la misma
+            // clase)
+            LoginService spyService = spy(loginService);
+            doReturn(mockUserDetails).when(spyService).loadUserByUsername(correo);
+
+            // Mock de jwtUtil
+            when(jwtUtil.generateToken(any(), eq("access"), eq(userId))).thenReturn("mock-access-token");
+            when(jwtUtil.generateToken(any(), eq("refresh"), eq(userId))).thenReturn("mock-refresh-token");
+
+            // WHEN
+            AuthResponse response = spyService.refreshAccessToken(userId);
+
+            // THEN
+            assertNotNull(response);
+            assertEquals("Refresh exitoso", response.message());
+            assertEquals("mock-access-token", response.accessToken());
+            assertEquals("mock-refresh-token", response.refreshToken());
+
+            // Verificar que la autenticación se guardó en el SecurityContext
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            assertNotNull(auth);
+            assertEquals(correo, auth.getPrincipal());
+        }
+
+        @Test
+        void refreshAccessToken_IdNotFound_ThrowsEntityNotFoundException() {
+            // GIVEN
+            Long userId = 99L;
+            when(loginRepository.findCorreoLoginForId(userId)).thenReturn(Optional.empty());
+
+            // WHEN & THEN
+            EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
+                loginService.refreshAccessToken(userId);
+            });
+
+            assertTrue(exception.getMessage().contains("Error en obtener el correo"));
+            verify(loginRepository).findCorreoLoginForId(userId);
+        }
+
+        @Test
+        void refreshAccessToken_UserNotFound_ThrowsBadCredentialsException() {
+            // GIVEN
+            Long userId = 1L;
+            String correo = "test@example.com";
+            when(loginRepository.findCorreoLoginForId(userId)).thenReturn(Optional.of(correo));
+
+            // Simulamos que loadUserByUsername devuelve null
+            LoginService spyService = spy(loginService);
+            doReturn(null).when(spyService).loadUserByUsername(correo);
+
+            // WHEN & THEN
+            BadCredentialsException exception = assertThrows(BadCredentialsException.class, () -> {
+                spyService.refreshAccessToken(userId);
+            });
+
+            assertEquals("Usuario no encontrado", exception.getMessage());
+        }
     }
 
     // ==========================
@@ -394,6 +495,7 @@ class LoginServiceTest {
 
     private LoginService loginService;
 
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach

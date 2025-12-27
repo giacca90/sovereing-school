@@ -537,10 +537,11 @@ public class UsuarioService implements IUsuarioService {
      * Función para crear el chat del usuario
      * Se llama cuando un usuario adquiere un curso
      * 
+     * TODO: Cambiar por Redis Stream
+     * 
      * @param usuario Usuario a crear el chat
      * @throws InternalComunicationException
      * 
-     *                                       TODO: Cambiar por Redis Stream
      */
     protected void createUsuarioChat(Usuario usuario) throws InternalComunicationException {
         try {
@@ -574,10 +575,11 @@ public class UsuarioService implements IUsuarioService {
     /**
      * Función para crear el streaming del usuario
      * 
+     * TODO: Cambiar por Redis Stream
+     * 
      * @param usuarioInsertado Usuario a crear el streaming
      * @throws InternalComunicationException
      * 
-     *                                       TODO: Cambiar por Redis Stream
      */
     protected void createUsuarioStream(Usuario usuario) throws InternalComunicationException {
         try {
@@ -625,10 +627,10 @@ public class UsuarioService implements IUsuarioService {
     /**
      * Función para eliminar el streaming del usuario
      * 
+     * TODO: Cambiar por Redis Stream
+     * 
      * @param id ID del usuario
      * @throws InternalComunicationException
-     * 
-     *                                       TODO: Cambiar por Redis Stream
      */
     protected void deleteUsuarioStream(Long id) throws InternalComunicationException {
         try {

@@ -392,7 +392,8 @@ public class CursoService implements ICursoService {
     protected void creaCarpetaCurso(Curso curso) throws InternalServerException {
         Path cursoPath = baseUploadDir.resolve(curso.getIdCurso().toString());
         File cursoFile = new File(cursoPath.toString());
-        if (!cursoFile.exists() || !cursoFile.isDirectory()) {
+        if (!cursoFile.exists() ||
+                !cursoFile.isDirectory()) {
             if (!cursoFile.mkdir()) {
                 logger.error("Error en crear la carpeta del curso.");
                 throw new InternalServerException("Error en crear la carpeta del curso.");
@@ -459,11 +460,10 @@ public class CursoService implements ICursoService {
                         logger.error("Error al conectar con el microservicio de chat {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     }).subscribe(res -> {
-                        if (res == null || !res.equals("Curso chat actualizado con éxito!!!")) {
+                        if (res == null ||
+                                !res.equals("Curso chat actualizado con éxito!!!")) {
                             logger.error("Error en actualizar el curso en el chat");
                             logger.error(res);
-                            // Log error and continue instead of throwing
-                            logger.error("Error en actualizar el curso en el chat");
                         }
                     });
         } catch (Exception e) {
@@ -486,17 +486,19 @@ public class CursoService implements ICursoService {
                     .retrieve()
                     .onStatus(
                             HttpStatusCode::isError,
-                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de streaming: {}", errorBody);
-                                return Mono.error(new InternalComunicationException(
-                                        "Error del microservicio de streaming: " + errorBody));
-                            }))
+                            response -> response.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        logger.error("Error HTTP del microservicio de streaming: {}", errorBody);
+                                        return Mono.error(new InternalComunicationException(
+                                                "Error del microservicio de streaming: " + errorBody));
+                                    }))
                     .bodyToMono(String.class)
                     .onErrorResume(e -> {
                         logger.error("Error al conectar con el microservicio de streaming: {}", e.getMessage());
                         return Mono.empty(); // Continuar sin interrumpir la aplicación
                     }).subscribe(res -> {
-                        if (res == null || !res.equals("Curso stream actualizado con éxito!!!")) {
+                        if (res == null ||
+                                !res.equals("Curso stream actualizado con éxito!!!")) {
                             logger.error("Error en actualizar el curso en el streaming:");
                             logger.error(res);
                         }
@@ -636,7 +638,9 @@ public class CursoService implements ICursoService {
 
         try {
             Path path = Paths.get(clase.getDireccionClase()).getParent();
-            if (path != null && Files.exists(path) && !path.equals(baseUploadDir)) {
+            if (path != null &&
+                    Files.exists(path) &&
+                    !path.equals(baseUploadDir)) {
                 Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {

@@ -9,7 +9,6 @@ import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,7 +20,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.ChangePassword;
 import com.sovereingschool.back_base.Interfaces.ILoginService;
@@ -246,19 +244,17 @@ public class LoginService implements UserDetailsService, ILoginService {
 
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        Optional<Usuario> usuarioOpt = this.usuarioRepository.findById(
+        Usuario usuario = this.usuarioRepository.findById(
                 this.loginRepository.getLoginForCorreo(auth.getName())
+                        .map(Login::getIdUsuario)
                         .orElseThrow(() -> {
                             logger.error("Error en obtener el login con el correo {}", auth.getName());
-                            return new EntityNotFoundException(
-                                    "Error en obtener el login con el correo " + auth.getName());
-                        })
-                        .getIdUsuario());
-        if (usuarioOpt.isEmpty()) {
-            logger.error("Usuario no encontrado en loginUser");
-            throw new UsernameNotFoundException("Usuario no encontrado");
-        }
-        Usuario usuario = usuarioOpt.get();
+                            return new EntityNotFoundException("Login no encontrado");
+                        }))
+                .orElseThrow(() -> {
+                    logger.error("Usuario no encontrado en loginUser");
+                    return new UsernameNotFoundException("Usuario no encontrado");
+                });
         Hibernate.initialize(usuario.getCursosUsuario());
 
         String accessToken = jwtUtil.generateToken(auth, "access", usuario.getIdUsuario());
@@ -310,17 +306,11 @@ public class LoginService implements UserDetailsService, ILoginService {
     @Override
     @Transactional
     public Usuario loginWithToken(String token) {
-        try {
-            Long idUsuario = jwtUtil.getIdUsuario(token);
-            Optional<Usuario> opUsuario = this.usuarioRepository.findById(idUsuario);
-            if (opUsuario.isEmpty()) {
-                logger.error("Usuario no encontrado en loginWithToken: id_usuario: {}", idUsuario);
-                throw new BadCredentialsException("Usuario no encontrado");
-            }
-            return opUsuario.get();
-        } catch (JWTVerificationException | InsufficientAuthenticationException | BadCredentialsException e) {
-            logger.error("Error en hacer login con token: {}", e.getMessage());
-            throw new JWTVerificationException("Error en hacer login con token: " + e.getMessage());
-        }
+
+        Long idUsuario = jwtUtil.getIdUsuario(token);
+        return this.usuarioRepository.findById(idUsuario).orElseThrow(() -> {
+            logger.error("Usuario no encontrado en loginWithToken: id_usuario: {}", idUsuario);
+            return new EntityNotFoundException("Usuario no encontrado");
+        });
     }
 }
