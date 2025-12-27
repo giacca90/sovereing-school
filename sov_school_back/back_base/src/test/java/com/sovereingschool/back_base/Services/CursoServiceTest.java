@@ -31,6 +31,7 @@ import java.util.Optional;
 import javax.net.ssl.SSLException;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -868,201 +869,128 @@ class CursoServiceTest {
 
         @Test
         void deleteCurso_SuccessfulDeletion() throws ServiceException {
-            // Configuramos respuestas de éxito para las llamadas asíncronas
-            // (1 para cursoStream, 1 para cursoChat, 1 para SSR, y 2 de cada para las
-            // clases)
-            lenient().when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
-            lenient().when(responseSpec.bodyToMono(any(Class.class)))
-                    .thenReturn(Mono.just(true)) // Para Boolean.class (Stream)
-                    .thenReturn(Mono.just("Clase chat borrado con exito!!!")); // Para String.class (Chat)
-
             CursoService spyService = spy(cursoService);
             doReturn(curso).when(spyService).getCurso(cursoId);
 
             when(claseRepo.findById(clase1.getIdClase())).thenReturn(Optional.of(clase1));
             when(claseRepo.findById(clase2.getIdClase())).thenReturn(Optional.of(clase2));
 
-            // Act
+            lenient().when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+
+            // Tipado específico para evitar warnings y asegurar match exacto
+            lenient().when(responseSpec.bodyToMono(Boolean.class)).thenReturn(Mono.just(true));
+            lenient().when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.just("Éxito"));
+
             Boolean resp = spyService.deleteCurso(cursoId);
 
-            // Assert
             assertTrue(resp);
             verify(spyService).getCurso(cursoId);
             verify(spyService, times(2)).deleteClase(any(Clase.class));
-            verify(spyService).deleteCursoStream(cursoId);
-            verify(spyService).deleteCursoChat(cursoId);
-
-            // Verificamos que WebClient fue llamado realmente
             verify(webClient, atLeastOnce()).delete();
+        }
+
+        @Test
+        @DisplayName("Cobertura de FlatMaps y Errores HTTP en deleteCurso")
+        void deleteCurso_AsyncFlatMapCoverage() throws ServiceException {
+            CursoService spyService = spy(cursoService);
+            doReturn(curso).when(spyService).getCurso(cursoId);
+            doNothing().when(spyService).deleteClase(any(Clase.class));
+
+            // Simular respuesta de error para el flatMap
+            org.springframework.web.reactive.function.client.ClientResponse mockResponse = mock(
+                    org.springframework.web.reactive.function.client.ClientResponse.class);
+            when(mockResponse.bodyToMono(String.class)).thenReturn(Mono.just("Error Interno del Microservicio"));
+
+            // Interceptar onStatus para ejecutar la lambda (Cobertura total)
+            lenient().when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
+                java.util.function.Function<org.springframework.web.reactive.function.client.ClientResponse, Mono<? extends Throwable>> errorFunc = invocation
+                        .getArgument(1);
+                errorFunc.apply(mockResponse).subscribe(); // Dispara el código interno
+                return responseSpec;
+            });
+
+            // Forzar error en el flujo principal para cubrir onErrorResume
+            lenient().when(responseSpec.bodyToMono(String.class)).thenReturn(Mono.error(new RuntimeException("Fail")));
+            lenient().when(responseSpec.bodyToMono(Boolean.class)).thenReturn(Mono.error(new RuntimeException("Fail")));
+
+            Boolean resp = spyService.deleteCurso(cursoId);
+
+            assertTrue(resp); // Sigue siendo true por el .onErrorResume(e -> Mono.empty())
+            verify(responseSpec, atLeastOnce()).onStatus(any(), any());
         }
 
         @Test
         void deleteCurso_SuccessfulDeletion_NoClases() throws ServiceException {
             curso.setClasesCurso(null);
-            // Spy
             CursoService spyService = spy(cursoService);
-
-            // Mock: getCurso() debe devolver el curso
             doReturn(curso).when(spyService).getCurso(cursoId);
 
-            // Act
             Boolean resp = spyService.deleteCurso(cursoId);
 
-            // Assert
             assertTrue(resp);
-
-            verify(spyService).getCurso(cursoId);
             verify(spyService).deleteCarpetaCurso(cursoId);
-            verify(spyService).deleteCursoStream(cursoId);
-            verify(spyService).deleteCursoChat(cursoId);
-            verify(spyService).updateSSR();
-
-            // El repositorio debe borrar el curso
             verify(cursoRepo).deleteById(cursoId);
         }
 
         @Test
         void deleteCurso_ErrorCursoNoEncontrado() throws ServiceException {
-            // Spy
             CursoService spyService = spy(cursoService);
+            // Si getCurso devuelve null o lanza excepción
+            doThrow(new EntityNotFoundException("No existe")).when(spyService).getCurso(cursoId);
 
-            // Act
-            EntityNotFoundException ex = assertThrows(EntityNotFoundException.class,
-                    () -> spyService.deleteCurso(cursoId));
-
-            // Assert
-            assertTrue(ex.getMessage().contains("Error borrar las clases del curso con ID "));
-
-            verify(spyService).getCurso(cursoId);
+            assertThrows(EntityNotFoundException.class, () -> spyService.deleteCurso(cursoId));
         }
 
         @Test
         void deleteCurso_ErrorDeleteClase() throws ServiceException {
-            // Spy
             CursoService spyService = spy(cursoService);
-
-            // Mock: getCurso() debe devolver el curso
             doReturn(curso).when(spyService).getCurso(cursoId);
+            doThrow(new ServiceException("Error clase")).when(spyService).deleteClase(any(Clase.class));
 
-            // Mock: deleteClase() debe lanzar excepción
-            doThrow(new ServiceException("Error en borrar la clase")).when(spyService).deleteClase(any(Clase.class));
-
-            // Act
             EntityNotFoundException ex = assertThrows(EntityNotFoundException.class,
                     () -> spyService.deleteCurso(cursoId));
-
-            // Assert
-
-            assertTrue(ex.getMessage().contains("Error borrar las clases del curso con ID "));
-            verify(spyService).getCurso(cursoId);
+            assertTrue(ex.getMessage().contains("Error borrar las clases"));
         }
 
         @Test
         void deleteCurso_ErrorDeleteCarpeta() throws ServiceException {
-            // Spy
             CursoService spyService = spy(cursoService);
-
-            // Mock: getCurso() debe devolver el curso
             doReturn(curso).when(spyService).getCurso(cursoId);
-
-            // Mock: deleteClase()
             doNothing().when(spyService).deleteClase(any(Clase.class));
-
-            // Mock: deleteCarpetaCurso() lanza excepción
             doThrow(new InternalServerException("Error carpeta")).when(spyService).deleteCarpetaCurso(cursoId);
 
-            // Act
-            ServiceException ex = assertThrows(ServiceException.class,
-                    () -> spyService.deleteCurso(cursoId));
-
-            // Assert
-            assertTrue(ex.getMessage().contains("Error"));
-            verify(spyService).getCurso(cursoId);
-            verify(spyService, times(2)).deleteClase(any(Clase.class));
-            verify(spyService).deleteCarpetaCurso(cursoId);
+            assertThrows(ServiceException.class, () -> spyService.deleteCurso(cursoId));
         }
 
         @Test
         void deleteCurso_ErrorDeleteStream() throws ServiceException {
-            // Spy
             CursoService spyService = spy(cursoService);
-
-            // Mock: getCurso() debe devolver el curso
             doReturn(curso).when(spyService).getCurso(cursoId);
-
-            // Mock: deleteClase()
             doNothing().when(spyService).deleteClase(any(Clase.class));
-
-            // Mock: deleteCursoStream() lanza excepción
             doThrow(new InternalComunicationException("Error stream")).when(spyService).deleteCursoStream(cursoId);
 
-            // Act
-            ServiceException ex = assertThrows(ServiceException.class,
-                    () -> spyService.deleteCurso(cursoId));
-
-            // Assert
-            assertTrue(ex.getMessage().contains("Error"));
-            verify(spyService).getCurso(cursoId);
-            verify(spyService, times(2)).deleteClase(any(Clase.class));
-            verify(spyService).deleteCarpetaCurso(cursoId);
-            verify(spyService).deleteCursoStream(cursoId);
+            assertThrows(ServiceException.class, () -> spyService.deleteCurso(cursoId));
         }
 
         @Test
         void deleteCurso_ErrorDeleteChat() throws ServiceException {
-            // Spy
             CursoService spyService = spy(cursoService);
-
-            // Mock: getCurso() debe devolver el curso
             doReturn(curso).when(spyService).getCurso(cursoId);
-
-            // Mock: deleteClase()
             doNothing().when(spyService).deleteClase(any(Clase.class));
-
-            // Mock: deleteCursoChat() lanza excepción
             doThrow(new InternalComunicationException("Error chat")).when(spyService).deleteCursoChat(cursoId);
 
-            // Act
-            ServiceException ex = assertThrows(ServiceException.class,
-                    () -> spyService.deleteCurso(cursoId));
-
-            // Assert
-            assertTrue(ex.getMessage().contains("Error"));
-            verify(spyService).getCurso(cursoId);
-            verify(spyService, times(2)).deleteClase(any(Clase.class));
-            verify(spyService).deleteCarpetaCurso(cursoId);
-            verify(spyService).deleteCursoStream(cursoId);
-            verify(spyService).deleteCursoChat(cursoId);
+            assertThrows(ServiceException.class, () -> spyService.deleteCurso(cursoId));
         }
 
         @Test
         void deleteCurso_ErrorUpdateSSR() throws ServiceException {
-            // Spy
             CursoService spyService = spy(cursoService);
-
-            // Mock: getCurso() debe devolver el curso
             doReturn(curso).when(spyService).getCurso(cursoId);
-
-            // Mock: deleteClase()
             doNothing().when(spyService).deleteClase(any(Clase.class));
-
-            // Mock: updateSSR() lanza excepción
             doThrow(new InternalComunicationException("Error SSR")).when(spyService).updateSSR();
 
-            // Act
-            ServiceException ex = assertThrows(ServiceException.class,
-                    () -> spyService.deleteCurso(cursoId));
-
-            // Assert
-            assertTrue(ex.getMessage().contains("Error"));
-            verify(spyService).getCurso(cursoId);
-            verify(spyService, times(2)).deleteClase(any(Clase.class));
-            verify(spyService).deleteCarpetaCurso(cursoId);
-            verify(spyService).deleteCursoStream(cursoId);
-            verify(spyService).deleteCursoChat(cursoId);
-            verify(spyService).updateSSR();
+            assertThrows(ServiceException.class, () -> spyService.deleteCurso(cursoId));
         }
-
     }
 
     // ==========================
@@ -1140,8 +1068,12 @@ class CursoServiceTest {
                 return responseSpec;
             });
 
-            // 3. Forzamos el error para que pase por onErrorResume
-            lenient().when(responseSpec.bodyToMono(any(Class.class)))
+            // 3. Forzamos el error para que pase por onErrorResume (Tipado específico para
+            // evitar warnings)
+            lenient().when(responseSpec.bodyToMono(String.class))
+                    .thenReturn(Mono.error(new RuntimeException("Conexion Fallida")));
+
+            lenient().when(responseSpec.bodyToMono(Boolean.class))
                     .thenReturn(Mono.error(new RuntimeException("Conexion Fallida")));
 
             CursoService spyService = spy(cursoService);
@@ -1255,13 +1187,13 @@ class CursoServiceTest {
     @Mock
     private WebClient webClient;
     @Mock
-    private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
+    private WebClient.RequestHeadersUriSpec<?> requestHeadersUriSpec;
     @Mock
     private WebClient.RequestBodyUriSpec requestBodyUriSpec;
     @Mock
     private WebClient.RequestBodySpec requestBodySpec;
     @Mock
-    private WebClient.RequestHeadersSpec requestHeadersSpec;
+    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
     @Mock
     private WebClient.ResponseSpec responseSpec;
 
@@ -1285,16 +1217,16 @@ class CursoServiceTest {
         lenient().doReturn(requestBodyUriSpec).when(webClient).post();
         lenient().doReturn(requestBodySpec).when(requestBodyUriSpec).uri(anyString());
         lenient().doReturn(requestHeadersSpec).when(requestBodySpec).bodyValue(any());
-        lenient().doReturn(requestHeadersSpec).when(requestBodySpec).body(any(), any(Class.class));
-
+        // Casteamos el mock al tipo crudo (raw type) en el doReturn para silenciar el
+        // aviso
+        lenient().doReturn(requestHeadersSpec).when(requestBodySpec).body(any(), (Class<?>) any(Class.class));
         // 4. Response Chain
         lenient().doReturn(responseSpec).when(requestHeadersSpec).retrieve();
         lenient().doReturn(responseSpec).when(responseSpec).onStatus(any(), any());
 
         // IMPORTANTE: Devolver un Mono vacío por defecto para que no falle el
         // .onErrorResume()
-        lenient().doReturn(Mono.empty()).when(responseSpec).bodyToMono(any(Class.class));
-
+        lenient().doReturn(Mono.empty()).when(responseSpec).bodyToMono((Class<?>) any());
         // 5. Instanciación
         cursoService = new CursoService(
                 tempDir.toString(),

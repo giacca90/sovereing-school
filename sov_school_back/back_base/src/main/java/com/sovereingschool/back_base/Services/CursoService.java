@@ -536,10 +536,12 @@ public class CursoService implements ICursoService {
                     .retrieve()
                     .onStatus(
                             HttpStatusCode::isError,
-                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
-                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
-                            }))
+                            response -> response.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                        return Mono
+                                                .error(new RuntimeException("Error del microservicio: " + errorBody));
+                                    }))
                     .bodyToMono(Boolean.class)
                     .onErrorResume(e -> {
                         logger.error("Error al conectar con el microservicio de streaming: {}", e.getMessage());
@@ -570,10 +572,12 @@ public class CursoService implements ICursoService {
                     .retrieve()
                     .onStatus(
                             HttpStatusCode::isError,
-                            response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de chat: {}", errorBody);
-                                return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
-                            }))
+                            response -> response.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        logger.error("Error HTTP del microservicio de chat: {}", errorBody);
+                                        return Mono
+                                                .error(new RuntimeException("Error del microservicio: " + errorBody));
+                                    }))
                     .bodyToMono(String.class)
                     .onErrorResume(e -> {
                         logger.error("Error al conectar con el microservicio de chat: {}", e.getMessage());

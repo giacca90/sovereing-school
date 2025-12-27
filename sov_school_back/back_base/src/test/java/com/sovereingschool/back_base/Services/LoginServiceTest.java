@@ -6,14 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -339,42 +341,114 @@ class LoginServiceTest {
         private Long idUsuario;
         private String correo;
         private String password;
+        private String encodedPassword;
         private Usuario usuario;
         private Login login;
+        private UserDetails userDetails;
 
         @BeforeEach
         void setUp() {
             idUsuario = 1L;
             correo = "correo@ejemplo.com";
             password = "password";
+            encodedPassword = "encodedPassword";
+
             login = new Login();
             login.setIdUsuario(idUsuario);
             login.setCorreoElectronico(correo);
-            login.setPassword(password);
+            login.setPassword(encodedPassword);
+
             usuario = new Usuario();
             usuario.setIdUsuario(idUsuario);
             usuario.setNombreUsuario("Tester");
-            usuario.setRollUsuario(RoleEnum.USER);
-            usuario.setIsEnabled(true);
-            usuario.setAccountNoExpired(true);
-            usuario.setCredentialsNoExpired(true);
-            usuario.setAccountNoLocked(true);
+            usuario.setCursosUsuario(new ArrayList<>()); // Evitar NullPointerException en initialize
+
+            // Mock de UserDetails que espera Spring Security
+            userDetails = org.springframework.security.core.userdetails.User.builder()
+                    .username(correo)
+                    .password(encodedPassword)
+                    .authorities("ROLE_USER")
+                    .build();
         }
 
         @Test
         void loginUser_SuccessfulLogin() {
-            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
-            when(loginRepository.getLoginForCorreo(correo)).thenReturn(Optional.of(login));
-            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-
+            // Arrange
             LoginService spyService = spy(loginService);
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
+            doReturn(userDetails).when(spyService).loadUserByUsername(correo);
+            when(passwordEncoder.matches(password, encodedPassword)).thenReturn(true);
+            when(loginRepository.getLoginForCorreo(correo)).thenReturn(Optional.of(login));
+            when(usuarioRepository.findById(idUsuario)).thenReturn(Optional.of(usuario));
+            when(jwtUtil.generateToken(any(), anyString(), anyLong())).thenReturn("token-ejemplo");
+
+            // Act
             AuthResponse authResponse = spyService.loginUser(idUsuario, password);
 
+            // Assert
             assertNotNull(authResponse);
-            verify(spyService).loginUser(idUsuario, password);
+            assertTrue(authResponse.status());
+            assertEquals("Login exitoso", authResponse.message());
+            assertEquals(usuario, authResponse.usuario());
             verify(loginRepository).findCorreoLoginForId(idUsuario);
-            verify(loginRepository, times(2)).getLoginForCorreo(correo);
-            verify(usuarioRepository, times(2)).findById(1L);
+            verify(passwordEncoder).matches(password, encodedPassword);
+        }
+
+        @Test
+        void loginUser_ErrorCorreoNoEncontrado() {
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> loginService.loginUser(idUsuario, password));
+        }
+
+        @Test
+        void loginUser_ErrorUserDetailsNull() {
+            LoginService spyService = spy(loginService);
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
+            doReturn(null).when(spyService).loadUserByUsername(correo);
+
+            assertThrows(BadCredentialsException.class, () -> spyService.loginUser(idUsuario, password));
+        }
+
+        @Test
+        void loginUser_ErrorPasswordIncorrecta() {
+            LoginService spyService = spy(loginService);
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
+            doReturn(userDetails).when(spyService).loadUserByUsername(correo);
+
+            // Simulamos que ni coincide el hash ni coincide el texto plano
+            when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
+
+            BadCredentialsException ex = assertThrows(BadCredentialsException.class,
+                    () -> spyService.loginUser(idUsuario, "wrong_pass"));
+            assertEquals("Password incorrecta", ex.getMessage());
+        }
+
+        @Test
+        void loginUser_ErrorLoginNoEncontradoTrasAuth() {
+            LoginService spyService = spy(loginService);
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
+            doReturn(userDetails).when(spyService).loadUserByUsername(correo);
+            when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+
+            // El login desaparece justo antes de obtener el ID del usuario
+            when(loginRepository.getLoginForCorreo(correo)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> spyService.loginUser(idUsuario, password));
+        }
+
+        @Test
+        void loginUser_ErrorUsuarioNoEncontradoFinal() {
+            LoginService spyService = spy(loginService);
+            when(loginRepository.findCorreoLoginForId(idUsuario)).thenReturn(Optional.of(correo));
+            doReturn(userDetails).when(spyService).loadUserByUsername(correo);
+            when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+            when(loginRepository.getLoginForCorreo(correo)).thenReturn(Optional.of(login));
+
+            // El login existe pero el usuario en la tabla Usuarios no
+            when(usuarioRepository.findById(idUsuario)).thenReturn(Optional.empty());
+
+            assertThrows(UsernameNotFoundException.class, () -> spyService.loginUser(idUsuario, password));
         }
     }
 

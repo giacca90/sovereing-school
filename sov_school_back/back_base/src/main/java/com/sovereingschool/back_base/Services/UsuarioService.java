@@ -8,7 +8,6 @@ import java.time.Year;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -399,24 +398,24 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public Integer changeCursosUsuario(CursosUsuario cursosUsuario) throws RepositoryException {
-        Optional<Usuario> oldUsuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.idUsuario());
-        if (oldUsuario.isEmpty()) {
-            throw new IllegalArgumentException("El usuario no existe");
-        }
+        Usuario usuario = this.usuarioRepo.findUsuarioForId(cursosUsuario.idUsuario()).orElseThrow(() -> {
+            logger.error("Error en obtener el usuario con ID {}", cursosUsuario.idUsuario());
+            return new EntityNotFoundException("Error en obtener el usuario con ID " + cursosUsuario.idUsuario());
+        });
         List<Curso> cursos = this.cursoRepo.findAllById(cursosUsuario.idsCursos());
-        oldUsuario.get().setCursosUsuario(cursos);
+        usuario.setCursosUsuario(cursos);
 
         try {
             // Añadir el usuario al microservicio de stream
-            this.createUsuarioStream(oldUsuario.get());
+            this.createUsuarioStream(usuario);
 
             // Añadir el usuario al microservicio de chat
-            this.createUsuarioChat(oldUsuario.get());
+            this.createUsuarioChat(usuario);
         } catch (Exception e) {
             logger.error("Error en cambiar los cursos del usuario: {}", e.getMessage());
         }
 
-        return this.usuarioRepo.changeUsuarioForId(cursosUsuario.idUsuario(), oldUsuario.get()).orElseThrow(() -> {
+        return this.usuarioRepo.changeUsuarioForId(cursosUsuario.idUsuario(), usuario).orElseThrow(() -> {
             logger.error("Error en cambiar los cursos del usuario");
             return new RepositoryException("Error en cambiar los cursos del usuario");
         });
@@ -589,7 +588,7 @@ public class UsuarioService implements IUsuarioService {
                     .body(Mono.just(usuario), Usuario.class)
                     .retrieve()
                     .onStatus(
-                            HttpStatusCode::isError, // compatible con HttpStatusCode
+                            HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
                                 logger.error("Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));

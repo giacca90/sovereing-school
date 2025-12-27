@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -194,57 +194,89 @@ class InitAppServiceTest {
     @Nested
     class RefreshSSRTests {
 
-        @Test
-        void refreshSSR_SuccessfulRefresh() throws InternalComunicationException {
-            // Arrange
-            List<Usuario> profes = Arrays.asList(Usuario.builder()
-                    .idUsuario(1L)
-                    .nombreUsuario("Prof1")
-                    .fotoUsuario(Arrays.asList("foto1"))
-                    .presentacion("presentacion1")
-                    .rollUsuario(RoleEnum.PROF)
-                    .build());
-            List<Curso> cursos = Arrays.asList(createCurso(1L, "Curso1", Arrays.asList(profes.get(0)), "desc", "img"));
-            when(usuarioRepo.getInit()).thenReturn(profes);
-            when(cursoRepo.getAllCursos()).thenReturn(cursos);
-            when(usuarioRepo.count()).thenReturn(1L);
-            when(cursoRepo.count()).thenReturn(1L);
-            when(claseRepo.count()).thenReturn(1L);
+        @BeforeEach
+        void setupData() {
+            // Creamos un profesor válido para evitar NPE en sus campos
+            Usuario profesor = new Usuario();
+            profesor.setIdUsuario(1L);
+            profesor.setNombreUsuario("Profesor Test");
+            profesor.setFotoUsuario(List.of("foto.jpg"));
 
-            when(webClient.post()
-                    .uri("/refresh-cache")
-                    .body(any(Mono.class), any(Class.class))
-                    .retrieve()
-                    .bodyToMono(String.class)).thenReturn(Mono.just("Cache global actualizado con éxito"));
+            // Creamos un curso y le ASIGNAMOS una lista de profesores (evita el error del
+            // stream)
+            Curso curso = new Curso();
+            curso.setIdCurso(1L);
+            curso.setNombreCurso("Curso Test");
+            curso.setProfesoresCurso(List.of(profesor)); // <--- ESTO ARREGLA EL ERROR
 
-            // Act & Assert
-            // Como es asíncrono, difícil testear directamente, pero verificar que no lance
-            // excepción
-            initAppService.refreshSSR();
+            // Configuramos los mocks de los repositorios
+            lenient().when(usuarioRepo.getInit()).thenReturn(List.of(profesor));
+            lenient().when(cursoRepo.getAllCursos()).thenReturn(List.of(curso));
+            lenient().when(usuarioRepo.count()).thenReturn(1L);
+            lenient().when(cursoRepo.count()).thenReturn(1L);
+            lenient().when(claseRepo.count()).thenReturn(1L);
         }
 
         @Test
-        void refreshSSR_ErrorInCommunication() {
-            // Arrange
-            List<Usuario> profes = Arrays.asList(Usuario.builder()
-                    .idUsuario(1L)
-                    .nombreUsuario("Prof1")
-                    .fotoUsuario(Arrays.asList("foto1"))
-                    .presentacion("presentacion1")
-                    .rollUsuario(RoleEnum.PROF)
-                    .build());
-            List<Curso> cursos = Arrays.asList(createCurso(1L, "Curso1", Arrays.asList(profes.get(0)), "desc", "img"));
-            when(usuarioRepo.getInit()).thenReturn(profes);
-            when(cursoRepo.getAllCursos()).thenReturn(cursos);
-            when(usuarioRepo.count()).thenReturn(1L);
-            when(cursoRepo.count()).thenReturn(1L);
-            when(claseRepo.count()).thenReturn(1L);
+        void refreshSSR_SuccessfulRefresh_FullCoverage() throws InternalComunicationException {
+            // GIVEN
+            when(responseSpec.bodyToMono(String.class))
+                    .thenReturn(Mono.just("Cache global actualizado con éxito"));
 
-            // Mock para lanzar error
-            when(webClient.post().uri("/refresh-cache").body(any(Mono.class), any(Class.class)).retrieve())
-                    .thenThrow(new RuntimeException("Connection error"));
+            // ACT
+            initAppService.refreshSSR();
 
-            // Act & Assert
+            // ASSERT
+            verify(webClient).post();
+            verify(responseSpec).bodyToMono(String.class);
+        }
+
+        @Test
+        void refreshSSR_ErrorResponse_FlatMapCoverage() throws InternalComunicationException {
+            // GIVEN
+            org.springframework.web.reactive.function.client.ClientResponse mockResponse = mock(
+                    org.springframework.web.reactive.function.client.ClientResponse.class);
+            when(mockResponse.bodyToMono(String.class)).thenReturn(Mono.just("Error 500"));
+
+            lenient().when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
+                java.util.function.Function<org.springframework.web.reactive.function.client.ClientResponse, Mono<? extends Throwable>> flatMapFunc = invocation
+                        .getArgument(1);
+                flatMapFunc.apply(mockResponse).subscribe();
+                return responseSpec;
+            });
+
+            when(responseSpec.bodyToMono(String.class))
+                    .thenReturn(Mono.error(new RuntimeException("Conn error")));
+
+            // ACT
+            initAppService.refreshSSR();
+
+            // ASSERT
+            verify(responseSpec).onStatus(any(), any());
+        }
+
+        @Test
+        void refreshSSR_InvalidResponseInSubscribe_Coverage() throws InternalComunicationException {
+            // GIVEN
+            when(responseSpec.bodyToMono(String.class))
+                    .thenReturn(Mono.just("Respuesta que no contiene el mensaje de éxito"));
+
+            // ACT
+            initAppService.refreshSSR();
+
+            // ASSERT
+            verify(responseSpec).bodyToMono(String.class);
+        }
+
+        @Test
+        void refreshSSR_CriticalException_ThrowsInternalComunicationException()
+                throws SSLException, URISyntaxException {
+            // GIVEN - Forzamos el error después de que getInit() haya funcionado o lo
+            // rompemos directamente
+            // Aquí rompemos la cadena del WebClient para que entre en el catch(Exception e)
+            when(webClientConfig.createSecureWebClient(anyString())).thenThrow(new RuntimeException("WebClient crash"));
+
+            // ACT & ASSERT
             assertThrows(InternalComunicationException.class, () -> initAppService.refreshSSR());
         }
     }
@@ -260,15 +292,37 @@ class InitAppServiceTest {
     @Mock
     private WebClientConfig webClientConfig;
 
-    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    // Mocks de la cadena WebClient
+    @Mock
     private WebClient webClient;
+    @Mock
+    private WebClient.RequestBodyUriSpec requestBodyUriSpec;
+    @Mock
+    private WebClient.RequestBodySpec requestBodySpec;
+    @Mock
+    private WebClient.RequestHeadersSpec<?> requestHeadersSpec;
+    @Mock
+    private WebClient.ResponseSpec responseSpec;
 
     private InitAppService initAppService;
     private final String frontDocker = "http://mocked-front-url";
 
     @BeforeEach
-    void setUp() throws SSLException, URISyntaxException {
+    void setUp() throws Exception {
+        // 1. Definición de la cadena fluida (Eslabón por eslabón)
         lenient().when(webClientConfig.createSecureWebClient(anyString())).thenReturn(webClient);
+        lenient().when(webClient.post()).thenReturn(requestBodyUriSpec);
+        lenient().when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+
+        // CORRECCIÓN AQUÍ: Usamos any() genérico para los eslabones de body
+        lenient().when(requestBodySpec.body(any()))
+                .thenReturn((WebClient.RequestHeadersSpec) requestHeadersSpec);
+        lenient().when(requestBodySpec.body(any(), any(Class.class))).thenReturn(requestHeadersSpec);
+
+        lenient().when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        lenient().when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
+
+        // 2. Inicialización del servicio
         initAppService = new InitAppService(
                 frontDocker,
                 cursoRepo,
