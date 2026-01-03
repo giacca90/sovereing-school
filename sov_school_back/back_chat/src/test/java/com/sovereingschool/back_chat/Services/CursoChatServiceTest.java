@@ -1,10 +1,13 @@
 package com.sovereingschool.back_chat.Services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -14,6 +17,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +28,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +44,7 @@ import com.sovereingschool.back_chat.Models.UsuarioChat;
 import com.sovereingschool.back_chat.Repositories.CursoChatRepository;
 import com.sovereingschool.back_chat.Repositories.MensajeChatRepository;
 import com.sovereingschool.back_chat.Repositories.UsuarioChatRepository;
+import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Usuario;
@@ -51,6 +60,7 @@ class CursoChatServiceTest {
     // ==========================
     // Tests getCursoChat()
     // ==========================
+
     @Nested
     class GetCursoChatTests {
         Long cursoId = 1L;
@@ -519,6 +529,95 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class CreaUsuarioChatTests {
+        Usuario usuario;
+        UsuarioChat usuarioChat;
+        Curso curso1;
+        Curso curso2;
+        Clase clase1curso1;
+        Clase clase2curso1;
+        Clase clase1curso2;
+        Clase clase2curso2;
+
+        CursoChat cursoChat1;
+        CursoChat cursoChat2;
+
+        ClaseChat claseChat1;
+        ClaseChat claseChat2;
+        ClaseChat claseChat3;
+        ClaseChat claseChat4;
+
+        @BeforeEach
+        void setUp() {
+            // Definición de Clases
+            clase1curso1 = new Clase();
+            clase1curso1.setIdClase(1L);
+            clase1curso1.setNombreClase("clase1curso1");
+
+            clase2curso1 = new Clase();
+            clase2curso1.setIdClase(2L);
+            clase2curso1.setNombreClase("clase2curso1");
+
+            clase1curso2 = new Clase();
+            clase1curso2.setIdClase(3L);
+            clase1curso2.setNombreClase("clase1curso2");
+
+            clase2curso2 = new Clase();
+            clase2curso2.setIdClase(4L);
+            clase2curso2.setNombreClase("clase2curso2");
+
+            // Cursos con listas mutables
+            curso1 = new Curso();
+            curso1.setIdCurso(1L);
+            curso1.setNombreCurso("curso1");
+            curso1.setClasesCurso(new ArrayList<>(Arrays.asList(clase1curso1, clase2curso1)));
+
+            curso2 = new Curso();
+            curso2.setIdCurso(2L);
+            curso2.setNombreCurso("curso2");
+            curso2.setClasesCurso(new ArrayList<>(Arrays.asList(clase1curso2, clase2curso2)));
+
+            // Usuario
+            usuario = new Usuario();
+            usuario.setIdUsuario(1L);
+            usuario.setNombreUsuario("nombreUsuario");
+            usuario.setCursosUsuario(new ArrayList<>(Arrays.asList(curso1, curso2)));
+
+            usuarioChat = new UsuarioChat();
+            usuarioChat.setIdUsuario(1L);
+            usuarioChat.setCursos(new ArrayList<>());
+
+            // CursoChat - Asegurando el uso de New ArrayList para evitar
+            // UnsupportedOperationException
+            cursoChat1 = new CursoChat();
+            cursoChat1.setIdCurso(curso1.getIdCurso());
+            cursoChat1.setClases(new ArrayList<>(Arrays.asList(claseChat1, claseChat2)));
+            cursoChat1.setMensajes(new ArrayList<>(Arrays.asList("idMensaje1", "idMensaje2")));
+
+            cursoChat2 = new CursoChat();
+            cursoChat2.setIdCurso(curso2.getIdCurso());
+            // Error corregido aquí: faltaba el operador diamante <> y asegurar mutabilidad
+            cursoChat2.setClases(new ArrayList<>(Arrays.asList(claseChat3, claseChat4)));
+            cursoChat2.setMensajes(new ArrayList<>(Arrays.asList("idMensaje3", "idMensaje4")));
+        }
+
+        @Test
+        void creaUsuarioChatTest_success() throws InternalServerException {
+            when(usuarioChatRepo.save(any(UsuarioChat.class))).thenReturn(usuarioChat);
+            when(cursoChatRepo.findByIdCurso(1L)).thenReturn(Optional.of(cursoChat1));
+            when(cursoChatRepo.findByIdCurso(2L)).thenReturn(Optional.of(cursoChat2));
+
+            cursoChatService.creaUsuarioChat(usuario);
+
+            verify(usuarioChatRepo, times(2)).save(any(UsuarioChat.class));
+        }
+
+        @Test
+        void creaUsuarioChatTest_error() {
+            when(usuarioChatRepo.save(any(UsuarioChat.class))).thenReturn(usuarioChat);
+            when(cursoChatRepo.findByIdCurso(1L)).thenReturn(Optional.empty());
+
+            assertThrows(InternalServerException.class, () -> cursoChatService.creaUsuarioChat(usuario));
+        }
     }
 
     // ==========================
@@ -526,6 +625,41 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class CreaCursoChatTests {
+        Curso curso;
+
+        Clase clase1;
+        Clase clase2;
+
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        @BeforeEach
+        void setUp() {
+            clase1 = new Clase();
+            clase1.setIdClase(1L);
+            clase1.setNombreClase("clase1");
+
+            clase2 = new Clase();
+            clase2.setIdClase(2L);
+            clase2.setNombreClase("clase2");
+
+            curso = new Curso();
+            curso.setIdCurso(1L);
+            curso.setNombreCurso("curso1");
+            curso.setClasesCurso(new ArrayList<>(Arrays.asList(clase1, clase2)));
+        }
+
+        @Test
+        void creaCursoChatTest_success() throws InternalServerException, JsonProcessingException {
+            String jsonMessage = objectMapper.writeValueAsString(curso);
+            cursoChatService.creaCursoChat(jsonMessage);
+            verify(cursoChatRepo).save(any(CursoChat.class));
+        }
+
+        @Test
+        void creaCursoChatTest_error() throws JsonProcessingException {
+            String jsonMessage = objectMapper.writeValueAsString("Texto inválido");
+            assertThrows(InternalServerException.class, () -> cursoChatService.creaCursoChat(jsonMessage));
+        }
     }
 
     // ==========================
@@ -533,6 +667,66 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class CreaClaseChatTests {
+        private Curso curso;
+        private Clase clase;
+        private CursoChat cursoChat;
+        private ClaseChat claseChat;
+
+        @BeforeEach
+        void setUp() {
+            curso = new Curso();
+            curso.setIdCurso(1L);
+            curso.setNombreCurso("curso1");
+            curso.setClasesCurso(new ArrayList<>());
+
+            clase = new Clase();
+            clase.setIdClase(1L);
+            clase.setNombreClase("clase1");
+            clase.setCursoClase(curso); // Esto ahora sí se incluirá en el JSON
+
+            cursoChat = new CursoChat();
+            cursoChat.setIdCurso(curso.getIdCurso());
+            cursoChat.setClases(new ArrayList<>());
+
+            claseChat = new ClaseChat();
+            claseChat.setIdClase(clase.getIdClase());
+            claseChat.setIdCurso(curso.getIdCurso());
+        }
+
+        @Test
+        void creaClaseChatTest_success() throws InternalServerException {
+            // Al generar el JSON, se incluirá el campo "cursoClase" gracias a la
+            // configuración del builder
+            String jsonMessage = "{"
+                    + "\"idClase\":1,"
+                    + "\"nombreClase\":\"clase1\","
+                    + "\"cursoClase\":{\"idCurso\":1}"
+                    + "}";
+            // Mocks
+            when(cursoChatRepo.findByIdCurso(1L)).thenReturn(Optional.of(cursoChat));
+
+            // Ejecución
+            cursoChatService.creaClaseChat(jsonMessage);
+
+            // Verificaciones
+            verify(cursoChatRepo).save(any(CursoChat.class));
+        }
+
+        @Test
+        void creaClaseChatTest_error_cursoChatNoEncontrado() {
+            // Al generar el JSON, se incluirá el campo "cursoClase" gracias a la
+            // configuración del builder
+            String jsonMessage = "{"
+                    + "\"idClase\":1,"
+                    + "\"nombreClase\":\"clase1\","
+                    + "\"cursoClase\":{\"idCurso\":1}"
+                    + "}";
+
+            // Mocks
+            when(cursoChatRepo.findByIdCurso(1L)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> cursoChatService.creaClaseChat(jsonMessage));
+        }
     }
 
     // ==========================
@@ -540,6 +734,36 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class MensajeLeidoTests {
+        String messageSimulado = "\"1\",\"idMensajePrueba\",\"Test\",\"Hola\",\"2023-06-01\"";
+        UsuarioChat usuarioChat;
+
+        @BeforeEach
+        void setUp() {
+            usuarioChat = new UsuarioChat();
+            usuarioChat.setIdUsuario(1L);
+            usuarioChat.setMensajes(new ArrayList<>());
+        }
+
+        @Test
+        void mensajeLeidoTest_success() {
+            // Mocks
+            when(usuarioChatRepo.findByIdUsuario(1L)).thenReturn(Optional.of(usuarioChat));
+
+            // Ejecución - Ahora enviamos "1" en lugar de "{"id":"1"..."
+            cursoChatService.mensajeLeido(messageSimulado);
+
+            // Verificaciones - No se llama a save porque no se guarda nada
+            verifyNoInteractions(mensajeChatRepo);
+
+        }
+
+        @Test
+        void mensajeLeidoTest_error_noMensaje() {
+            // Mocks
+            String idStringValido = "1";
+
+            assertThrows(EntityNotFoundException.class, () -> cursoChatService.mensajeLeido(idStringValido));
+        }
     }
 
     // ==========================
@@ -547,6 +771,45 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class BorrarClaseChatTests {
+        Long cursoId = 1L;
+        Long claseId = 2L;
+
+        CursoChat cursoChat;
+        ClaseChat claseChat;
+
+        @BeforeEach
+        void setUp() {
+            cursoChat = new CursoChat();
+            cursoChat.setIdCurso(cursoId);
+            cursoChat.setClases(new ArrayList<>());
+
+            claseChat = new ClaseChat();
+            claseChat.setIdClase(claseId);
+            claseChat.setIdCurso(cursoId);
+
+            cursoChat.getClases().add(claseChat);
+        }
+
+        @Test
+        void borrarClaseChatTest_success() {
+            // Mocks
+            when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.of(cursoChat));
+            when(cursoChatRepo.save(any(CursoChat.class))).thenReturn(cursoChat);
+
+            // Ejecución
+            cursoChatService.borrarClaseChat(cursoId, claseId);
+
+            // Verificaciones
+            verify(cursoChatRepo).save(cursoChat);
+        }
+
+        @Test
+        void borrarClaseChatTest_error_noCurso() {
+            // Mocks
+            when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> cursoChatService.borrarClaseChat(cursoId, claseId));
+        }
     }
 
     // ==========================
@@ -554,6 +817,36 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class BorrarCursoChatTests {
+        Long cursoId = 1L;
+
+        CursoChat cursoChat;
+
+        @BeforeEach
+        void setUp() {
+            cursoChat = new CursoChat();
+            cursoChat.setIdCurso(cursoId);
+            cursoChat.setClases(new ArrayList<>());
+        }
+
+        @Test
+        void borrarCursoChatTest_success() {
+            // Mocks
+            when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.of(cursoChat));
+
+            // Ejecución
+            cursoChatService.borrarCursoChat(cursoId);
+
+            // Verificaciones
+            verify(cursoChatRepo).delete(cursoChat);
+        }
+
+        @Test
+        void borrarCursoChatTest_error_noCurso() {
+            // Mocks
+            when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> cursoChatService.borrarCursoChat(cursoId));
+        }
     }
 
     // ==========================
@@ -561,6 +854,36 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class BorrarUsuarioChatTests {
+        Long usuarioId = 1L;
+
+        UsuarioChat usuarioChat;
+
+        @BeforeEach
+        void setUp() {
+            usuarioChat = new UsuarioChat();
+            usuarioChat.setIdUsuario(usuarioId);
+            usuarioChat.setMensajes(new ArrayList<>());
+        }
+
+        @Test
+        void borrarUsuarioChatTest_success() {
+            // Mocks
+            when(usuarioChatRepo.findByIdUsuario(usuarioId)).thenReturn(Optional.of(usuarioChat));
+
+            // Ejecución
+            cursoChatService.borrarUsuarioChat(usuarioId);
+
+            // Verificaciones
+            verify(usuarioChatRepo).delete(usuarioChat);
+        }
+
+        @Test
+        void borrarUsuarioChatTest_error_noUsuario() {
+            // Mocks
+            when(usuarioChatRepo.findByIdUsuario(usuarioId)).thenReturn(Optional.empty());
+
+            assertThrows(EntityNotFoundException.class, () -> cursoChatService.borrarUsuarioChat(usuarioId));
+        }
     }
 
     // ==========================
@@ -568,6 +891,31 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class RefreshTokenInOpenWebsocketTests {
+        private String sessionId = "test-session-123";
+        private String token = "valid.jwt.token";
+
+        @Test
+        void refreshTokenInOpenWebsocket_success() {
+            // 1. Setup de la autenticación simulada
+            List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
+            UsernamePasswordAuthenticationToken mockAuth = new UsernamePasswordAuthenticationToken("user@test.com",
+                    token, authorities);
+
+            when(jwtUtil.createAuthenticationFromToken(token)).thenReturn(mockAuth);
+
+            // 2. Ejecución
+            cursoChatService.refreshTokenInOpenWebsocket(sessionId, token);
+
+            // 3. Verificaciones
+            // Comprobar que el contexto global de seguridad se actualizó
+            Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
+            assertNotNull(currentAuth);
+            assertEquals("user@test.com", currentAuth.getName());
+            assertEquals(token, currentAuth.getCredentials());
+
+            // Verificar interacción con el utilitario
+            verify(jwtUtil).createAuthenticationFromToken(token);
+        }
     }
 
     // ==========================
@@ -575,6 +923,94 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class InitTests {
+        Usuario usuario1;
+        Usuario profesor1;
+        Curso curso1;
+        Clase clase1;
+        UsuarioChat usuarioChat1;
+
+        @BeforeEach
+        void setUp() {
+            // Usuario Alumno
+            usuario1 = new Usuario();
+            usuario1.setIdUsuario(1L);
+
+            // Profesor
+            profesor1 = new Usuario();
+            profesor1.setIdUsuario(99L);
+
+            // Clase
+            clase1 = new Clase();
+            clase1.setIdClase(10L);
+
+            // Curso con su clase y profesor
+            curso1 = new Curso();
+            curso1.setIdCurso(500L);
+            curso1.setClasesCurso(new ArrayList<>(List.of(clase1)));
+            curso1.setProfesoresCurso(new ArrayList<>(List.of(profesor1)));
+
+            // UsuarioChat pre-existente para el profesor (necesario para la lógica del
+            // curso)
+            usuarioChat1 = new UsuarioChat();
+            usuarioChat1.setIdUsuario(99L);
+            usuarioChat1.setCursos(new ArrayList<>());
+        }
+
+        @Test
+        void init_Success_CreatesNewData() throws InternalServerException {
+            // --- CONFIGURACIÓN DE MOCKS ---
+            // 1. Usuarios: usuario1 no existe en Chat, profesor1 sí
+            when(usuarioRepo.findAll()).thenReturn(List.of(usuario1, profesor1));
+            when(usuarioChatRepo.findByIdUsuario(1L)).thenReturn(Optional.empty()); // Crea este
+            when(usuarioChatRepo.findByIdUsuario(99L)).thenReturn(Optional.of(usuarioChat1)); // Salta este
+
+            // 2. Cursos: curso1 no existe en Chat
+            when(cursoRepo.findAll()).thenReturn(List.of(curso1));
+            when(cursoChatRepo.findByIdCurso(500L)).thenReturn(Optional.empty());
+
+            // --- EJECUCIÓN ---
+            cursoChatService.init();
+
+            // --- VERIFICACIONES ---
+            // Verificar que se guardó el UsuarioChat que faltaba
+            verify(usuarioChatRepo, atLeastOnce()).save(any(UsuarioChat.class));
+
+            // Verificar que se guardó el CursoChat
+            verify(cursoChatRepo).save(any(CursoChat.class));
+
+            // Verificar que el profesor fue actualizado con el ID del nuevo curso
+            verify(usuarioChatRepo, atLeastOnce()).save(usuarioChat1);
+        }
+
+        @Test
+        void init_Skips_WhenDataAlreadyExists() throws InternalServerException {
+            // Simular que todo ya existe
+            when(usuarioRepo.findAll()).thenReturn(List.of(usuario1));
+            when(usuarioChatRepo.findByIdUsuario(anyLong())).thenReturn(Optional.of(new UsuarioChat()));
+
+            when(cursoRepo.findAll()).thenReturn(List.of(curso1));
+            when(cursoChatRepo.findByIdCurso(anyLong())).thenReturn(Optional.of(new CursoChat()));
+
+            cursoChatService.init();
+
+            // No debería llamar a save para nuevos registros
+            verify(usuarioChatRepo, never()).save(any(UsuarioChat.class));
+            verify(cursoChatRepo, never()).save(any(CursoChat.class));
+        }
+
+        @Test
+        void init_ThrowsException_WhenProfessorChatNotFound() {
+            // Forzar error: el curso tiene un profesor pero no existe su UsuarioChat
+            when(usuarioRepo.findAll()).thenReturn(new ArrayList<>()); // Saltamos primera parte
+            when(cursoRepo.findAll()).thenReturn(List.of(curso1));
+            when(cursoChatRepo.findByIdCurso(anyLong())).thenReturn(Optional.empty());
+
+            // El profesor 99 no tiene chat
+            when(usuarioChatRepo.findByIdUsuario(99L)).thenReturn(Optional.empty());
+
+            // Debe lanzar InternalServerException envolviendo la EntityNotFoundException
+            assertThrows(InternalServerException.class, () -> cursoChatService.init());
+        }
     }
 
     // ==========================
@@ -582,6 +1018,98 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class ActualizarCursoChatTests {
+        private Curso curso;
+        private Usuario profesor;
+        private Clase clase1;
+        private CursoChat cursoChatExistente;
+        private UsuarioChat profChat;
+
+        @BeforeEach
+        void setUp() {
+            profesor = new Usuario();
+            profesor.setIdUsuario(99L);
+
+            clase1 = new Clase();
+            clase1.setIdClase(10L);
+
+            curso = new Curso();
+            curso.setIdCurso(500L);
+            curso.setProfesoresCurso(new ArrayList<>(List.of(profesor)));
+            curso.setClasesCurso(new ArrayList<>(List.of(clase1)));
+
+            // Simulación de chats existentes
+            profChat = new UsuarioChat();
+            profChat.setIdUsuario(99L);
+            profChat.setCursos(new ArrayList<>());
+
+            cursoChatExistente = new CursoChat();
+            cursoChatExistente.setId("id-curso-chat-777");
+            cursoChatExistente.setIdCurso(500L);
+            cursoChatExistente.setClases(new ArrayList<>()); // Empieza sin clases
+        }
+
+        @Test
+        void actualizarCursoChat_CuandoNoExiste_DebeCrearYAsignarAProfesores() throws InternalServerException {
+            // Configuramos mocks para que no encuentre el curso pero sí al profesor
+            when(cursoChatRepo.findByIdCurso(500L)).thenReturn(Optional.empty());
+            when(usuarioChatRepo.findByIdUsuario(99L)).thenReturn(Optional.of(profChat));
+
+            // El save del cursoChat devuelve el objeto con ID (importante para el prof)
+            when(cursoChatRepo.save(any(CursoChat.class))).thenAnswer(i -> {
+                CursoChat c = i.getArgument(0);
+                c.setId("id-curso-chat-777");
+                return c;
+            });
+
+            // Ejecución
+            cursoChatService.actualizarCursoChat(curso);
+
+            // Verificaciones
+            verify(cursoChatRepo, atLeastOnce()).save(any(CursoChat.class));
+            verify(usuarioChatRepo).save(profChat);
+        }
+
+        @Test
+        void actualizarCursoChat_CuandoExiste_DebeAnadirSoloNuevasClases() throws InternalServerException {
+            // El curso ya existe
+            when(cursoChatRepo.findByIdCurso(500L)).thenReturn(Optional.of(cursoChatExistente));
+
+            // Ejecución
+            cursoChatService.actualizarCursoChat(curso);
+
+            // Verificaciones
+            verify(cursoChatRepo).save(cursoChatExistente);
+            assertEquals(1, cursoChatExistente.getClases().size());
+            assertEquals(10L, cursoChatExistente.getClases().get(0).getIdClase());
+
+            // No debería interactuar con profesores si el curso ya existía
+            verify(usuarioChatRepo, never()).findByIdUsuario(anyLong());
+        }
+
+        @Test
+        void actualizarCursoChat_CuandoFallaProfe_DebeLanzarExcepcion() {
+            // Curso nuevo, pero profesor no encontrado
+            when(cursoChatRepo.findByIdCurso(500L)).thenReturn(Optional.empty());
+            when(usuarioChatRepo.findByIdUsuario(99L)).thenReturn(Optional.empty());
+
+            // El save inicial del cursoChat (antes de fallar con el profe)
+            when(cursoChatRepo.save(any(CursoChat.class))).thenReturn(cursoChatExistente);
+
+            assertThrows(InternalServerException.class, () -> {
+                cursoChatService.actualizarCursoChat(curso);
+            });
+        }
+
+        @Test
+        void actualizarCursoChat_ConClasesNulas_NoDebeFallar() throws InternalServerException {
+            curso.setClasesCurso(null); // Caso borde
+            when(cursoChatRepo.findByIdCurso(500L)).thenReturn(Optional.of(cursoChatExistente));
+
+            cursoChatService.actualizarCursoChat(curso);
+
+            verify(cursoChatRepo).save(cursoChatExistente);
+            assertTrue(cursoChatExistente.getClases().isEmpty());
+        }
     }
 
     // ==========================
@@ -589,6 +1117,97 @@ class CursoChatServiceTest {
     // ==========================
     @Nested
     class GetAllCursosChatTests {
+        private CursoChat cursoChat;
+        private Curso curso;
+        private ClaseChat claseChat;
+        private MensajeChat mensajeChat;
+
+        @BeforeEach
+        void setUp() {
+            // Datos de Clase
+            claseChat = new ClaseChat(10L, 500L, new ArrayList<>());
+
+            // Datos de CursoChat
+            cursoChat = new CursoChat();
+            cursoChat.setIdCurso(500L);
+            cursoChat.setClases(new ArrayList<>(List.of(claseChat)));
+            cursoChat.setMensajes(new ArrayList<>(List.of("msg_1")));
+
+            // Datos de Curso (Entidad relacional)
+            curso = new Curso();
+            curso.setIdCurso(500L);
+            curso.setNombreCurso("Curso de Prueba");
+            curso.setImagenCurso("imagen.png");
+
+            // Datos de Mensaje
+            mensajeChat = new MensajeChat();
+            mensajeChat.setId("msg_1");
+        }
+
+        @Test
+        void getAllCursosChat_Success() throws InternalServerException {
+            // 1. Mock de la lista principal
+            when(cursoChatRepo.findAll()).thenReturn(List.of(cursoChat));
+
+            // 2. Mock del nombre de la clase (para evitar el error en .get())
+            when(claseRepo.findNombreClaseById(10L)).thenReturn(Optional.of("Nombre Clase Test"));
+
+            // 3. Mock de mensajes
+            when(mensajeChatRepo.findAllById(anyList())).thenReturn(List.of(mensajeChat));
+
+            // Simulamos la conversión de mensajes que hace initChatService
+            MensajeChatDTO msgDto = new MensajeChatDTO(
+                    "msg_1",
+                    500L,
+                    10L,
+                    1L,
+                    "Nombre Curso",
+                    "Nombre Clase",
+                    "Nombre Usuario",
+                    "Foto Usuario",
+                    "Foto Usuario",
+                    null,
+                    null,
+                    "Mensaje",
+                    new Date());
+            when(initChatService.getMensajesDTO(anyList())).thenReturn(List.of(msgDto));
+
+            // 4. Mock del curso
+            when(cursoRepo.findById(500L)).thenReturn(Optional.of(curso));
+
+            // EJECUCIÓN
+            List<CursoChatDTO> resultado = cursoChatService.getAllCursosChat();
+
+            // VERIFICACIONES
+            assertNotNull(resultado);
+            assertEquals(1, resultado.size());
+            assertEquals("Curso de Prueba", resultado.get(0).nombreCurso());
+            assertEquals("Nombre Clase Test", resultado.get(0).clases().get(0).nombreClase());
+            verify(cursoChatRepo).findAll();
+        }
+
+        @Test
+        void getAllCursosChat_ReturnsNull_WhenNoCursos() throws InternalServerException {
+            when(cursoChatRepo.findAll()).thenReturn(new ArrayList<>());
+
+            List<CursoChatDTO> resultado = cursoChatService.getAllCursosChat();
+
+            assertNull(resultado);
+        }
+
+        @Test
+        void getAllCursosChat_ThrowsException_WhenCursoNotFound() {
+            when(cursoChatRepo.findAll()).thenReturn(List.of(cursoChat));
+            when(claseRepo.findNombreClaseById(anyLong())).thenReturn(Optional.of("Nombre"));
+
+            // El curso chat existe pero la entidad Curso no (integridad referencial
+            // fallida)
+            when(cursoRepo.findById(500L)).thenReturn(Optional.empty());
+
+            assertThrows(InternalServerException.class, () -> {
+                cursoChatService.getAllCursosChat();
+            });
+        }
     }
 
     @Mock
