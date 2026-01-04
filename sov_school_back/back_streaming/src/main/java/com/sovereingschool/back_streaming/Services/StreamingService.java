@@ -193,7 +193,7 @@ public class StreamingService {
                 boolean sdpSent = false;
 
                 while ((line = reader.readLine()) != null) {
-                    System.err.println("FFmpeg: " + line);
+                    System.out.println("FFmpeg: " + line);
 
                     // Enviar SDP a FFmpeg (solo para WebRTC)
                     if (!sdpSent && inputStream instanceof InputStream sdpStream && line.contains("ffmpeg version")) {

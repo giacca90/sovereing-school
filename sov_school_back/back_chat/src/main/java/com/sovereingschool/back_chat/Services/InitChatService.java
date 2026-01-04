@@ -104,7 +104,7 @@ public class InitChatService {
 
     /**
      * Convierte una lista de Mensajes en una lista de MensajesDTO
-     * Gestiona tambien la respuesta de los mensajes y las preguntas
+     * Gestiona también la respuesta de los mensajes y las preguntas
      * 
      * @param mensajes Lista de mensajes
      * @return Lista de MensajesDTO
@@ -244,116 +244,43 @@ public class InitChatService {
      */
     protected void notifyCoursesChat(Document document) {
         Long idCurso = document.getLong("idCurso");
-        List<ClaseChatDTO> clases = new ArrayList<>();
-        List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
+
+        // 1. Obtener datos básicos del curso
         Curso curso = cursoRepo.findById(idCurso).orElseThrow(() -> {
             logger.error("InitChatService: notifyCoursesChat: Error en obtener el curso con ID {}", idCurso);
             throw new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
         });
-        String nombreCurso = curso.getNombreCurso();
-        String fotoCurso = curso.getImagenCurso();
 
-        List<String> mensajesIDs = document.getList("mensajes", String.class);
-        if (mensajesIDs != null && !mensajesIDs.isEmpty()) {
-            List<MensajeChat> mensajesChat = this.mensajeChatRepo.findAllById(mensajesIDs);
-            if (mensajesChat != null && !mensajesChat.isEmpty()) {
-                mensajesDTO = getMensajesDTO(mensajesChat);
-            }
-        }
+        // 2. Procesar mensajes generales del curso
+        List<MensajeChatDTO> mensajesDTO = fetchMensajesFromIds(document.getList("mensajes", String.class));
 
-        List<Document> clasesChatDocument = document.getList("clases", Document.class);
-        if (clasesChatDocument != null && !clasesChatDocument.isEmpty()) {
-            for (Document claseChatDocument : clasesChatDocument) {
-                List<String> mensajesClase = claseChatDocument.getList("mensajes", String.class);
-                List<MensajeChatDTO> mensajesClaseDTO = new ArrayList<>();
-                if (mensajesClase != null && !mensajesClase.isEmpty()) {
-                    List<MensajeChat> mensajesChatClase = this.mensajeChatRepo.findAllById(mensajesClase);
-                    if (mensajesChatClase != null && !mensajesChatClase.isEmpty()) {
-                        mensajesClaseDTO = getMensajesDTO(mensajesChatClase);
-                    }
-                }
-                String nombreClase = this.claseRepo.findNombreClaseById(claseChatDocument.getLong("idClase"))
-                        .orElseThrow(() -> {
-                            logger.error("Error en obtener el nombre de la clase en notifyCourseChat");
-                            throw new EntityNotFoundException("Error en obtener el nombre de la clase");
-                        });
-                clases.add(new ClaseChatDTO(
-                        claseChatDocument.getLong("idClase"),
-                        claseChatDocument.getLong("idCurso"),
-                        nombreClase, mensajesClaseDTO));
-            }
-        }
+        // 3. Procesar las clases del curso
+        List<ClaseChatDTO> clases = fetchClasesChat(document.getList("clases", Document.class));
 
-        CursoChatDTO cursoChatDTO = new CursoChatDTO(idCurso, clases, mensajesDTO, nombreCurso, fotoCurso);
+        // 4. Construir y Enviar
+        CursoChatDTO cursoChatDTO = new CursoChatDTO(
+                idCurso, clases, mensajesDTO, curso.getNombreCurso(), curso.getImagenCurso());
+
         simpMessagingTemplate.convertAndSend("/init_chat/" + idCurso, cursoChatDTO);
     }
 
-    /**
-     * Notifica al usuario de cambios en sus chats
-     * 
-     * @param document Documento de chat del usuario
-     */
     protected void notifyUsersChat(Document document) {
         Long idUsuario = document.getLong("idUsuario");
-        List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
-        List<CursoChatDTO> cursosDTO = new ArrayList<>();
 
+        // 1. Obtener mensajes directos del usuario (Optimizado con findAllById)
         List<String> mensajesId = document.getList("mensajes", String.class);
-        if (mensajesId != null && !mensajesId.isEmpty()) {
-            List<MensajeChat> mensajes = new ArrayList<>();
-            mensajesId.forEach(mexs -> mensajes.add(this.mensajeChatRepo.findById(mexs).get()));
-            mensajesDTO = getMensajesDTO(mensajes);
-        }
+        List<MensajeChatDTO> mensajesDTO = fetchMensajesFromIds(mensajesId);
 
-        List<String> cursosId = document.getList("cursos", String.class);
-        if (cursosId != null && !cursosId.isEmpty()) {
-            for (String cursoId : cursosId) {
-                CursoChat cursoChat = cursoChatRepo.findById(cursoId).orElseThrow(() -> {
-                    logger.error("Error en obtener el curso del chat");
-                    throw new EntityNotFoundException("Error en obtener el curso del chat");
-                });
-                Long idCurso = cursoChat.getIdCurso();
-                List<ClaseChatDTO> clasesDTO = new ArrayList<>();
-                List<ClaseChat> clasesChat = cursoChat.getClases();
-                if (clasesChat != null && !clasesChat.isEmpty()) {
-                    for (ClaseChat claseChat : clasesChat) {
-                        List<MensajeChatDTO> mensajesChatDTO = new ArrayList<>();
-                        List<String> mex = claseChat.getMensajes();
-                        List<MensajeChat> mensajesChat = this.mensajeChatRepo.findAllById(mex);
-                        if (mensajesChat != null && !mensajesChat.isEmpty()) {
-                            mensajesChatDTO = getMensajesDTO(mensajesChat);
-                        }
-                        String nombreClase = this.claseRepo.findNombreClaseById(claseChat.getIdClase())
-                                .orElseThrow(() -> {
-                                    logger.error("Error en obtener el nombre de la clase");
-                                    throw new EntityNotFoundException("Error en obtener el nombre de la clase");
-                                });
-                        clasesDTO.add(new ClaseChatDTO(
-                                claseChat.getIdClase(), // id_clase;
-                                claseChat.getIdCurso(), // id_curso;
-                                nombreClase, // nombre_clase;
-                                mensajesChatDTO// mensajes;
-                        ));
-                    }
-                }
-                Curso curso = cursoRepo.findById(idCurso).orElseThrow(() -> {
-                    logger.error("InitChatService: notifyUsersChat: Error en obtener el curso con ID {}", idCurso);
-                    throw new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
-                });
-                String nombreCurso = curso.getNombreCurso();
-                String fotoCurso = curso.getImagenCurso();
-                cursosDTO.add(new CursoChatDTO(
-                        idCurso,
-                        clasesDTO,
-                        mensajesDTO,
-                        nombreCurso, // nombre_curso;
-                        fotoCurso // foto_curso;
-                ));
-            }
-        }
+        // 2. Obtener y procesar los cursos del usuario
+        List<String> cursosMongoIds = document.getList("cursos", String.class);
+        List<CursoChatDTO> cursosDTO = fetchCursosUsuario(cursosMongoIds);
 
+        // 3. Notificar vía WebSocket
         InitChatDTO updateDTO = new InitChatDTO(idUsuario, mensajesDTO, cursosDTO);
-        simpMessagingTemplate.convertAndSendToUser(idUsuario.toString(), "/init_chat/result", updateDTO);
+        simpMessagingTemplate.convertAndSendToUser(
+                idUsuario.toString(),
+                "/init_chat/result",
+                updateDTO);
     }
 
     /**
@@ -383,7 +310,7 @@ public class InitChatService {
         List<CursoChatDTO> cursosChatDTO = new ArrayList<>();
         if (usuarioChat.getCursos() != null && !usuarioChat.getCursos().isEmpty()) {
             List<CursoChat> cursosChat = this.cursoChatRepo.findAllById(usuarioChat.getCursos());
-            if (cursosChat.isEmpty()) {
+            if (!cursosChat.isEmpty()) {
                 for (CursoChat cursoChat : cursosChat) {
                     Curso curso = cursoRepo.findById(cursoChat.getIdCurso()).orElseThrow(() -> {
                         logger.error("InitChatService: initChat: Error en obtener el curso con ID {}",
@@ -442,6 +369,83 @@ public class InitChatService {
                 "No hay mensajes en este curso", // mensaje
                 null // fecha
         );
+    }
+
+    protected List<CursoChatDTO> fetchCursosUsuario(List<String> cursosMongoIds) {
+        if (cursosMongoIds == null || cursosMongoIds.isEmpty())
+            return new ArrayList<>();
+
+        // Traemos todos los documentos de CursoChat de una sola vez
+        List<CursoChat> cursosChat = cursoChatRepo.findAllById(cursosMongoIds);
+
+        return cursosChat.stream().map(cursoChat -> {
+            Long idCurso = cursoChat.getIdCurso();
+
+            // Reutilizamos la lógica de procesar clases que definimos antes
+            List<ClaseChatDTO> clasesDTO = mapClasesToDTO(cursoChat.getClases());
+
+            // Datos del curso principal
+            Curso curso = cursoRepo.findById(idCurso).orElseThrow(() -> {
+                logger.error("InitChatService: notifyUsersChat: Error en obtener el curso con ID {}", idCurso);
+                return new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
+            });
+
+            return new CursoChatDTO(
+                    idCurso,
+                    clasesDTO,
+                    new ArrayList<>(), // Aquí podrías pasar mensajes específicos si el DTO lo requiere
+                    curso.getNombreCurso(),
+                    curso.getImagenCurso());
+        }).toList();
+    }
+
+    protected List<ClaseChatDTO> mapClasesToDTO(List<ClaseChat> clasesChat) {
+        if (clasesChat == null || clasesChat.isEmpty())
+            return new ArrayList<>();
+
+        return clasesChat.stream().map(claseChat -> {
+            List<MensajeChatDTO> mensajesClaseDTO = fetchMensajesFromIds(claseChat.getMensajes());
+
+            String nombreClase = claseRepo.findNombreClaseById(claseChat.getIdClase()).orElseThrow(() -> {
+                logger.error("Error en obtener el nombre de la clase {}", claseChat.getIdClase());
+                return new EntityNotFoundException("Error en obtener el nombre de la clase");
+            });
+
+            return new ClaseChatDTO(
+                    claseChat.getIdClase(),
+                    claseChat.getIdCurso(),
+                    nombreClase,
+                    mensajesClaseDTO);
+        }).toList();
+    }
+
+    // Reutilizamos el del método anterior
+    protected List<MensajeChatDTO> fetchMensajesFromIds(List<String> ids) {
+        if (ids == null || ids.isEmpty())
+            return new ArrayList<>();
+        List<MensajeChat> mensajes = mensajeChatRepo.findAllById(ids);
+        return (!mensajes.isEmpty()) ? getMensajesDTO(mensajes) : new ArrayList<>();
+    }
+
+    protected List<ClaseChatDTO> fetchClasesChat(List<Document> clasesDocs) {
+        if (clasesDocs == null || clasesDocs.isEmpty())
+            return new ArrayList<>();
+
+        return clasesDocs.stream().map(doc -> {
+            Long idClase = doc.getLong("idClase");
+            Long idCurso = doc.getLong("idCurso");
+
+            // Obtener mensajes de la clase
+            List<MensajeChatDTO> mensajesClaseDTO = fetchMensajesFromIds(doc.getList("mensajes", String.class));
+
+            // Obtener nombre de la clase
+            String nombreClase = claseRepo.findNombreClaseById(idClase).orElseThrow(() -> {
+                logger.error("Error en obtener el nombre de la clase {} en notifyCourseChat", idClase);
+                throw new EntityNotFoundException("Error en obtener el nombre de la clase");
+            });
+
+            return new ClaseChatDTO(idClase, idCurso, nombreClase, mensajesClaseDTO);
+        }).toList();
     }
 
 }
