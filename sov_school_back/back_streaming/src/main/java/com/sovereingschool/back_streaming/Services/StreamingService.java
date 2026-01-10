@@ -1,7 +1,6 @@
 package com.sovereingschool.back_streaming.Services;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -9,13 +8,17 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -45,6 +48,8 @@ public class StreamingService {
 
     private String uploadDir;
 
+    private Executor executor;
+
     /**
      * Constructor de StreamingService
      *
@@ -56,100 +61,63 @@ public class StreamingService {
             ClaseRepository claseRepo) {
         this.uploadDir = uploadDir;
         this.claseRepo = claseRepo;
+        // Cambiar si hay más de una GPU, o si se procesan todos los videos con CPU
+        this.executor = Executors.newFixedThreadPool(1);
     }
 
     /**
-     * Función para convertir los videos de un curso
+     * Función para convertir los videos de un curso en paralelo.
      * 
-     * @param curso
-     * @throws IOException
-     * @throws InterruptedException
-     * @throws NotFoundException
-     * @throws InternalServerException
+     * @param curso Curso con los videos
+     * @throws NotFoundException Si no hay clases en el curso
      */
     @Async
-    // TODO: Modificar para trabajar solo con clases concretas
-    public void convertVideos(Curso curso)
-            throws IOException, InterruptedException, NotFoundException, InternalServerException {
+    public void convertVideos(Curso curso) throws NotFoundException {
         if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
             throw new NotFoundException("Curso sin clases");
         }
+
         Path baseUploadDir = Paths.get(uploadDir);
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
         for (Clase clase : curso.getClasesCurso()) {
-            Path destinationPath = Paths.get(baseUploadDir.toString(), curso.getIdCurso().toString(),
-                    clase.getIdClase().toString());
-
-            // Verificar que la dirección de la clase no esté vacía y que sea diferente de
-            // la
-            // base
-            String direccion = clase.getDireccionClase();
-            if (!direccion.isEmpty()
-                    && !direccion.contains(destinationPath.toString())
-                    && !direccion.endsWith(".m3u8")
-                    && direccion.contains(".")) {
-
-                // Extraer el directorio y el nombre del archivo de entrada
-                Path inputPath = Paths.get(clase.getDireccionClase());
-                File destinationFile = destinationPath.toFile();
-                File inputFile = inputPath.toFile();
-                File destino = new File(destinationFile, inputPath.getFileName().toString());
-
-                // Mover el archivo de entrada a la carpeta de destino
-                if (!inputFile.renameTo(destino)) {
-                    // System.err.println("Error al mover el video a la carpeta de destino");
-                    continue;
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                String originalName = Thread.currentThread().getName();
+                try {
+                    Thread.currentThread().setName(originalName + "-Conv-Clase-" + clase.getIdClase());
+                    processSingleClase(curso, clase, baseUploadDir);
+                } catch (InterruptedException e) {
+                    logger.error("Conversión interrumpida para clase {}", clase.getIdClase());
+                    Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    logger.error("Error en conversión de clase {}: {}", clase.getIdClase(), e.getMessage());
+                } finally {
+                    Thread.currentThread().setName(originalName);
                 }
-                List<String> ffmpegCommand = null;
-                ffmpegCommand = this.creaComandoFFmpeg(destino.getAbsolutePath(), false, null);
-                if (ffmpegCommand != null) {
-                    // Ejecutar el comando FFmpeg
-                    ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
+            }, this.executor);
 
-                    // Establecer el directorio de trabajo
-                    processBuilder.directory(destinationFile);
-                    processBuilder.redirectErrorStream(true);
-
-                    Process process = processBuilder.start();
-
-                    // Leer la salida del proceso
-                    try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            System.out.println("FFmpeg: " + line);
-                        }
-                    } catch (IOException e) {
-                        process.destroy();
-                        throw new InternalServerException("Error leyendo salida de FFmpeg: " + e.getMessage());
-                    }
-
-                    int exitCode = process.waitFor();
-                    logger.info("Salida del proceso de FFmpeg: {}", exitCode);
-                    if (exitCode != 0) {
-                        throw new IOException("El proceso de FFmpeg falló con el código de salida " + exitCode);
-                    }
-
-                    clase.setDireccionClase(destinationPath.toString() + "/master.m3u8");
-                    clase.setCursoClase(curso);
-                    clase = this.claseRepo.save(clase);
-                }
-            }
+            futures.add(future);
         }
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        logger.info("Finalizado proceso paralelo para curso {}", curso.getIdCurso());
     }
 
     /**
      * Función para iniciar la transmisión en vivo
      * 
-     * @param streamId     String: identificador del streaming en directo
-     *                     (idUsuario_idSession)
-     * @param inputStream  String: flujo de entrada del video para ffmpeg
-     * @param videoSetting String[]: configuración del video (ancho, alto, fps)
+     * @param streamId     ID del flujo
+     * @param inputStream  InputStream con el flujo
+     * @param videoSetting String[] con la configuración de la transmisión
      * @throws IOException
      * @throws InterruptedException
+     * @throws IllegalArgumentException
      * @throws RepositoryException
-     * @throws Exception
+     * @throws InternalServerException
      */
     public void startLiveStreamingFromStream(String streamId, Object inputStream, String[] videoSetting)
-            throws IOException, InterruptedException, RuntimeException, IllegalArgumentException, RepositoryException {
+            throws IOException, InterruptedException, IllegalArgumentException, RepositoryException,
+            InternalServerException {
         Optional<Clase> claseOpt = claseRepo.findByDireccionClase(streamId);
         if (!claseOpt.isPresent())
             throw new RepositoryException("No se encuentra la clase con la dirección " + streamId);
@@ -161,12 +129,11 @@ public class StreamingService {
         claseRepo.updateClase(idClase, clase.getNombreClase(), clase.getTipoClase(),
                 outputDir.toString() + "/master.m3u8",
                 clase.getPosicionClase());
-        // Crear el directorio de salida si no existe
+
         if (!Files.exists(outputDir)) {
             Files.createDirectories(outputDir);
         }
 
-        // Comando FFmpeg para procesar el streaming
         List<String> ffmpegCommand;
         if (inputStream instanceof String str) {
             ffmpegCommand = this.creaComandoFFmpeg(str, true, videoSetting);
@@ -182,65 +149,49 @@ public class StreamingService {
         processBuilder.redirectErrorStream(true);
 
         Process process = processBuilder.start();
-        // Guardar el proceso en el mapa
-        ffmpegProcesses.put(streamId.substring(streamId.lastIndexOf("_") + 1), process);
+        String processKey = streamId.substring(streamId.lastIndexOf("_") + 1);
+        ffmpegProcesses.put(processKey, process);
 
-        // Hilo para leer los logs de FFmpeg
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        Thread logReader = new Thread(() -> {
-            try {
+        executor.execute(() -> {
+            String originalName = Thread.currentThread().getName();
+            Thread.currentThread().setName("FFmpegLog-" + processKey);
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
                 boolean sdpSent = false;
-
                 while ((line = reader.readLine()) != null) {
-                    System.out.println("FFmpeg: " + line);
-
-                    // Enviar SDP a FFmpeg (solo para WebRTC)
+                    System.out.println("FFmpeg clase " + clase.getIdClase() + ": " + line);
                     if (!sdpSent && inputStream instanceof InputStream sdpStream && line.contains("ffmpeg version")) {
-                        this.sendSDP(process, sdpStream, sdpSent);
+                        sdpSent = this.sendSDP(process, sdpStream);
                     }
                 }
             } catch (IOException e) {
-                throw new RuntimeException("Error leyendo salida de FFmpeg: " + e.getMessage());
+                logger.error("Error leyendo salida de FFmpeg para el stream {}: {}", processKey, e.getMessage());
+            } finally {
+                Thread.currentThread().setName(originalName);
+                ffmpegProcesses.remove(processKey);
             }
         });
-        logReader.start();
-        // logReader.join(); // Esperar a que se terminen de leer los logs
     }
 
     /**
      * Función para detener el proceso FFmpeg para un usuario
      * 
-     * @param streamId ID del streaming
-     * @throws RuntimeException
+     * @param streamId ID del flujo
      * @throws InternalServerException
      */
-    public void stopFFmpegProcessForUser(String streamId)
-            throws InternalServerException {
+    public void stopFFmpegProcessForUser(String streamId) throws InternalServerException {
         String sessionId = streamId.substring(streamId.lastIndexOf('_') + 1);
         Process process = ffmpegProcesses.remove(sessionId);
 
-        if (process == null) {
-            logger.error("⚠️ No se encontró proceso FFmpeg activo para sessionId={}", sessionId);
+        if (process == null)
             return;
-        }
-
-        if (!process.isAlive()) {
-            logger.info("✅ FFmpeg ya estaba detenido para sessionId={}", sessionId);
-            return;
-        }
 
         try {
-            logger.info("🛑 Deteniendo FFmpeg enviando SIGTERM...");
-            process.destroy(); // Señal de terminación suave
-
+            process.destroy();
             if (!process.waitFor(3, TimeUnit.SECONDS)) {
-                logger.error("⏰ FFmpeg no respondió, forzando terminación (SIGKILL)...");
                 process.destroyForcibly();
-            } else {
-                logger.info("✅ FFmpeg detenido correctamente (exitCode={})", process.exitValue());
             }
-
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new InternalServerException("El proceso fue interrumpido: " + e.getMessage(), e);
@@ -248,19 +199,17 @@ public class StreamingService {
     }
 
     /**
-     * Función para obtener el preview del streaming
+     * Función para obtener la URL de la previsualización
      * 
-     * @param idPreview ID del preview
-     * @return Path con la ruta del preview
+     * @param idPreview ID de la previsualización
+     * @return Path con la URL de la previsualización
      * @throws InternalServerException
      */
     public Path getPreview(String idPreview) throws InternalServerException {
         Path baseUploadDir = Paths.get(uploadDir);
         Path previewDir = baseUploadDir.resolve("previews");
         Path m3u8 = previewDir.resolve(idPreview + ".m3u8");
-        // Espera a que se genere el preview
         while (!Files.exists(m3u8)) {
-            // Espera medio segundo y reintenta
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -272,126 +221,66 @@ public class StreamingService {
     }
 
     /**
-     * Función para generar el comando ffmpeg.
-     * El comando debe ser ejecutado en la carpeta de salida.
+     * Función para crear el comando FFmpeg
      * 
-     * @param inputFilePath String: dirección del video original
-     * @param live          Boolean: bandera para eventos en vivo
-     * @param streamId      String: identificador del streamong en directo
-     *                      (isUsuario_idSession)
-     * @param videoSetting  String[]: configuración del video (ancho, alto, fps)
-     * @return List<String>: el comando generado
+     * @param inputFilePath String con la ruta del flujo
+     * @param live          Booleano con el tipo de transmisión
+     * @param videoSetting  String[] con la configuración de la transmisión
+     * @return List<String> con el comando FFmpeg
      * @throws IOException
      * @throws InterruptedException
+     * @throws InternalServerException
      */
     protected List<String> creaComandoFFmpeg(String inputFilePath, boolean live, String[] videoSetting)
-            throws IOException, InterruptedException, RuntimeException {
+            throws IOException, InterruptedException, InternalServerException {
 
+        String[] settings;
+        boolean tieneAudio;
+
+        // 1. Identificar si es un Pipe (Pion) o un flujo analizable (Archivo/RTMP)
+        // El pipe:0 es el que causa el bloqueo con Pion si se intenta usar ffprobe
+        if (inputFilePath.contains("pipe:")) {
+            // En WebRTC/Pion, confiamos en los settings pasados o valores por defecto
+            settings = (videoSetting != null && videoSetting.length >= 3 && videoSetting[0] != null)
+                    ? videoSetting
+                    : new String[] { "1280", "720", "30" };
+            tieneAudio = true; // Asumimos audio para WebRTC para preparar el grafo
+        } else {
+            // Para Archivos Y flujos RTMP (rtmp://...), usamos ffprobe
+            // ffprobe funcionará con RTMP siempre que el servidor RTMP ya esté emitiendo
+            settings = this.ffprobe(inputFilePath);
+            tieneAudio = settings.length > 3 && settings[3] != null && !settings[3].isEmpty();
+        }
+
+        int inputWidth = Integer.parseInt(settings[0]);
+        int inputHeight = Integer.parseInt(settings[1]);
+        int inputFps = Integer.parseInt(settings[2]);
+
+        // 2. Calcular perfiles y detectar aceleración
+        List<ResolutionProfile> resolutionPairs = this.calculateResolutionPairs(inputWidth * inputHeight, inputFps);
+        GPUDetector.VideoAcceleration accel = GPUDetector.detectAcceleration();
+
+        // 3. Construcción del comando base
+        List<String> command = new ArrayList<>();
+        command.add("ffmpeg");
+        command.addAll(List.of("-loglevel", "info"));
+
+        applyHardwareAcceleration(command, accel);
+        configureInputSource(command, inputFilePath, live, settings);
+
+        // 4. Filtros y Mapeos (Usando la detección de audio anterior)
+        command.add("-filter_complex");
+        command.addAll(resolveFilters(accel, resolutionPairs));
+
+        command.add("-var_stream_map");
+        command.add(buildStreamMap(resolutionPairs, tieneAudio));
+
+        // 5. Configuración HLS
         String hlsPlaylistType = live ? "event" : "vod";
         String hlsFlags = live ? "independent_segments+append_list+program_date_time" : "independent_segments";
 
-        String width = null;
-        String height = null;
-        String fps = null;
-        if (videoSetting != null) {
-            width = videoSetting[0];
-            height = videoSetting[1];
-            fps = videoSetting[2];
-        }
-
-        // Obtener la resolución si falta
-        if (width == null || height == null || fps == null) {
-            videoSetting = this.ffprobe(inputFilePath);
-            width = videoSetting[0];
-            height = videoSetting[1];
-            fps = videoSetting[2];
-        }
-
-        int inputWidth = Integer.parseInt(width);
-        int inputHeight = Integer.parseInt(height);
-        int inputFps = Integer.parseInt(fps);
-        int totalPixels = inputWidth * inputHeight;
-
-        // calcular perfiles a usar
-        List<ResolutionProfile> resolutionPairs = this.calculateResolutionPairs(totalPixels, inputFps);
-
-        // Detectar aceleración una sola vez
-        GPUDetector.VideoAcceleration accel = GPUDetector.detectAcceleration();
-
-        // Crear los filtros según aceleración
-        List<String> filters;
-        switch (accel) {
-            case VAAPI:
-                filters = createIntelGPUFilter(resolutionPairs);
-                break;
-            case NVIDIA:
-                filters = createNvidiaGPUFilter(resolutionPairs);
-                break;
-            case CPU:
-            default:
-                filters = createCPUFilter(resolutionPairs);
-                break;
-        }
-
-        // Base del comando
-        List<String> ffmpegCommand = new ArrayList<>();
-        ffmpegCommand.add("ffmpeg");
-        ffmpegCommand.add("-loglevel");
-        ffmpegCommand.add("info");
-
-        // Opciones específicas de hw antes del -i
-        switch (accel) {
-            case VAAPI:
-                // Vaapi: especificamos dispositivo VAAPI (debe estar presente y montado)
-                ffmpegCommand.addAll(List.of("-vaapi_device", "/dev/dri/renderD128"));
-                break;
-            case NVIDIA:
-                // NVIDIA: habilitar hwaccel y salida en formato cuda. Puede necesitar ajustes
-                // si el ffmpeg/driver requiere init_hw_device/filter_hw_device.
-                ffmpegCommand.addAll(List.of("-hwaccel", "cuda", "-hwaccel_output_format", "cuda"));
-                break;
-            case CPU:
-                // CPU: no añadimos -hwaccel (no existe -hwaccel cpu)
-                break;
-        }
-
-        // Lectura input / opciones para pipe
-        if (live && !inputFilePath.contains("pipe:")) {
-            ffmpegCommand.add("-re");
-        }
-
-        if (inputFilePath.contains("pipe:") && videoSetting != null) {
-            ffmpegCommand.addAll(List.of("-analyzeduration", "10000000",
-                    "-probesize", "5000000", "-protocol_whitelist",
-                    "file,udp,rtp,stdin,fd",
-                    "-f", "sdp", "-i", "-",
-                    "-fflags", "+genpts",
-                    "-use_wallclock_as_timestamps", "1",
-                    "-fps_mode", "passthrough"));
-        } else {
-            ffmpegCommand.addAll(List.of("-i", inputFilePath));
-        }
-
-        // Añadir filter_complex: asume que el primer elemento de filters es la cadena
-        // del grafo
-        ffmpegCommand.add("-filter_complex");
-        ffmpegCommand.addAll(filters);
-
-        // Construir var_stream_map (sin espacio inicial)
-        StringBuilder streamMap = new StringBuilder();
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            int w = resolutionPairs.get(i).getWidth();
-            int h = resolutionPairs.get(i).getHeight();
-            int fpsn = resolutionPairs.get(i).getFps();
-            if (streamMap.length() > 0)
-                streamMap.append(" ");
-            streamMap.append("v:").append(i).append(",a:").append(i).append(",name:")
-                    .append(w).append("x").append(h).append("@").append(fpsn);
-        }
-        ffmpegCommand.addAll(List.of("-var_stream_map", streamMap.toString()));
-
-        // Opciones de salida HLS (maestro)
-        ffmpegCommand.addAll(List.of("-master_pl_name", "master.m3u8",
+        command.addAll(List.of(
+                "-master_pl_name", "master.m3u8",
                 "-f", "hls",
                 "-hls_time", "2",
                 "-hls_playlist_type", hlsPlaylistType,
@@ -400,286 +289,367 @@ public class StreamingService {
                 "-hls_segment_filename", "%v/data%05d.ts",
                 "%v/stream.m3u8"));
 
-        // Si quieres además guardar un original.mp4 cuando live
+        // Guardar original si es live (RTMP o WebRTC)
         if (live) {
-            // Nota: usar -map y -c:v copy produce un segundo output; en este caso
-            // las opciones se aplican a ese output concreto.
-            ffmpegCommand
-                    .addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy", "-c:a", "aac", "original.mp4"));
+            command.addAll(List.of("-map", "0:v?", "-map", "0:a?", "-c:v", "copy", "-c:a", "aac", "original.mp4"));
         }
 
-        logger.info("Comando FFmpeg: {}", String.join(" ", ffmpegCommand));
-        return ffmpegCommand;
+        if (logger.isInfoEnabled()) {
+            logger.info("Comando FFmpeg generado para {}: {}", inputFilePath, String.join(" ", command));
+        }
+
+        return command;
+    }
+
+    /**
+     * Función para aplicar la aceleración de hardware
+     * 
+     * @param command List<String> con el comando FFmpeg
+     * @param accel   GPUDetector.VideoAcceleration con la aceleración de hardware
+     */
+    protected void applyHardwareAcceleration(List<String> command, GPUDetector.VideoAcceleration accel) {
+        switch (accel) {
+            case VAAPI -> command.addAll(List.of("-vaapi_device", "/dev/dri/renderD128"));
+            case NVIDIA -> command.addAll(List.of("-hwaccel", "cuda", "-hwaccel_output_format", "cuda"));
+            default -> {
+                // No hacemos nada
+            }
+        }
+    }
+
+    /**
+     * Función para configurar la fuente de entrada
+     * 
+     * @param command  List<String> con el comando FFmpeg
+     * @param path     String con la ruta del flujo
+     * @param live     Booleano con el tipo de transmisión
+     * @param settings String[] con la configuración de la transmisión
+     */
+    protected void configureInputSource(List<String> command, String path, boolean live, String[] settings) {
+        if (live && !path.contains("pipe:")) {
+            command.add("-re");
+        }
+
+        if (path.contains("pipe:") && settings != null) {
+            command.addAll(List.of(
+                    "-analyzeduration", "10000000", "-probesize", "5000000",
+                    "-protocol_whitelist", "file,udp,rtp,stdin,fd",
+                    "-f", "sdp", "-i", "-",
+                    "-fflags", "+genpts", "-use_wallclock_as_timestamps", "1",
+                    "-fps_mode", "passthrough"));
+        } else {
+            command.addAll(List.of("-i", path));
+        }
+    }
+
+    /**
+     * Función para resolver los filtros
+     * 
+     * @param accel    GPUDetector.VideoAcceleration con la aceleración de hardware
+     * @param profiles List<ResolutionProfile> con los perfiles de resolución
+     * @return List<String> con los filtros FFmpeg
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    protected List<String> resolveFilters(GPUDetector.VideoAcceleration accel, List<ResolutionProfile> profiles) {
+        return switch (accel) {
+            case VAAPI -> createIntelGPUFilter(profiles);
+            case NVIDIA -> createNvidiaGPUFilter(profiles);
+            default -> createCPUFilter(profiles);
+        };
+    }
+
+    /**
+     * Función para construir el stream map
+     * 
+     * @param profiles   List<ResolutionProfile> con los perfiles de resolución
+     * @param tieneAudio Booleano con si hay audio
+     * @return String con el stream map
+     */
+    protected String buildStreamMap(List<ResolutionProfile> profiles, boolean tieneAudio) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < profiles.size(); i++) {
+            ResolutionProfile p = profiles.get(i);
+            if (i > 0)
+                sb.append(" ");
+
+            // Si no hay audio, NO incluimos la referencia 'a:' en el stream map
+            if (tieneAudio) {
+                sb.append(String.format("v:%d,a:%d,name:%dx%d@%d", i, i, p.getWidth(), p.getHeight(), p.getFps()));
+            } else {
+                sb.append(String.format("v:%d,name:%dx%d@%d", i, p.getWidth(), p.getHeight(), p.getFps()));
+            }
+        }
+        return sb.toString();
     }
 
     /**
      * Función para enviar el SDP a FFmpeg
      * 
-     * @param process   Proceso de FFmpeg
-     * @param sdpStream Flujo de entrada del SDP
-     * @param sdpSent   Booleano para indicar si se ha enviado el SDP
+     * @param process   Process con el proceso FFmpeg
+     * @param sdpStream InputStream con el flujo de entrada
+     * @return Booleano con el resultado de la operación
      * @throws IOException
      */
-    protected void sendSDP(Process process, InputStream sdpStream, Boolean sdpSent) throws IOException {
+    protected boolean sendSDP(Process process, InputStream sdpStream) throws IOException {
         try {
             logger.info("➡️ Enviando SDP a FFmpeg...");
             OutputStream os = process.getOutputStream();
-
             byte[] buffer = new byte[8192];
             int bytesRead;
             while ((bytesRead = sdpStream.read(buffer)) != -1) {
                 os.write(buffer, 0, bytesRead);
             }
             os.flush();
-            os.close(); // cerramos stdin, el SDP ya está completo
-
-            sdpSent = true;
+            os.close();
             logger.info("✅ SDP enviado y stdin cerrado");
+            return true;
         } catch (IOException e) {
             logger.error("Error al enviar SDP a FFmpeg: {}", e.getMessage());
+            return false;
         }
     }
 
     /**
-     * Función para obtener la resolución del video con ffprobe
+     * Función para obtener la información de la resolución del video
      * 
-     * @param inputFilePath String: dirección del video original
-     * @return String[] con la resolución del video
+     * @param inputFilePath String con la ruta del flujo
+     * @return String[] con la información de la resolución del video
      * @throws IOException
-     * @throws RuntimeException
      * @throws InterruptedException
+     * @throws InternalServerException
      */
-    protected String[] ffprobe(String inputFilePath) throws IOException, RuntimeException, InterruptedException {
+    protected String[] ffprobe(String inputFilePath)
+            throws IOException, InterruptedException, InternalServerException {
         String width = null;
         String height = null;
         String fps = null;
+        String audioCodec = null;
+
         logger.info("Obteniendo la resolución del video con ffprobe");
+        // Buscamos info de video y audio simultáneamente
         ProcessBuilder processBuilder = new ProcessBuilder("ffprobe",
                 "-v", "error",
-                "-select_streams", "v:0",
-                "-show_entries", "stream=width,height,r_frame_rate",
+                "-show_entries", "stream=width,height,r_frame_rate,codec_type,codec_name",
                 "-of", "csv=p=0", inputFilePath);
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            logger.info("FFProbe: {}", line);
-            String[] parts = line.split(",");
-            width = parts[0];
-            height = parts[1];
-
-            // Para calcular los fps, "r_frame_rate" devuelve un formato como"30000/1001"
-            String[] frameRateParts = parts[2].split("/");
-            if (frameRateParts.length == 2) {
-                // Redondear el fps a entero
-                fps = String.valueOf((int) Math.round(Double.parseDouble(frameRateParts[0]) /
-                        Double.parseDouble(frameRateParts[1])));
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                logger.info("FFProbe line: {}", line);
+                String[] parts = line.split(",");
+                if (line.contains("video")) {
+                    width = parts[2];
+                    height = parts[3];
+                    String[] frameRateParts = parts[4].split("/");
+                    if (frameRateParts.length == 2) {
+                        fps = String.valueOf((int) Math
+                                .round(Double.parseDouble(frameRateParts[0]) / Double.parseDouble(frameRateParts[1])));
+                    }
+                } else if (line.contains("audio")) {
+                    audioCodec = parts[1]; // codec_name
+                }
             }
         }
 
         process.waitFor();
         if (width == null || height == null || fps == null) {
-            logger.error("La resolución es null, reintentando con ffprobe");
-            this.ffprobe(inputFilePath);
-        } else if (width.equals("0") || height.equals("0") || fps.equals("0")) {
-            logger.error("La resolución es 0");
-            throw new RuntimeException("No se pudo obtener la resolución del streaming");
+            throw new InternalServerException("No se pudo obtener la resolución del streaming");
         }
 
-        logger.info("Resolución: {}x{}@{}", width, height, fps);
-        return new String[] { width, height, fps };
+        logger.info("Resolución: {}x{}@{} | Audio: {}", width, height, fps, (audioCodec != null ? audioCodec : "NONE"));
+        return new String[] { width, height, fps, audioCodec };
     }
 
     /**
      * Función para calcular los perfiles de resolución
      * 
-     * @param totalPixels Número total de píxeles
-     * @param inputFps    FPS del video
-     * @return Lista de ResolutionProfile
+     * @param totalPixels Integer con el número total de píxeles
+     * @param inputFps    Integer con el FPS del flujo
+     * @return List<ResolutionProfile> con los perfiles de resolución
      */
     protected List<ResolutionProfile> calculateResolutionPairs(int totalPixels, int inputFps) {
         return Arrays.stream(ResolutionProfile.values())
-                .filter(r -> r.getWidth() * r.getHeight() <= totalPixels &&
-                        (r.getFps() == 30 || r.getFps() <= inputFps))
-                // Ordena de mayor a menor resolución
-                .sorted((a, b) -> Integer.compare(
-                        b.getWidth() * b.getHeight(),
-                        a.getWidth() * a.getHeight()))
-                // Elimina duplicados si los hubiera
+                .filter(r -> r.getWidth() * r.getHeight() <= totalPixels
+                        && (r.getFps() == 30 || r.getFps() <= inputFps))
+                .sorted((a, b) -> Integer.compare(b.getWidth() * b.getHeight(), a.getWidth() * a.getHeight()))
                 .distinct().toList();
     }
 
     /**
-     * Función para crear el filtro de CPU
+     * Función para crear el filtro CPU
      * 
-     * @param resolutionPairs Lista de ResolutionProfile
-     * @return String con el filtro de CPU
+     * @param profiles List<ResolutionProfile> con los perfiles de resolución
+     * @return List<String> con los filtros FFmpeg
      */
-    protected List<String> createCPUFilter(List<ResolutionProfile> resolutionPairs) {
-        // defensa básica
-        if (resolutionPairs == null || resolutionPairs.isEmpty()) {
+    protected List<String> createCPUFilter(List<ResolutionProfile> profiles) {
+        if (profiles == null || profiles.isEmpty())
             return Collections.emptyList();
-        }
-
-        int n = resolutionPairs.size();
+        int n = profiles.size();
         List<String> filters = new ArrayList<>();
-
-        // 1) Construir el filtergraph: split + scale por salida
         StringBuilder graph = new StringBuilder();
-        // split desde la entrada
         graph.append("[0:v]split=").append(n);
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
             graph.append("[v").append(i + 1).append("]");
-        }
-        // ahora las escalas (una por each vX -> vXout)
         for (int i = 0; i < n; i++) {
-            ResolutionProfile rp = resolutionPairs.get(i);
-            graph.append(";");
-            graph.append("[v").append(i + 1).append("]");
-            graph.append("scale=w=").append(rp.getWidth())
-                    .append(":h=").append(rp.getHeight())
-                    .append("[v").append(i + 1).append("out]");
+            ResolutionProfile rp = profiles.get(i);
+            graph.append(";[v").append(i + 1).append("]scale=w=").append(rp.getWidth()).append(":h=")
+                    .append(rp.getHeight()).append("[v").append(i + 1).append("out]");
         }
-        // añadir el grafo como primer elemento de la lista de filtros
         filters.add(graph.toString());
 
-        // 2) Opciones por cada stream de vídeo (map + codec + rates etc.)
         for (int i = 0; i < n; i++) {
-            ResolutionProfile rp = resolutionPairs.get(i);
-            int fpsn = rp.getFps();
-
-            filters.addAll(Arrays.asList(
-                    "-map", "[v" + (i + 1) + "out]",
-                    "-c:v:" + i, "libx264", // encoder CPU
-                    "-profile:v:" + i, rp.getProfile(),
-                    "-level:v:" + i, rp.getLevel(),
-                    "-b:v:" + i, rp.getBitrate(),
-                    "-maxrate:v:" + i, rp.getMaxrate(),
-                    "-bufsize:v:" + i, rp.getBufsize(),
-                    "-g", String.valueOf(fpsn),
-                    "-keyint_min", String.valueOf(fpsn)));
+            ResolutionProfile rp = profiles.get(i);
+            filters.addAll(Arrays.asList("-map", "[v" + (i + 1) + "out]", "-c:v:" + i, "libx264", "-profile:v:" + i,
+                    rp.getProfile(), "-level:v:" + i, rp.getLevel(), "-b:v:" + i, rp.getBitrate(), "-maxrate:v:" + i,
+                    rp.getMaxrate(), "-bufsize:v:" + i, rp.getBufsize(), "-g", String.valueOf(rp.getFps()),
+                    "-keyint_min", String.valueOf(rp.getFps())));
         }
 
-        // 3) Mapear audio por cada stream (mismo audio 0:a:0 en cada salida)
         for (int i = 0; i < n; i++) {
-            filters.addAll(Arrays.asList(
-                    "-map", "0:a:0", // map primer audio del input
-                    "-c:a:" + i, "aac",
-                    "-b:a:" + i, resolutionPairs.get(i).getAudioBitrate()));
-            if (i == 0) {
-                // Forzar estereo si lo quieres solo una vez (aplica antes de outputs)
+            filters.addAll(Arrays.asList("-map", "0:a:0?", "-c:a:" + i, "aac", "-b:a:" + i,
+                    profiles.get(i).getAudioBitrate()));
+            if (i == 0)
                 filters.addAll(Arrays.asList("-ac", "2"));
-            }
         }
-
         return filters;
     }
 
     /**
-     * Función para crear el filtro de GPU de Intel
+     * Función para crear el filtro GPU Intel
      * 
-     * @param resolutionPairs Lista de ResolutionProfile
-     * @return Lista de String con el filtro de GPU
+     * @param profiles List<ResolutionProfile> con los perfiles de resolución
+     * @return List<String> con los filtros FFmpeg
      */
-    protected List<String> createIntelGPUFilter(List<ResolutionProfile> resolutionPairs) {
+    protected List<String> createIntelGPUFilter(List<ResolutionProfile> profiles) {
         List<String> filters = new ArrayList<>();
+        // Forzamos nv12 para compatibilidad con streams yuv444p
+        StringBuilder filtroBuilder = new StringBuilder("[0:v]format=nv12,hwupload,split=");
+        filtroBuilder.append(profiles.size());
 
-        String filtro = "[0:v]format=nv12,hwupload,split=" + resolutionPairs.size();
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            filtro += "[v" + (i + 1) + "]";
+        for (int i = 0; i < profiles.size(); i++)
+            filtroBuilder.append("[v").append(i + 1).append("]");
+        for (int i = 0; i < profiles.size(); i++) {
+            filtroBuilder.append("; [v").append(i + 1).append("]scale_vaapi=w=").append(profiles.get(i).getWidth())
+                    .append(":h=").append(profiles.get(i).getHeight()).append("[v").append(i + 1).append("out]");
+        }
+        filters.add(filtroBuilder.toString());
+
+        for (int i = 0; i < profiles.size(); i++) {
+            ResolutionProfile rp = profiles.get(i);
+            filters.addAll(Arrays.asList("-map", "[v" + (i + 1) + "out]", "-c:v:" + i, "h264_vaapi", "-profile:v:" + i,
+                    rp.getProfile(), "-level:v:" + i, rp.getLevel(), "-b:v:" + i, rp.getBitrate(), "-maxrate:v:" + i,
+                    rp.getMaxrate(), "-bufsize:v:" + i, rp.getBufsize(), "-g", String.valueOf(rp.getFps()),
+                    "-keyint_min", String.valueOf(rp.getFps())));
         }
 
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            filtro += "; [v" + (i + 1) + "]scale_vaapi=w=" + resolutionPairs.get(i).getWidth() + ":h="
-                    + resolutionPairs.get(i).getHeight() + "[v" + (i + 1) + "out]";
-        }
-        filters.add(filtro);
-
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            int fpsn = resolutionPairs.get(i).getFps();
-            filters.addAll(Arrays.asList(
-                    "-map", "[v" + (i + 1) + "out]",
-                    "-c:v:" + i, "h264_vaapi", // o libx264 si no se usa VAAPI
-                    // "-qp:v:" + i, "4", // Constante de calidad
-                    "-profile:v:" + i, resolutionPairs.get(i).getProfile(),
-                    "-level:v:" + i, resolutionPairs.get(i).getLevel(),
-                    "-b:v:" + i, resolutionPairs.get(i).getBitrate(),
-                    "-maxrate:v:" + i, resolutionPairs.get(i).getMaxrate(),
-                    "-bufsize:v:" + i, resolutionPairs.get(i).getBufsize(),
-                    "-g", String.valueOf(fpsn), // Conversión explícita de fps a String
-                    "-keyint_min", String.valueOf(fpsn)));
-        }
-
-        for (int i = 0; i < resolutionPairs.size(); i++) {
-            filters.addAll(Arrays.asList("-map", "a:0", "-c:a:" + i, "aac", "-b:a:" + i,
-                    resolutionPairs.get(i).getAudioBitrate()));
-            if (i == 0) {
+        for (int i = 0; i < profiles.size(); i++) {
+            // Usamos '?' para que no falle si no hay audio, aunque en var_stream_map ya lo
+            // gestionamos
+            filters.addAll(Arrays.asList("-map", "0:a:0?", "-c:a:" + i, "aac", "-b:a:" + i,
+                    profiles.get(i).getAudioBitrate()));
+            if (i == 0)
                 filters.addAll(Arrays.asList("-ac", "2"));
-            }
         }
-
         return filters;
     }
 
-    protected List<String> createNvidiaGPUFilter(List<ResolutionProfile> resolutionPairs) {
-        if (resolutionPairs == null || resolutionPairs.isEmpty()) {
+    /**
+     * Función para crear el filtro GPU NVIDIA
+     * 
+     * @param profiles List<ResolutionProfile> con los perfiles de resolución
+     * @return List<String> con los filtros FFmpeg
+     */
+    protected List<String> createNvidiaGPUFilter(List<ResolutionProfile> profiles) {
+        if (profiles == null || profiles.isEmpty())
             return Collections.emptyList();
-        }
-
         List<String> filters = new ArrayList<>();
-        int n = resolutionPairs.size();
-
-        // --- Filtro base con split y escalado por hardware
+        int n = profiles.size();
         StringBuilder filtro = new StringBuilder();
         filtro.append("[0:v]format=nv12,hwupload_cuda,split=").append(n);
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
             filtro.append("[v").append(i + 1).append("]");
-        }
-
-        // Escalado por resolución (cada salida independiente)
         for (int i = 0; i < n; i++) {
-            ResolutionProfile rp = resolutionPairs.get(i);
-            filtro.append(";[v").append(i + 1).append("]")
-                    .append("scale_cuda=w=").append(rp.getWidth())
-                    .append(":h=").append(rp.getHeight())
-                    .append("[v").append(i + 1).append("out]");
+            ResolutionProfile rp = profiles.get(i);
+            filtro.append(";[v").append(i + 1).append("]").append("scale_cuda=w=").append(rp.getWidth()).append(":h=")
+                    .append(rp.getHeight()).append("[v").append(i + 1).append("out]");
         }
-
         filters.add(filtro.toString());
 
-        // --- Configuración de video (una salida por resolución)
         for (int i = 0; i < n; i++) {
-            ResolutionProfile rp = resolutionPairs.get(i);
-            int fpsn = rp.getFps();
-
-            filters.addAll(Arrays.asList(
-                    "-map", "[v" + (i + 1) + "out]",
-                    "-c:v:" + i, "h264_nvenc",
-                    "-preset:v:" + i, "p4", // rango p1–p7 (más alto = más calidad)
-                    "-profile:v:" + i, rp.getProfile(),
-                    "-level:v:" + i, rp.getLevel(),
-                    "-b:v:" + i, rp.getBitrate(),
-                    "-maxrate:v:" + i, rp.getMaxrate(),
-                    "-bufsize:v:" + i, rp.getBufsize(),
-                    "-g", String.valueOf(fpsn),
-                    "-keyint_min", String.valueOf(fpsn)));
+            ResolutionProfile rp = profiles.get(i);
+            filters.addAll(Arrays.asList("-map", "[v" + (i + 1) + "out]", "-c:v:" + i, "h264_nvenc", "-profile:v:" + i,
+                    rp.getProfile(), "-level:v:" + i, rp.getLevel(), "-b:v:" + i, rp.getBitrate(), "-maxrate:v:" + i,
+                    rp.getMaxrate(), "-bufsize:v:" + i, rp.getBufsize(), "-g", String.valueOf(rp.getFps()),
+                    "-keyint_min", String.valueOf(rp.getFps())));
         }
 
-        // --- Configuración de audio (una pista por salida)
         for (int i = 0; i < n; i++) {
-            filters.addAll(Arrays.asList(
-                    "-map", "0:a:0",
-                    "-c:a:" + i, "aac",
-                    "-b:a:" + i, resolutionPairs.get(i).getAudioBitrate()));
-            if (i == 0) {
+            filters.addAll(Arrays.asList("-map", "0:a:0?", "-c:a:" + i, "aac", "-b:a:" + i,
+                    profiles.get(i).getAudioBitrate()));
+            if (i == 0)
                 filters.addAll(Arrays.asList("-ac", "2"));
-            }
         }
-
         return filters;
     }
 
+    /**
+     * Función para procesar una clase
+     * 
+     * @param curso         Curso con los videos
+     * @param clase         Clase con los videos
+     * @param baseUploadDir Path con la ruta de carga de archivos
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws InternalServerException
+     */
+    protected void processSingleClase(Curso curso, Clase clase, Path baseUploadDir)
+            throws IOException, InterruptedException, InternalServerException {
+        Path destinationPath = baseUploadDir.resolve(curso.getIdCurso().toString())
+                .resolve(clase.getIdClase().toString());
+        String direccion = clase.getDireccionClase();
+
+        if (direccion == null || direccion.isEmpty() || direccion.contains(destinationPath.toString())
+                || direccion.endsWith(".m3u8") || !direccion.contains(".")) {
+            return;
+        }
+
+        Path inputPath = Paths.get(direccion);
+        Files.createDirectories(destinationPath);
+        Path targetPath = destinationPath.resolve(inputPath.getFileName());
+        Files.move(inputPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+        List<String> ffmpegCommand = this.creaComandoFFmpeg(targetPath.toAbsolutePath().toString(), false, null);
+
+        if (ffmpegCommand != null) {
+            ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
+            processBuilder.directory(destinationPath.toFile());
+            processBuilder.redirectErrorStream(true);
+            Process process = processBuilder.start();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.out.println("FFmpeg [Clase " + clase.getIdClase() + "]: " + line);
+                }
+            } catch (IOException e) {
+                process.destroy();
+                logger.error("Error leyendo salida de FFmpeg en clase {}: {}", clase.getIdClase(), e.getMessage());
+                return;
+            }
+
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                logger.warn("FFmpeg terminó con errores (code {}) en clase {}", exitCode, clase.getIdClase());
+                return;
+            }
+
+            clase.setDireccionClase(destinationPath.resolve("master.m3u8").toString());
+            clase.setCursoClase(curso);
+            this.claseRepo.save(clase);
+            logger.info("Clase {} convertida con éxito.", clase.getIdClase());
+        }
+    }
 }

@@ -351,6 +351,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
             File dockerEnv = new File("/.dockerenv");
             inDocker = dockerEnv.exists();
         } catch (Exception ignored) {
+            // Ignorar excepciones
         }
 
         if (inDocker) {
@@ -361,7 +362,7 @@ public class WebRTCSignalingHandler extends BinaryWebSocketHandler {
             logger.info("Iniciando Pion desde binario compilado en Docker: {}", prodBinary);
         } else {
             // En desarrollo, usar go run sobre el script
-            pb = new ProcessBuilder("go", "run", "pion-server.go");
+            pb = new ProcessBuilder("/usr/local/go/bin/go", "run", "pion-server.go");
             pb.directory(new File("src/main/resources/pion/"));
             logger.info("Iniciando Pion en modo desarrollo con go run");
         }

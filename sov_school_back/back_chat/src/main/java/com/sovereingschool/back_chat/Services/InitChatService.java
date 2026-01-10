@@ -264,6 +264,12 @@ public class InitChatService {
         simpMessagingTemplate.convertAndSend("/init_chat/" + idCurso, cursoChatDTO);
     }
 
+    /**
+     * Función para notificar a los usuarios del chat que se ha añadido un nuevo
+     * mensaje
+     * 
+     * @param document Document: documento de MongoDB con los datos del mensaje
+     */
     protected void notifyUsersChat(Document document) {
         Long idUsuario = document.getLong("idUsuario");
 
@@ -371,6 +377,12 @@ public class InitChatService {
         );
     }
 
+    /**
+     * Función para obtener los cursos del usuario
+     * 
+     * @param cursosMongoIds Lista de IDs de cursos
+     * @return Lista de CursoChatDTO
+     */
     protected List<CursoChatDTO> fetchCursosUsuario(List<String> cursosMongoIds) {
         if (cursosMongoIds == null || cursosMongoIds.isEmpty())
             return new ArrayList<>();
@@ -399,6 +411,12 @@ public class InitChatService {
         }).toList();
     }
 
+    /**
+     * Función para convertir una lista de ClaseChat en una lista de ClaseChatDTO
+     * 
+     * @param clasesChat Lista de ClaseChat
+     * @return Lista de ClaseChatDTO
+     */
     protected List<ClaseChatDTO> mapClasesToDTO(List<ClaseChat> clasesChat) {
         if (clasesChat == null || clasesChat.isEmpty())
             return new ArrayList<>();
@@ -419,7 +437,12 @@ public class InitChatService {
         }).toList();
     }
 
-    // Reutilizamos el del método anterior
+    /**
+     * Función para obtener los mensajes de un listado de IDs
+     *
+     * @param ids Lista de IDs
+     * @return Lista de MensajeChatDTO
+     */
     protected List<MensajeChatDTO> fetchMensajesFromIds(List<String> ids) {
         if (ids == null || ids.isEmpty())
             return new ArrayList<>();
@@ -427,6 +450,12 @@ public class InitChatService {
         return (!mensajes.isEmpty()) ? getMensajesDTO(mensajes) : new ArrayList<>();
     }
 
+    /**
+     * Función para obtener las clases del chat de un usuario
+     * 
+     * @param clasesDocs Lista de Documentos de MongoDB
+     * @return Lista de ClaseChatDTO
+     */
     protected List<ClaseChatDTO> fetchClasesChat(List<Document> clasesDocs) {
         if (clasesDocs == null || clasesDocs.isEmpty())
             return new ArrayList<>();

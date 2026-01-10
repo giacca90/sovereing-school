@@ -1,6 +1,5 @@
 package com.sovereingschool.back_streaming.Services;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -266,34 +265,23 @@ public class UsuarioCursosService implements IUsuarioCursosService {
      */
     @Override
     public Long getStatus(Long idUsuario, Long idCurso) throws InternalServerException {
-        UsuarioCursos usuarioCursos = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
-            logger.error("Error en obtener el usuario del chat");
-            throw new EntityNotFoundException("Error en obtener el usuario del chat");
-        });
+        UsuarioCursos usuarioCursos = usuarioCursosRepository.findByIdUsuario(idUsuario)
+                .orElseThrow(() -> {
+                    logger.error("Usuario no encontrado para chat: {}", idUsuario);
+                    return new EntityNotFoundException("Error en obtener el usuario del chat");
+                });
 
+        // 1. Lógica para PROF o ADMIN
         if (usuarioCursos.getRolUsuario() == RoleEnum.PROF || usuarioCursos.getRolUsuario() == RoleEnum.ADMIN) {
-            Curso curso = cursoRepository.findById(idCurso)
-                    .orElseThrow(() -> new EntityNotFoundException("Curso no encontrado con id " + idCurso));
-
-            if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
-                throw new InternalServerException("El curso no tiene clases registradas");
-            }
-            return curso.getClasesCurso().get(0).getIdClase();
-        } else {
-            List<StatusCurso> lst = usuarioCursos.getCursos();
-            for (StatusCurso sc : lst) {
-                if (sc.getIdCurso().equals(idCurso)) {
-                    List<StatusClase> lscl = sc.getClases();
-                    for (StatusClase scl : lscl) {
-                        if (!scl.isCompleted()) {
-                            return scl.getIdClase();
-                        }
-                    }
-                    return lscl.get(0).getIdClase();
-                }
-            }
+            return getFirstClaseIdFromCurso(idCurso);
         }
-        return 0L;
+
+        // 2. Lógica para Alumnos (usando Streams para mayor claridad)
+        return usuarioCursos.getCursos().stream()
+                .filter(sc -> sc.getIdCurso().equals(idCurso))
+                .findFirst()
+                .map(this::findNextOrFirstClase)
+                .orElse(0L);
     }
 
     /**
@@ -303,40 +291,22 @@ public class UsuarioCursosService implements IUsuarioCursosService {
      * @throws InternalServerException
      */
     @Override
-
-    // TODO: Revisar
+    // TODO: Revisar - Implementado procesamiento por lotes y Streams
     public void actualizarCursoStream(Curso curso) throws InternalServerException {
         List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getIdCurso());
+
         if (usuarios != null && !usuarios.isEmpty()) {
-            for (UsuarioCursos usuario : usuarios) {
-                List<StatusCurso> cursosStatus = usuario.getCursos();
-                for (StatusCurso cursoStatus : cursosStatus) {
-                    if (cursoStatus.getIdCurso().equals(curso.getIdCurso())) {
-                        cursoStatus.getClases().clear();
-                        for (Clase clase : curso.getClasesCurso()) {
-                            StatusClase claseStatus = new StatusClase();
-                            claseStatus.setIdClase(clase.getIdClase());
-                            claseStatus.setCompleted(false);
-                            claseStatus.setProgress(0);
-                            cursoStatus.getClases().add(claseStatus);
-                        }
-                        this.usuarioCursosRepository.save(usuario);
-                        break;
-                    }
-                }
-            }
+            // 1. Procesar cada usuario
+            usuarios.forEach(usuario -> actualizarStatusUsuario(usuario, curso));
+
+            // 2. Guardar todos los usuarios de una vez (Batch Save)
+            // SonarQube S2118: Es mucho más eficiente guardar la lista completa fuera del
+            // bucle
+            this.usuarioCursosRepository.saveAll(usuarios);
         }
 
-        // Convertir los videos del curso
-        try {
-            if (curso.getClasesCurso() != null && !curso.getClasesCurso().isEmpty()) {
-                this.streamingService.convertVideos(curso);
-            }
-        } catch (IOException | InterruptedException e) {
-            throw new InternalServerException("Error en convertir los videos del curso: " + e.getMessage());
-        } catch (NotFoundException e) {
-            throw new RuntimeException("Error en convertir los videos del curso: " + e.getMessage());
-        }
+        // 3. Convertir los videos del curso
+        procesarVideosAsync(curso);
     }
 
     /**
@@ -387,6 +357,31 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         return true;
     }
 
+    protected Long getFirstClaseIdFromCurso(Long idCurso) throws InternalServerException {
+        Curso curso = cursoRepository.findById(idCurso)
+                .orElseThrow(() -> new EntityNotFoundException("Curso no encontrado con id " + idCurso));
+
+        if (curso.getClasesCurso() == null || curso.getClasesCurso().isEmpty()) {
+            throw new InternalServerException("El curso no tiene clases registradas");
+        }
+        return curso.getClasesCurso().get(0).getIdClase();
+    }
+
+    protected Long findNextOrFirstClase(StatusCurso statusCurso) {
+        List<StatusClase> clases = statusCurso.getClases();
+        if (clases == null || clases.isEmpty()) {
+            return 0L;
+        }
+
+        // Buscamos la primera clase no completada, si todas están completas, devolvemos
+        // la primera
+        return clases.stream()
+                .filter(scl -> !scl.isCompleted())
+                .map(StatusClase::getIdClase)
+                .findFirst()
+                .orElseGet(() -> clases.get(0).getIdClase());
+    }
+
     protected void updateCursosUsuario(Usuario usuario, UsuarioCursos usuarioCursos) {
         List<Curso> cursos = usuario.getCursosUsuario();
         List<StatusCurso> cursosStatus = usuarioCursos.getCursos();
@@ -418,5 +413,41 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             classStatus.setProgress(0);
             return classStatus;
         }).toList();
+    }
+
+    protected void actualizarStatusUsuario(UsuarioCursos usuario, Curso curso) {
+        usuario.getCursos().stream()
+                .filter(cs -> cs.getIdCurso().equals(curso.getIdCurso()))
+                .findFirst()
+                .ifPresent(cursoStatus -> {
+                    // Limpiar y reconstruir la lista de clases
+                    cursoStatus.getClases().clear();
+
+                    List<StatusClase> nuevasClases = curso.getClasesCurso().stream()
+                            .map(this::mapToStatusClase)
+                            .toList();
+
+                    cursoStatus.getClases().addAll(nuevasClases);
+                });
+    }
+
+    protected StatusClase mapToStatusClase(Clase clase) {
+        StatusClase claseStatus = new StatusClase();
+        claseStatus.setIdClase(clase.getIdClase());
+        claseStatus.setCompleted(false);
+        claseStatus.setProgress(0);
+        return claseStatus;
+    }
+
+    protected void procesarVideosAsync(Curso curso) throws InternalServerException {
+        try {
+            if (curso.getClasesCurso() != null && !curso.getClasesCurso().isEmpty()) {
+                this.streamingService.convertVideos(curso);
+            }
+        } catch (NotFoundException e) {
+            // Restaurar interrupción si es necesario
+            Thread.currentThread().interrupt();
+            throw new InternalServerException("Error al convertir los videos del curso: " + e.getMessage());
+        }
     }
 }
