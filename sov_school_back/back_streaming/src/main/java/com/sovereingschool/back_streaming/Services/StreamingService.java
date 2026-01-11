@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
@@ -81,14 +80,21 @@ public class StreamingService {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         for (Clase clase : curso.getClasesCurso()) {
+            Path destinationPath = baseUploadDir.resolve(curso.getIdCurso().toString())
+                    .resolve(clase.getIdClase().toString());
+            String direccion = clase.getDireccionClase();
+            if (direccion == null ||
+                    direccion.isEmpty() ||
+                    direccion.contains(destinationPath.toString()) ||
+                    direccion.endsWith(".m3u8") ||
+                    !direccion.contains(".")) {
+                continue;
+            }
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 String originalName = Thread.currentThread().getName();
                 try {
                     Thread.currentThread().setName(originalName + "-Conv-Clase-" + clase.getIdClase());
-                    processSingleClase(curso, clase, baseUploadDir);
-                } catch (InterruptedException e) {
-                    logger.error("Conversión interrumpida para clase {}", clase.getIdClase());
-                    Thread.currentThread().interrupt();
+                    processSingleClase(curso, clase, baseUploadDir, destinationPath);
                 } catch (Exception e) {
                     logger.error("Error en conversión de clase {}: {}", clase.getIdClase(), e.getMessage());
                 } finally {
@@ -116,12 +122,10 @@ public class StreamingService {
      * @throws InternalServerException
      */
     public void startLiveStreamingFromStream(String streamId, Object inputStream, String[] videoSetting)
-            throws IOException, InterruptedException, IllegalArgumentException, RepositoryException,
+            throws IOException, IllegalArgumentException, RepositoryException,
             InternalServerException {
-        Optional<Clase> claseOpt = claseRepo.findByDireccionClase(streamId);
-        if (!claseOpt.isPresent())
-            throw new RepositoryException("No se encuentra la clase con la dirección " + streamId);
-        Clase clase = claseOpt.get();
+        Clase clase = claseRepo.findByDireccionClase(streamId).orElseThrow(
+                () -> new RepositoryException("No se encuentra la clase con la dirección " + streamId));
         Long idCurso = clase.getCursoClase().getIdCurso();
         Long idClase = clase.getIdClase();
         Path baseUploadDir = Paths.get(uploadDir);
@@ -211,7 +215,7 @@ public class StreamingService {
         Path m3u8 = previewDir.resolve(idPreview + ".m3u8");
         while (!Files.exists(m3u8)) {
             try {
-                Thread.sleep(500);
+                Thread.sleep(200);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new InternalServerException("Error al esperar a que se genere el preview: " + e.getMessage());
@@ -232,7 +236,7 @@ public class StreamingService {
      * @throws InternalServerException
      */
     protected List<String> creaComandoFFmpeg(String inputFilePath, boolean live, String[] videoSetting)
-            throws IOException, InterruptedException, InternalServerException {
+            throws InternalServerException {
 
         String[] settings;
         boolean tieneAudio;
@@ -420,7 +424,7 @@ public class StreamingService {
      * @throws InternalServerException
      */
     protected String[] ffprobe(String inputFilePath)
-            throws IOException, InterruptedException, InternalServerException {
+            throws InternalServerException {
         String width = null;
         String height = null;
         String fps = null;
@@ -433,34 +437,49 @@ public class StreamingService {
                 "-show_entries", "stream=width,height,r_frame_rate,codec_type,codec_name",
                 "-of", "csv=p=0", inputFilePath);
         processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
+        Process process;
+        try {
+            process = processBuilder.start();
+        } catch (Exception e) {
+            logger.error("Error al ejecutar ffprobe: {}", e.getMessage());
+            throw new InternalServerException("Error al ejecutar ffprobe");
+        }
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                logger.info("FFProbe line: {}", line);
-                String[] parts = line.split(",");
-                if (line.contains("video")) {
-                    width = parts[2];
-                    height = parts[3];
-                    String[] frameRateParts = parts[4].split("/");
-                    if (frameRateParts.length == 2) {
-                        fps = String.valueOf((int) Math
-                                .round(Double.parseDouble(frameRateParts[0]) / Double.parseDouble(frameRateParts[1])));
+        try {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    logger.info("FFProbe line: {}", line);
+                    String[] parts = line.split(",");
+                    if (line.contains("video")) {
+                        width = parts[2];
+                        height = parts[3];
+                        String[] frameRateParts = parts[4].split("/");
+                        if (frameRateParts.length == 2) {
+                            fps = String.valueOf((int) Math
+                                    .round(Double.parseDouble(frameRateParts[0])
+                                            / Double.parseDouble(frameRateParts[1])));
+                        }
+                    } else if (line.contains("audio")) {
+                        audioCodec = parts[1]; // codec_name
                     }
-                } else if (line.contains("audio")) {
-                    audioCodec = parts[1]; // codec_name
                 }
             }
-        }
 
-        process.waitFor();
-        if (width == null || height == null || fps == null) {
-            throw new InternalServerException("No se pudo obtener la resolución del streaming");
-        }
+            process.waitFor();
+            if (width == null || height == null || fps == null) {
+                throw new InternalServerException("No se pudo obtener la resolución del streaming");
+            }
 
-        logger.info("Resolución: {}x{}@{} | Audio: {}", width, height, fps, (audioCodec != null ? audioCodec : "NONE"));
-        return new String[] { width, height, fps, audioCodec };
+            logger.info("Resolución: {}x{}@{} | Audio: {}", width, height, fps,
+                    (audioCodec != null ? audioCodec : "NONE"));
+            return new String[] { width, height, fps, audioCodec };
+        } catch (IOException e) {
+            throw new InternalServerException("Error al leer la salida de ffprobe: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new InternalServerException("FFprobe se interrumpió: " + e.getMessage());
+        }
     }
 
     /**
@@ -605,21 +624,19 @@ public class StreamingService {
      * @throws InterruptedException
      * @throws InternalServerException
      */
-    protected void processSingleClase(Curso curso, Clase clase, Path baseUploadDir)
-            throws IOException, InterruptedException, InternalServerException {
-        Path destinationPath = baseUploadDir.resolve(curso.getIdCurso().toString())
-                .resolve(clase.getIdClase().toString());
-        String direccion = clase.getDireccionClase();
+    protected void processSingleClase(Curso curso, Clase clase, Path baseUploadDir, Path destinationPath)
+            throws InternalServerException {
 
-        if (direccion == null || direccion.isEmpty() || direccion.contains(destinationPath.toString())
-                || direccion.endsWith(".m3u8") || !direccion.contains(".")) {
-            return;
+        Path inputPath = Paths.get(clase.getDireccionClase());
+        Path targetPath;
+        try {
+            Files.createDirectories(destinationPath);
+            targetPath = destinationPath.resolve(inputPath.getFileName());
+            Files.move(inputPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception e) {
+            logger.error("Error en mover el video de la clase {}: {}", clase.getIdClase(), e.getMessage());
+            throw new InternalServerException("Error en mover el video de la clase " + clase.getIdClase());
         }
-
-        Path inputPath = Paths.get(direccion);
-        Files.createDirectories(destinationPath);
-        Path targetPath = destinationPath.resolve(inputPath.getFileName());
-        Files.move(inputPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
 
         List<String> ffmpegCommand = this.creaComandoFFmpeg(targetPath.toAbsolutePath().toString(), false, null);
 
@@ -627,29 +644,38 @@ public class StreamingService {
             ProcessBuilder processBuilder = new ProcessBuilder(ffmpegCommand);
             processBuilder.directory(destinationPath.toFile());
             processBuilder.redirectErrorStream(true);
-            Process process = processBuilder.start();
+            try {
+                Process process = processBuilder.start();
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    System.out.println("FFmpeg [Clase " + clase.getIdClase() + "]: " + line);
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println("FFmpeg [Clase " + clase.getIdClase() + "]: " + line);
+                    }
+                } catch (IOException e) {
+                    process.destroy();
+                    logger.error("Error leyendo salida de FFmpeg en clase {}: {}", clase.getIdClase(), e.getMessage());
+                    return;
                 }
+
+                int exitCode = process.waitFor();
+                if (exitCode != 0) {
+                    logger.warn("FFmpeg terminó con errores (code {}) en clase {}", exitCode, clase.getIdClase());
+                    return;
+                }
+
+                clase.setDireccionClase(destinationPath.resolve("master.m3u8").toString());
+                clase.setCursoClase(curso);
+                this.claseRepo.save(clase);
+                logger.info("Clase {} convertida con éxito.", clase.getIdClase());
             } catch (IOException e) {
-                process.destroy();
-                logger.error("Error leyendo salida de FFmpeg en clase {}: {}", clase.getIdClase(), e.getMessage());
-                return;
+                logger.error("Error al convertir la clase {}: {}", clase.getIdClase(), e.getMessage());
+                throw new InternalServerException("Error al convertir la clase " + clase.getIdClase());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("Error al convertir la clase {}: {}", clase.getIdClase(), e.getMessage());
+                throw new InternalServerException("Error al convertir la clase " + clase.getIdClase());
             }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                logger.warn("FFmpeg terminó con errores (code {}) en clase {}", exitCode, clase.getIdClase());
-                return;
-            }
-
-            clase.setDireccionClase(destinationPath.resolve("master.m3u8").toString());
-            clase.setCursoClase(curso);
-            this.claseRepo.save(clase);
-            logger.info("Clase {} convertida con éxito.", clase.getIdClase());
         }
     }
 }

@@ -15,16 +15,14 @@
 	<artifactId>back_chat</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
-
 	<name>back_chat</name>
-
 	<description>Microservicio de chat</description>
 
 	<properties>
 		<java.version>21</java.version>
 	</properties>
-	<dependencies>
 
+	<dependencies>
 		<dependency>
 			<groupId>com.sovereingschool</groupId>
 			<artifactId>back_common</artifactId>
