@@ -1,11 +1,13 @@
 package com.sovereingschool.back_base.Interfaces;
 
+import org.springframework.security.core.userdetails.UserDetailsService;
+
 import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.ChangePassword;
 import com.sovereingschool.back_common.Models.Login;
 import com.sovereingschool.back_common.Models.Usuario;
 
-public interface ILoginService {
+public interface ILoginService extends UserDetailsService {
 
     public Long compruebaCorreo(String correo);
 

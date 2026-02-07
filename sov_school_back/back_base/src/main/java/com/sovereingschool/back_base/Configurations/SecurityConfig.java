@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sovereingschool.back_base.Configurations.Filters.CustomOAuth2SuccessHandler;
 import com.sovereingschool.back_base.Configurations.Filters.JwtTokenCookieFilter;
 import com.sovereingschool.back_base.Configurations.Filters.JwtTokenValidator;
-import com.sovereingschool.back_base.Services.LoginService;
+import com.sovereingschool.back_base.Interfaces.ILoginService;
 import com.sovereingschool.back_base.Services.UsuarioService;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -111,7 +111,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(LoginService loginService) {
+    public AuthenticationProvider authenticationProvider(ILoginService loginService) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(loginService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
@@ -142,7 +142,7 @@ public class SecurityConfig {
     // Dejar la creación del CustomOAuth2SuccessHandler como bean que recibe los
     // servicios necesarios
     @Bean
-    public CustomOAuth2SuccessHandler customOAuth2SuccessHandler(LoginService loginService,
+    public CustomOAuth2SuccessHandler customOAuth2SuccessHandler(ILoginService loginService,
             UsuarioService usuarioService) {
         return new CustomOAuth2SuccessHandler(front, loginService, usuarioService, objectMapper);
     }

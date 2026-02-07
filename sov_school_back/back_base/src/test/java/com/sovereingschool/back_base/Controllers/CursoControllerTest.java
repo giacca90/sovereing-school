@@ -44,7 +44,7 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import jakarta.persistence.EntityNotFoundException;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "server.http.port=0")
 public class CursoControllerTest {
 
     @Nested

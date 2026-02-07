@@ -17,7 +17,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sovereingschool.back_base.DTOs.AuthResponse;
-import com.sovereingschool.back_base.Services.LoginService;
+import com.sovereingschool.back_base.Interfaces.ILoginService;
 import com.sovereingschool.back_base.Services.UsuarioService;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
 import com.sovereingschool.back_common.Exceptions.InternalComunicationException;
@@ -29,7 +29,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private static final Logger logger = LoggerFactory.getLogger(CustomOAuth2SuccessHandler.class);
-    private LoginService loginService;
+    private ILoginService loginService;
     private UsuarioService usuarioService;
 
     private ObjectMapper objectMapper;
@@ -45,7 +45,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
      */
     public CustomOAuth2SuccessHandler(
             @Value("${variable.FRONT}") String front,
-            LoginService loginService, UsuarioService usuarioService,
+            ILoginService loginService, UsuarioService usuarioService,
             ObjectMapper objectMapper) {
         this.front = front;
         this.loginService = loginService;
