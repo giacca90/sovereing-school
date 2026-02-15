@@ -301,8 +301,7 @@ public class LoginController {
 			return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
 		}
 		try {
-			response = this.loginService.loginWithToken(token);
-			Usuario usuario = (Usuario) response;
+			Usuario usuario = this.loginService.loginWithToken(token);
 			Authentication auth = jwtUtil.createAuthenticationFromToken(token);
 			String refreshToken = jwtUtil.generateToken(auth, "refresh", usuario.getIdUsuario());
 			ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
@@ -314,7 +313,7 @@ public class LoginController {
 					.build();
 			return ResponseEntity.ok()
 					.header("Set-Cookie", refreshTokenCookie.toString())
-					.body(response);
+					.body(usuario);
 		} catch (JWTVerificationException e) {
 			logger.error("Error en login con token: {}", e.getMessage());
 			response = e.getMessage();

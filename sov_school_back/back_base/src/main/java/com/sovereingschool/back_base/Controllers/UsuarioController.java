@@ -270,6 +270,7 @@ public class UsuarioController {
 	 * @return ResponseEntity<Object> con el resultado de la operación
 	 */
 	@PostMapping("/nuevo")
+	// @PreAuthorize("permitAll()")
 	public ResponseEntity<?> createUsuario(@RequestBody NewUsuario newUsuario) {
 		Object response = new Object();
 		try {
@@ -299,6 +300,7 @@ public class UsuarioController {
 	 * @return ResponseEntity<Object> con el resultado de la operación
 	 */
 	@PostMapping("/confirmation")
+	@PreAuthorize("permitAll()")
 	public ResponseEntity<?> confirmationEmail(@RequestBody String token) {
 		Object response = new Object();
 		try {
@@ -329,10 +331,6 @@ public class UsuarioController {
 					.body(response);
 		} catch (AccessDeniedException e) {
 			return new ResponseEntity<>(e.getMessage(), HttpStatus.FORBIDDEN);
-		} catch (EntityNotFoundException e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-		} catch (IllegalArgumentException e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
 		} catch (DataIntegrityViolationException e) {
 			return new ResponseEntity<>("El usuario ya existe", HttpStatus.BAD_REQUEST);
 		} catch (RuntimeException e) {
@@ -360,8 +358,7 @@ public class UsuarioController {
 		Long idUsuario = (Long) authentication.getDetails();
 
 		if (idUsuario == null || !idUsuario.equals(usuario.getIdUsuario())) {
-			return new ResponseEntity<>("Error en el token de acceso: idUsuario no coincide\nidUsuario: "
-					+ usuario.getIdUsuario() + "\nidUsuario del token: " + idUsuario, HttpStatus.UNAUTHORIZED);
+			return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
 		}
 		Object response = new Object();
 		try {
@@ -396,7 +393,7 @@ public class UsuarioController {
 		}
 		Long idUsuario = (Long) authentication.getDetails();
 		if (idUsuario == null || !idUsuario.equals(usuario.getIdUsuario())) {
-			return new ResponseEntity<>("Error en el token de acceso: no hay un id_usuario en el token",
+			return new ResponseEntity<>("Error en el token de acceso",
 					HttpStatus.UNAUTHORIZED);
 		}
 		Object response = new Object();
@@ -422,7 +419,7 @@ public class UsuarioController {
 	 * @param cursosUsuario Objeto CursosUsuario con los datos del usuario
 	 * @return ResponseEntity<Object> con el resultado de la operación
 	 */
-	@PreAuthorize("hasRole('USER') or hasRole('PROF') or hasRole('ADMIN')")
+	@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 	@PutMapping("/cursos")
 	public ResponseEntity<?> changeCursosUsuario(@RequestBody CursosUsuario cursosUsuario) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -432,7 +429,7 @@ public class UsuarioController {
 		}
 		Long idUsuario = (Long) authentication.getDetails();
 		if (idUsuario == null || !idUsuario.equals(cursosUsuario.idUsuario())) {
-			return new ResponseEntity<>("Error en el token de acceso: no hay id_usuario en el token",
+			return new ResponseEntity<>("Error en el token de acceso",
 					HttpStatus.UNAUTHORIZED);
 		}
 		Object response = new Object();
@@ -537,10 +534,6 @@ public class UsuarioController {
 						writer.write(null, new IIOImage(webpImage, null, null), param);
 					}
 					fileNames.add(backBase + "/usuario/fotos/" + webpFileName);
-				} catch (IllegalArgumentException e) {
-					return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-				} catch (EntityNotFoundException e) {
-					return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
 				} catch (RuntimeException e) {
 					return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 				} catch (IOException e) {
@@ -551,10 +544,6 @@ public class UsuarioController {
 				try {
 					Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 					fileNames.add(backBase + "/usuario/fotos/" + fileName);
-				} catch (IllegalArgumentException e) {
-					return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-				} catch (EntityNotFoundException e) {
-					return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
 				} catch (RuntimeException e) {
 					return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 				} catch (IOException e) {
@@ -580,8 +569,7 @@ public class UsuarioController {
 			response = this.usuarioService.getAllUsuarios();
 			return new ResponseEntity<>(response, HttpStatus.OK);
 		} catch (RuntimeException e) {
-			response = e.getMessage();
-			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		} catch (Exception e) {
 			response = "Error en obtener todos los usuarios: " + e.getMessage();
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);

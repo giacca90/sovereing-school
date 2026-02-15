@@ -312,7 +312,7 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public List<Curso> getCursosUsuario(Long idUsuario) {
+    public List<Curso> getCursosUsuario(Long idUsuario) throws Exception {
         return this.usuarioRepo.findUsuarioForId(idUsuario)
                 .map(Usuario::getCursosUsuario)
                 .orElse(null);
@@ -488,7 +488,7 @@ public class UsuarioService implements IUsuarioService {
      * 
      */
     @Override
-    public boolean sendConfirmationEmail(NewUsuario newUsuario) throws InternalServerException {
+    public boolean sendConfirmationEmail(NewUsuario newUsuario) throws InternalServerException, AccessDeniedException {
         Context context = new Context();
         String token = jwtUtil.generateRegistrationToken(newUsuario);
         context.setVariable("nombre", newUsuario.nombreUsuario());

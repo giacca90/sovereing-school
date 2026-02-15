@@ -72,7 +72,8 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 // .redirectToHttps(Customizer.withDefaults())
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/oauth2/**", "/login/**", "/error").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/oauth2/**", "/login/**", "/error", "/usuario/confirmation").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(Customizer.withDefaults())
                 .userDetailsService(inMemoryUserDetailsManager())

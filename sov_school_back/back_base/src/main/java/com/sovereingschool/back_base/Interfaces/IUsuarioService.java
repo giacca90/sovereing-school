@@ -2,6 +2,8 @@ package com.sovereingschool.back_base.Interfaces;
 
 import java.util.List;
 
+import org.springframework.security.access.AccessDeniedException;
+
 import com.sovereingschool.back_base.DTOs.AuthResponse;
 import com.sovereingschool.back_base.DTOs.CursosUsuario;
 import com.sovereingschool.back_common.DTOs.NewUsuario;
@@ -20,27 +22,28 @@ public interface IUsuarioService {
 
     public Usuario getUsuario(Long idUsuario);
 
-    public String getNombreUsuario(Long idUsuario);
+    public String getNombreUsuario(Long idUsuario) throws Exception;
 
     public List<String> getFotosUsuario(Long idUsuario);
 
-    public RoleEnum getRollUsuario(Long idUsuario);
+    public RoleEnum getRollUsuario(Long idUsuario) throws Exception;
 
-    public Plan getPlanUsuario(Long idUsuario);
+    public Plan getPlanUsuario(Long idUsuario) throws Exception;
 
-    public List<Curso> getCursosUsuario(Long idUsuario);
+    public List<Curso> getCursosUsuario(Long idUsuario) throws Exception;
 
-    public Usuario updateUsuario(Usuario usuario) throws InternalServerException;
+    public Usuario updateUsuario(Usuario usuario) throws InternalServerException, Exception;
 
-    public Integer changePlanUsuario(Usuario usuario);
+    public Integer changePlanUsuario(Usuario usuario) throws Exception;
 
-    public Integer changeCursosUsuario(CursosUsuario cursosUsuario) throws RepositoryException;
+    public Integer changeCursosUsuario(CursosUsuario cursosUsuario) throws RepositoryException, Exception;
 
-    public String deleteUsuario(Long id) throws RepositoryException, InternalComunicationException;
+    public String deleteUsuario(Long id) throws RepositoryException, InternalComunicationException, Exception;
 
-    public List<Usuario> getProfes();
+    public List<Usuario> getProfes() throws Exception;
 
-    public boolean sendConfirmationEmail(NewUsuario newUsuario) throws MessagingException, InternalServerException;
+    public boolean sendConfirmationEmail(NewUsuario newUsuario) throws MessagingException, InternalServerException,
+            AccessDeniedException;
 
-    public List<Usuario> getAllUsuarios() throws RepositoryException;
+    public List<Usuario> getAllUsuarios() throws RepositoryException, Exception;
 }

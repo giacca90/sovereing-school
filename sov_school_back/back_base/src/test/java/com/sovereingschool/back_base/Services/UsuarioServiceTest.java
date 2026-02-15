@@ -299,7 +299,7 @@ class UsuarioServiceTest {
     @Nested
     class GetNombreUsuarioTests {
         @Test
-        void getNombreUsuario_SuccessfulRetrieval() {
+        void getNombreUsuario_SuccessfulRetrieval() throws Exception {
             Long userId = 1L;
             String nombreUsuario = "pepito";
             Usuario usuario = new Usuario();
@@ -380,7 +380,7 @@ class UsuarioServiceTest {
     @Nested
     class GetRollUsuarioTests {
         @Test
-        void getRollUsuario_SuccessfulRetrieval() {
+        void getRollUsuario_SuccessfulRetrieval() throws Exception {
             Long userId = 1L; // Usuario 1
             RoleEnum roll = RoleEnum.USER;
             Usuario usuario = new Usuario();
@@ -420,7 +420,7 @@ class UsuarioServiceTest {
     @Nested
     class GetPlanUsuarioTests {
         @Test
-        void getPlanUsuario_SuccessfulRetrieval() {
+        void getPlanUsuario_SuccessfulRetrieval() throws Exception {
             Long userId = 1L;
             Plan plan = new Plan();
             plan.setIdPlan(1L);
@@ -460,7 +460,7 @@ class UsuarioServiceTest {
     @Nested
     class GetCursosUsuarioTests {
         @Test
-        void getCursosUsuario_SuccessfulRetrieval() {
+        void getCursosUsuario_SuccessfulRetrieval() throws Exception {
             Long userId = 1L;
             List<Curso> cursosUsuario = List.of(new Curso());
             Usuario usuario = new Usuario();
@@ -478,7 +478,7 @@ class UsuarioServiceTest {
         }
 
         @Test
-        void getCursosUsuario_Error() {
+        void getCursosUsuario_Error() throws Exception {
             Long userId = 1L;
 
             when(usuarioRepo.findUsuarioForId(userId)).thenReturn(Optional.empty());
