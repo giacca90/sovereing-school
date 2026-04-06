@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Curso } from '../../models/Curso';
@@ -27,28 +27,16 @@ export class CursoComponent implements OnDestroy {
 		private readonly route: ActivatedRoute,
 		private readonly cursoService: CursosService,
 		private readonly usuarioService: UsuariosService,
+		private readonly cdr: ChangeDetectorRef,
 		public loginService: LoginService,
 		public router: Router,
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
 				this.idCurso = Number(params['idCurso']);
+				this.getCurso();
 			}),
 		);
-
-		this.cursoService.getCurso(this.idCurso).then((curso) => {
-			this.curso = curso;
-			if (this.curso) {
-				if (this.curso.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0]);
-				else {
-					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0])?.toString();
-					for (let i = 1; i < this.curso.profesoresCurso.length; i++) {
-						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso.profesoresCurso[i]);
-					}
-					this.nombresProfesores = nombres;
-				}
-			}
-		});
 	}
 
 	compruebaPlan(planUsuario: Plan | undefined): Plan | null {
@@ -115,5 +103,24 @@ export class CursoComponent implements OnDestroy {
 			return false;
 		}
 		return usuario.cursosUsuario.some((c: any) => c.idCurso === curso.idCurso);
+	}
+
+	getCurso() {
+		this.cursoService.getCurso(this.idCurso).then((curso) => {
+			console.log('TEST: curso', curso);
+			this.curso = curso;
+			console.log('TEST: this.curso', curso);
+			if (this.curso) {
+				if (this.curso.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0]);
+				else {
+					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0])?.toString();
+					for (let i = 1; i < this.curso.profesoresCurso.length; i++) {
+						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso.profesoresCurso[i]);
+					}
+					this.nombresProfesores = nombres;
+				}
+			}
+			this.cdr.detectChanges();
+		});
 	}
 }

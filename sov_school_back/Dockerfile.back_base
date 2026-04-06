@@ -1,5 +1,5 @@
 # Etapa 1: Build de la aplicación
-FROM maven:3.9.11 AS build
+FROM maven:3.9.11-eclipse-temurin-21 AS build
 
 # Crear directorio base
 WORKDIR /app
@@ -20,7 +20,7 @@ WORKDIR /app/back_base
 RUN mvn clean package -DskipTests
 
 # Etapa 2: Imagen final con solo el JAR
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:21-jre-jammy
 
 RUN apt update && apt upgrade -y && rm -rf /var/lib/apt/lists/*
 

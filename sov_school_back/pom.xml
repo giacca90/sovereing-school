@@ -8,7 +8,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.3</version>
+    <version>4.0.4</version>
     <relativePath />
   </parent>
 
@@ -19,6 +19,23 @@
 
   <name>sov_school_back</name>
   <description>Contenedor de la aplicación Sovereing School</description>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+      <comments>A business-friendly OSS license</comments>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Giacca90</name>
+      <email>giacca90mobile@protonmail.com</email>
+      <organization>Giacca90</organization>
+    </developer>
+  </developers>
 
   <modules>
     <module>back_common</module>
@@ -123,36 +140,73 @@
   <build>
     <pluginManagement>
       <plugins>
-
         <plugin>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
         </plugin>
-
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.14.0</version>
-          <configuration>
-            <release>${java.version}</release>
-            <annotationProcessorPaths>
-              <path>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok</artifactId>
-                <version>1.18.42</version>
-              </path>
-            </annotationProcessorPaths>
-          </configuration>
-        </plugin>
-
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>0.8.14</version>
         </plugin>
-
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.0</version>
+        <configuration>
+          <release>${java.version}</release>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>1.18.34</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>license-maven-plugin</artifactId>
+        <version>2.4.0</version>
+        <executions>
+          <execution>
+            <id>aggregate-add-third-party</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>aggregate-add-third-party</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.basedir}</outputDirectory>
+              <thirdPartyFilename>THIRD-PARTY-NOTICES.txt</thirdPartyFilename>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 
 </project>

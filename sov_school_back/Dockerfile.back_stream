@@ -1,5 +1,5 @@
 # Etapa 1: Build de la aplicación Java y binario Go
-FROM maven:3.9.11 AS build
+FROM maven:3.9.11-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ WORKDIR /app/back_streaming/src/main/resources/pion
 RUN go build -o pion-server pion-server.go
 
 # Etapa 2: Imagen final solo con JAR y binario Go
-FROM eclipse-temurin:21-jdk
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
