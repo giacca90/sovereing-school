@@ -2,6 +2,7 @@ import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { catchError, firstValueFrom, map, Observable, of } from 'rxjs';
 import { Curso } from '../models/Curso';
+import { Plan } from '../models/Plan';
 import { Usuario } from '../models/Usuario';
 
 @Injectable({
@@ -165,6 +166,21 @@ export class CursosService {
 			}),
 			catchError((e: Error) => {
 				console.error('Error en obtener todos los cursos: ' + e.message);
+				return of([]);
+			}),
+		);
+	}
+
+	getPlanesCurso(idCurso: number): Observable<Plan[]> {
+		return this.http.get<Plan[]>(this.backURL + '/cursos/getPlanesCurso/' + idCurso, { observe: 'response' }).pipe(
+			map((response: HttpResponse<Plan[]>) => {
+				if (response.ok && response.body) {
+					return response.body;
+				}
+				return [];
+			}),
+			catchError((e: Error) => {
+				console.error('Error en obtener todos los planes: ' + e.message);
 				return of([]);
 			}),
 		);

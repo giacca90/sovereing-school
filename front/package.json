@@ -81,6 +81,7 @@
 		"@types/cookie-parser": "1.4.10",
 		"@types/express": "5.0.6",
 		"@types/jasmine": "6.0.0",
+		"@types/jest": "^30.0.0",
 		"@types/jsonwebtoken": "9.0.10",
 		"@types/node": "25.5.2",
 		"@types/video.js": "7.3.58",

@@ -340,13 +340,10 @@ public class StreamingController {
      * @param curso Curso a convertir
      * @return ResponseEntity<String> con el resultado de la operación
      * 
-     *         TODO: Modificar para trabajar solo con clases concretas
-     * 
      */
     @PostMapping("/convertir_videos")
     public ResponseEntity<?> convertirVideos(@RequestBody Curso curso) {
         try {
-            // StreamingService streamingService = new StreamingService(claseRepo);
             streamingService.convertVideos(curso);
             // ResponseEntity
             return new ResponseEntity<>("Videos convertidos con éxito!!!", HttpStatus.OK);

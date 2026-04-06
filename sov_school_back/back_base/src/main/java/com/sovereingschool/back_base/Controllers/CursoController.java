@@ -203,11 +203,13 @@ public class CursoController {
 		try {
 			List<Plan> planes = this.cursoService.getPlanesDelCurso(id);
 			if (planes.isEmpty()) {
-				response = "Curso no encontrado";
-				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+				response = "El curso no tiene planes";
+				return new ResponseEntity<>(response, HttpStatus.OK);
 			}
 			response = planes;
 			return new ResponseEntity<>(response, HttpStatus.OK);
+		} catch (NotFoundException e) {
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
 		} catch (Exception e) {
 			response = "Error en obtener los planes del curso: " + e.getMessage();
 			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);

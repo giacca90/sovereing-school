@@ -179,19 +179,15 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				let currentSelection = 'auto';
 
 				const updateMenuHighlight = () => {
-					const items = menu.querySelectorAll('[data-quality]');
+					const items: NodeListOf<HTMLElement> = menu.querySelectorAll('[data-quality]');
 					items.forEach((item) => {
-						const isActive = item.getAttribute('data-quality') === currentSelection;
-						item.setAttribute(
-							'style',
-							`
-								padding: 6px 12px;
-								cursor: pointer;
-								background: ${isActive ? '#555' : 'transparent'};
-								font-weight: ${isActive ? 'bold' : 'normal'};
-								color: white;
-							`,
-						);
+						const isActive = item.dataset['quality'] === String(currentSelection);
+
+						item.style.padding = '6px 12px';
+						item.style.cursor = 'pointer';
+						item.style.background = isActive ? '#555' : 'transparent';
+						item.style.fontWeight = isActive ? 'bold' : 'normal';
+						item.style.color = 'white';
 					});
 					button.textContent = `${currentSelection === 'auto' ? 'Auto' : currentSelection + 'p'} ▾`;
 				};
@@ -221,7 +217,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 					// Auto
 					const autoItem = document.createElement('div');
 					autoItem.textContent = 'Auto';
-					autoItem.setAttribute('data-quality', 'auto');
+					autoItem.dataset['quality'] = 'auto';
 					autoItem.onclick = () => {
 						currentSelection = 'auto';
 						for (const ql of qualityLevels) {
@@ -245,11 +241,11 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 						.forEach((height) => {
 							const item = document.createElement('div');
 							item.textContent = `${height}p`;
-							item.setAttribute('data-quality', `${height}`);
+							item.dataset['quality'] = String(height);
 							item.onclick = () => {
 								currentSelection = `${height}`;
-								for (let j = 0; j < qualityLevels.length; j++) {
-									qualityLevels[j].enabled = qualityLevels[j].height === height;
+								for (const level of qualityLevels) {
+									level.enabled = level.height === height;
 								}
 								if (vhs?.autoLevelEnabled !== undefined) {
 									vhs.autoLevelEnabled = false;

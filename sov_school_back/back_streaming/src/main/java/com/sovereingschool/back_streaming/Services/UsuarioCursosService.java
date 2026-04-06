@@ -291,7 +291,6 @@ public class UsuarioCursosService implements IUsuarioCursosService {
      * @throws InternalServerException
      */
     @Override
-    // TODO: Revisar - Implementado procesamiento por lotes y Streams
     public void actualizarCursoStream(Curso curso) throws InternalServerException {
         List<UsuarioCursos> usuarios = this.usuarioCursosRepository.findAllByIdCurso(curso.getIdCurso());
 

@@ -11,6 +11,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -205,16 +206,15 @@ public class CursoService implements ICursoService {
      * @param id_curso ID del curso
      * @return Lista de Plan con los planes del curso
      * @throws NotFoundException si no hay planes del curso
-     *                           TODO: Revisar si es correcto que devielva el error
      */
     @Override
     public List<Plan> getPlanesDelCurso(Long idCurso) throws NotFoundException {
-        List<Plan> planes = this.cursoRepo.findPlanesCursoById(idCurso);
-        if (planes == null || planes.isEmpty()) {
-            logger.error("Error en obtener los planes del curso con ID {}", idCurso);
-            throw new NotFoundException("Error en obtener los planes del curso con ID " + idCurso);
+        Optional<Curso> curso = this.cursoRepo.findById(idCurso);
+        if (curso.isEmpty()) {
+            logger.error("Error en obtener el curso con ID {}", idCurso);
+            throw new NotFoundException("Error en obtener el curso con ID " + idCurso);
         }
-        return planes;
+        return curso.get().getPlanesCurso();
     }
 
     /**

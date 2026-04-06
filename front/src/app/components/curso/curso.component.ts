@@ -43,8 +43,7 @@ export class CursoComponent implements OnDestroy {
 		if (planUsuario !== undefined && planUsuario !== null && this.curso?.planesCurso) {
 			for (const idPlan of this.curso.planesCurso) {
 				if (idPlan == planUsuario.idPlan) {
-					// TODO: Crear una forma de obtener el plan
-					return null;
+					return this.loginService.usuario?.planUsuario ?? null;
 				}
 			}
 		}
@@ -107,9 +106,7 @@ export class CursoComponent implements OnDestroy {
 
 	getCurso() {
 		this.cursoService.getCurso(this.idCurso).then((curso) => {
-			console.log('TEST: curso', curso);
 			this.curso = curso;
-			console.log('TEST: this.curso', curso);
 			if (this.curso) {
 				if (this.curso.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0]);
 				else {

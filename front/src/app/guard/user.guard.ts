@@ -30,20 +30,27 @@ export class UserGuard implements CanActivate {
 			return true;
 		}
 
-		const idCurso = route.params['idCurso'];
+		const idCurso: number = Number(route.params['idCurso']);
 
 		try {
 			const curso = await this.cursoService.getCurso(idCurso);
-			if (!curso || !usuario.cursosUsuario) {
+			if (!curso) {
 				this.router.navigate(['/']);
 				return false;
 			}
 
-			const hasAccess = usuario.cursosUsuario?.some((cursoUs) => cursoUs.idCurso === curso.idCurso);
-			if (!hasAccess) {
+			//TODO: comprobar si el usuario tiene uno de los planes de este curso
+			if (usuario.planUsuario && !curso.planesCurso?.includes(usuario.planUsuario.idPlan)) {
 				this.router.navigate(['/']);
+				return false;
 			}
-			return hasAccess;
+
+			if (!usuario.cursosUsuario?.some((cursoUs) => cursoUs.idCurso === curso.idCurso)) {
+				this.router.navigate(['/']);
+				return false;
+			}
+
+			return true;
 		} catch (error) {
 			console.error('Error al obtener el curso:', error);
 			this.router.navigate(['/']);
