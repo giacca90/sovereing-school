@@ -40,12 +40,16 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	ngOnInit(): void {
+		if (isPlatformBrowser(this.platformId)) {
+			this.backStream = (globalThis.window as any).__env?.BACK_STREAM ?? '';
+		}
+
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
-				this.idCurso = params['idCurso'];
-				this.idClase = params['idClase'];
+				this.idCurso = Number(params['idCurso']);
+				this.idClase = Number(params['idClase']);
 
-				if (this.idClase == 0) {
+				if (this.idClase === 0) {
 					this.cursoService.getStatusCurso(this.idCurso).subscribe({
 						next: (resp) => {
 							if (resp === 0) {
@@ -66,13 +70,10 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		);
 		this.subscription.add(
 			this.route.queryParams.subscribe((qparams) => {
-				this.momento = qparams['momento'] || null;
+				this.momento = Number(qparams['momento']) || null;
 				this.loadData();
 			}),
 		);
-		if (isPlatformBrowser(this.platformId)) {
-			this.backStream = (globalThis.window as any).__env?.BACK_STREAM ?? '';
-		}
 	}
 
 	loadData() {
@@ -82,10 +83,10 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				const result = this.curso.clasesCurso.find((clase) => clase.idClase == this.idClase);
 				if (result) {
 					this.clase = result;
-					this.cdr.detectChanges();
 					this.getVideo();
 				}
 			}
+			this.cdr.detectChanges();
 		});
 	}
 

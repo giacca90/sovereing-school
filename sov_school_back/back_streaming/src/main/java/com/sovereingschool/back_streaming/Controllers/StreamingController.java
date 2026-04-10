@@ -106,43 +106,49 @@ public class StreamingController {
             return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
         }
         Long idUsuario = (Long) authentication.getDetails();
+        try {
+            String direccionCarpeta = this.usuarioCursosService.getClase(idUsuario, idCurso, idClase);
 
-        String direccionCarpeta = this.usuarioCursosService.getClase(idUsuario, idCurso, idClase);
-        if (direccionCarpeta == null) {
-            logger.error("No se encuentra la carpeta del curso: {}", direccionCarpeta);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No se encuentra la carpeta del curso: " + direccionCarpeta);
+            if (direccionCarpeta == null) {
+                logger.error("No se encuentra la carpeta del curso: {}", direccionCarpeta);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No se encuentra la carpeta del curso: " + direccionCarpeta);
+            }
+            direccionCarpeta = direccionCarpeta.substring(0, direccionCarpeta.lastIndexOf("/"));
+            if (direccionCarpeta == null) {
+                logger.error("El video no tiene ruta");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("El video no tiene ruta");
+            }
+
+            Path carpetaPath = Paths.get(direccionCarpeta);
+
+            Path videoPath = carpetaPath.resolve(lista);
+
+            if (!Files.exists(videoPath)) {
+                logger.error("No existe el archivo: {}", videoPath);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No existe el archivo: " + videoPath);
+            }
+
+            // Obtener el tipo MIME del video
+            String contentType = Files.probeContentType(videoPath);
+
+            // Configurar las cabeceras de la respuesta
+            HttpHeaders responseHeaders = this.createHeaders(contentType);
+
+            long fileLength = Files.size(videoPath);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(fileLength)
+                    .headers(responseHeaders)
+                    .body(new InputStreamResource(Files.newInputStream(videoPath)));
+
+        } catch (Exception e) {
+            logger.error("Error al obtener el video: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener el video: " + e.getMessage());
         }
-        direccionCarpeta = direccionCarpeta.substring(0, direccionCarpeta.lastIndexOf("/"));
-        if (direccionCarpeta == null) {
-            logger.error("El video no tiene ruta");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("El video no tiene ruta");
-        }
-
-        Path carpetaPath = Paths.get(direccionCarpeta);
-
-        Path videoPath = carpetaPath.resolve(lista);
-
-        if (!Files.exists(videoPath)) {
-            logger.error("No existe el archivo: {}", videoPath);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No existe el archivo: " + videoPath);
-        }
-
-        // Obtener el tipo MIME del video
-        String contentType = Files.probeContentType(videoPath);
-
-        // Configurar las cabeceras de la respuesta
-        HttpHeaders responseHeaders = this.createHeaders(contentType);
-
-        long fileLength = Files.size(videoPath);
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(fileLength)
-                .headers(responseHeaders)
-                .body(new InputStreamResource(Files.newInputStream(videoPath)));
-
     }
 
     /**

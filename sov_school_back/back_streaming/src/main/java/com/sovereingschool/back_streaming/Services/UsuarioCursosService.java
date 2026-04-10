@@ -131,11 +131,12 @@ public class UsuarioCursosService implements IUsuarioCursosService {
      * @param idClase   ID de la clase
      * @return String con la dirección de la clase
      * @throws InternalServerException
+     * @throws EntityNotFoundException
      */
     @Override
     public String getClase(Long idUsuario, Long idCurso, Long idClase) throws InternalServerException {
         UsuarioCursos usuario = this.usuarioCursosRepository.findByIdUsuario(idUsuario).orElseThrow(() -> {
-            logger.error("Error en obtener el usuario del streaming. id_usuario: {}", idUsuario);
+            logger.error("Error en obtener el usuario del streaming. idUsuario: {}", idUsuario);
             throw new EntityNotFoundException("Error en obtener el usuario del streaming");
         });
 
@@ -267,8 +268,8 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     public Long getStatus(Long idUsuario, Long idCurso) throws InternalServerException {
         UsuarioCursos usuarioCursos = usuarioCursosRepository.findByIdUsuario(idUsuario)
                 .orElseThrow(() -> {
-                    logger.error("Usuario no encontrado para chat: {}", idUsuario);
-                    return new EntityNotFoundException("Error en obtener el usuario del chat");
+                    logger.error("Usuario no encontrado para streaming: {}", idUsuario);
+                    return new EntityNotFoundException("Error en obtener el usuario del streaming");
                 });
 
         // 1. Lógica para PROF o ADMIN
