@@ -360,51 +360,54 @@ class CursoServiceTest {
 
         private Long cursoId;
         private List<Plan> planes;
+        private Curso curso;
 
         @BeforeEach
         void setUp() {
             cursoId = 1L;
             planes = List.of(new Plan(), new Plan());
+            curso = new Curso();
+            curso.setIdCurso(cursoId);
+            curso.setPlanesCurso(planes);
         }
 
         @Test
         void getPlanesDelCurso_SuccessfulRetrieval() throws NotFoundException {
-            when(cursoRepo.findPlanesCursoById(cursoId)).thenReturn(planes);
+            when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
 
             List<Plan> resp = cursoService.getPlanesDelCurso(cursoId);
 
             assertNotNull(resp);
             assertEquals(planes, resp);
 
-            verify(cursoRepo).findPlanesCursoById(cursoId);
+            verify(cursoRepo).findById(cursoId);
         }
 
         @Test
-        void getPlanesDelCurso_ErrorEmptyList() {
+        void getPlanesDelCurso_EmptyList() throws NotFoundException {
             // Simular que la lista está vacía
-            when(cursoRepo.findPlanesCursoById(cursoId)).thenReturn(List.of());
+            this.curso.setPlanesCurso(null);
+            when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
 
-            // Verificar que lanza la excepción esperada
-            NotFoundException thrown = assertThrows(NotFoundException.class,
-                    () -> cursoService.getPlanesDelCurso(cursoId));
+            List<Plan> resp = cursoService.getPlanesDelCurso(cursoId);
 
-            assertEquals("Error en obtener los planes del curso con ID " + cursoId, thrown.getMessage());
+            assertEquals(null, resp);
 
-            verify(cursoRepo).findPlanesCursoById(cursoId);
+            verify(cursoRepo).findById(cursoId);
         }
 
         @Test
         void getPlanesDelCurso_ErrorNullList() {
             // Simular que la lista está vacía
-            when(cursoRepo.findPlanesCursoById(cursoId)).thenReturn(null);
+            when(cursoRepo.findById(cursoId)).thenReturn(Optional.empty());
 
             // Verificar que lanza la excepción esperada
             NotFoundException thrown = assertThrows(NotFoundException.class,
                     () -> cursoService.getPlanesDelCurso(cursoId));
 
-            assertEquals("Error en obtener los planes del curso con ID " + cursoId, thrown.getMessage());
+            assertEquals("Error en obtener el curso con ID " + cursoId, thrown.getMessage());
 
-            verify(cursoRepo).findPlanesCursoById(cursoId);
+            verify(cursoRepo).findById(cursoId);
         }
     }
 

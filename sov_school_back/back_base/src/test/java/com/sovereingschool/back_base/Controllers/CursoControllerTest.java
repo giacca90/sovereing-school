@@ -45,13 +45,13 @@ import io.restassured.http.ContentType;
 import jakarta.persistence.EntityNotFoundException;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "server.http.port=0")
-public class CursoControllerTest {
+class CursoControllerTest {
 
     @Nested
     class GetAllTests {
 
         @Test
-        public void testGetAll_Success() {
+        void testGetAll_Success() {
             // GIVEN
             Curso curso = new Curso();
             curso.setIdCurso(1L);
@@ -75,7 +75,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetAll_InternalError() {
+        void testGetAll_InternalError() {
             when(cursoService.getAll()).thenThrow(new RuntimeException("Error de BD"));
 
             given()
@@ -93,7 +93,7 @@ public class CursoControllerTest {
     class GetCursoByIdTests {
 
         @Test
-        public void testGetCurso_Success() throws NotFoundException {
+        void testGetCurso_Success() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             Curso curso = new Curso();
@@ -117,7 +117,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetCurso_NotFound() throws NotFoundException {
+        void testGetCurso_NotFound() throws NotFoundException {
             // GIVEN
             Long id = 99L;
             when(cursoService.getCurso(id)).thenThrow(new EntityNotFoundException("No existe"));
@@ -134,7 +134,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetCurso_InternalError() throws NotFoundException {
+        void testGetCurso_InternalError() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             when(cursoService.getCurso(id)).thenThrow(new RuntimeException("Fallo crítico"));
@@ -155,7 +155,7 @@ public class CursoControllerTest {
     class GetNombreCursoTests {
 
         @Test
-        public void testGetNombreCurso_Success() throws NotFoundException {
+        void testGetNombreCurso_Success() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             String nombreEsperado = "Programación Funcional";
@@ -176,7 +176,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetNombreCurso_NotFound() throws NotFoundException {
+        void testGetNombreCurso_NotFound() throws NotFoundException {
             // GIVEN
             Long id = 99L;
             String errorMsg = "Curso no encontrado";
@@ -194,7 +194,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetNombreCurso_InternalError() throws NotFoundException {
+        void testGetNombreCurso_InternalError() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             when(cursoService.getNombreCurso(id)).thenThrow(new RuntimeException("Error interno"));
@@ -215,7 +215,7 @@ public class CursoControllerTest {
     class GetNombresProfesoresCursoTests {
 
         @Test
-        public void testGetNombresProfesoresCurso_Success() throws NotFoundException {
+        void testGetNombresProfesoresCurso_Success() throws NotFoundException {
             // GIVEN
             Long idCurso = 1L;
 
@@ -243,7 +243,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetNombresProfesoresCurso_Empty() throws NotFoundException {
+        void testGetNombresProfesoresCurso_Empty() throws NotFoundException {
             // GIVEN: El curso existe pero no tiene profesores asignados
             Long idCurso = 1L;
             when(cursoService.getProfesoresCurso(idCurso)).thenReturn(Collections.emptyList());
@@ -260,7 +260,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetNombresProfesoresCurso_NotFound() throws NotFoundException {
+        void testGetNombresProfesoresCurso_NotFound() throws NotFoundException {
             // GIVEN
             Long idInexistente = 99L;
             when(cursoService.getProfesoresCurso(idInexistente))
@@ -278,7 +278,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetNombresProfesoresCurso_InternalError() throws NotFoundException {
+        void testGetNombresProfesoresCurso_InternalError() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             when(cursoService.getProfesoresCurso(id)).thenThrow(new RuntimeException("Error de conexión"));
@@ -299,7 +299,7 @@ public class CursoControllerTest {
     class GetFechaCreacionCursoTests {
 
         @Test
-        public void testGetFechaCreacionCurso_Success() throws NotFoundException {
+        void testGetFechaCreacionCurso_Success() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             java.util.Date fechaSimulada = new java.util.Date();
@@ -320,7 +320,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetFechaCreacionCurso_NotFound() throws NotFoundException {
+        void testGetFechaCreacionCurso_NotFound() throws NotFoundException {
             // GIVEN
             Long id = 99L;
             when(cursoService.getFechaCreacionCurso(id))
@@ -338,7 +338,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetFechaCreacionCurso_InternalError() throws NotFoundException {
+        void testGetFechaCreacionCurso_InternalError() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             when(cursoService.getFechaCreacionCurso(id))
@@ -360,7 +360,7 @@ public class CursoControllerTest {
     class GetClasesDelCursoTests {
 
         @Test
-        public void testGetClasesDelCurso_Success() throws NotFoundException {
+        void testGetClasesDelCurso_Success() throws NotFoundException {
             // GIVEN
             Long idCurso = 1L;
             Clase clase1 = new Clase(); // Asume que tienes este modelo
@@ -385,9 +385,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetClasesDelCurso_Empty_ReturnsNotFound() throws NotFoundException {
-            // GIVEN: El servicio devuelve lista vacía, lo que activa tu
-            // if(clases.isEmpty())
+        void testGetClasesDelCurso_Empty_ReturnsNotFound() throws NotFoundException {
             Long idCurso = 1L;
             when(cursoService.getClasesDelCurso(idCurso)).thenReturn(Collections.emptyList());
 
@@ -403,7 +401,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetClasesDelCurso_InternalError() throws NotFoundException {
+        void testGetClasesDelCurso_InternalError() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             when(cursoService.getClasesDelCurso(id)).thenThrow(new RuntimeException("Error fatal"));
@@ -424,7 +422,7 @@ public class CursoControllerTest {
     class GetPlanesDelCursoTests {
 
         @Test
-        public void testGetPlanesDelCurso_Success() throws NotFoundException {
+        void testGetPlanesDelCurso_Success() throws NotFoundException {
             // GIVEN
             Long idCurso = 1L;
 
@@ -451,7 +449,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetPlanesDelCurso_Empty_ReturnsNotFound() throws NotFoundException {
+        void testGetPlanesDelCurso_Empty_ReturnsMessage() throws NotFoundException {
             // GIVEN
             Long idCurso = 1L;
             when(cursoService.getPlanesDelCurso(idCurso)).thenReturn(Collections.emptyList());
@@ -463,12 +461,12 @@ public class CursoControllerTest {
                     .when()
                     .get("/getPlanesDelCurso/{id}", idCurso)
                     .then()
-                    .statusCode(HttpStatus.NOT_FOUND.value())
-                    .body(equalTo("Curso no encontrado"));
+                    .statusCode(HttpStatus.OK.value())
+                    .body(equalTo("El curso no tiene planes"));
         }
 
         @Test
-        public void testGetPlanesDelCurso_InternalError() throws NotFoundException {
+        void testGetPlanesDelCurso_InternalError() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             when(cursoService.getPlanesDelCurso(id)).thenThrow(new RuntimeException("Error en base de datos"));
@@ -489,7 +487,7 @@ public class CursoControllerTest {
     class GetPrecioCursoTests {
 
         @Test
-        public void testGetPrecioCurso_Success() throws NotFoundException {
+        void testGetPrecioCurso_Success() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             java.math.BigDecimal precioSimulado = new java.math.BigDecimal("99.99");
@@ -511,7 +509,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetPrecioCurso_NotFound() throws NotFoundException {
+        void testGetPrecioCurso_NotFound() throws NotFoundException {
             // GIVEN
             Long id = 99L;
             when(cursoService.getPrecioCurso(id))
@@ -529,7 +527,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetPrecioCurso_InternalError() throws NotFoundException {
+        void testGetPrecioCurso_InternalError() throws NotFoundException {
             // GIVEN
             Long id = 1L;
             when(cursoService.getPrecioCurso(id))
@@ -553,7 +551,7 @@ public class CursoControllerTest {
         private String adminJWT;
 
         @BeforeEach
-        public void setUp() {
+        void setUp() {
             // 1. Creamos una autoridad con el rol que pide el @PreAuthorize
             // Nota: Spring Security suele esperar "ROLE_ADMIN" si en el PreAuthorize
             // pusiste 'ADMIN'
@@ -570,7 +568,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testUpdateCurso_Success() throws Exception {
+        void testUpdateCurso_Success() throws Exception {
             // GIVEN
             CursoDTO inputDto = new CursoDTO(1L, "Java Updated", null, null, null, null, null, null, null, null);
             Curso cursoMock = new Curso();
@@ -596,7 +594,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testUpdateCurso_NotFound() throws Exception {
+        void testUpdateCurso_NotFound() throws Exception {
             // GIVEN
             CursoDTO inputDto = new CursoDTO(99L, "Inexistente", null, null, null, null, null, null, null, null);
 
@@ -617,7 +615,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testUpdateCurso_FailedDependency() throws Exception {
+        void testUpdateCurso_FailedDependency() throws Exception {
             // GIVEN
             CursoDTO inputDto = new CursoDTO(1L, "Test", null, null, null, null, null, null, null, null);
 
@@ -639,7 +637,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testUpdateCurso_InternalServerError() throws Exception {
+        void testUpdateCurso_InternalServerError() throws Exception {
             // GIVEN
             CursoDTO inputDto = new CursoDTO(1L, "Error Test", null, null, null, null, null, null, null, null);
 
@@ -661,7 +659,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testUpdateCurso_NotModified() throws Exception {
+        void testUpdateCurso_NotModified() throws Exception {
             // GIVEN
             CursoDTO inputDto = new CursoDTO(1L, "Sin Cambios", null, null, null, null, null, null, null, null);
 
@@ -690,7 +688,7 @@ public class CursoControllerTest {
         private String adminJWT;
 
         @BeforeEach
-        public void setUp() {
+        void setUp() {
             // Reutilizamos la lógica del token con rol ADMIN
             org.springframework.security.core.Authentication auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                     "adminUser",
@@ -700,7 +698,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteCurso_Success() throws Exception {
+        void testDeleteCurso_Success() throws Exception {
             // GIVEN
             Long id = 1L;
 
@@ -721,7 +719,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteCurso_NotFound() throws Exception {
+        void testDeleteCurso_NotFound() throws Exception {
             // GIVEN
             Long id = 99L;
             org.mockito.Mockito.doThrow(new EntityNotFoundException("Curso no existe"))
@@ -739,7 +737,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteCurso_InternalError() throws Exception {
+        void testDeleteCurso_InternalError() throws Exception {
             // GIVEN
             Long id = 1L;
             org.mockito.Mockito.doThrow(new RuntimeException("Fallo en la base de datos"))
@@ -757,7 +755,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteCurso_GeneralException() throws Exception {
+        void testDeleteCurso_GeneralException() throws Exception {
             // GIVEN
             Long id = 1L;
             String mensajeError = "Error inesperado";
@@ -789,7 +787,7 @@ public class CursoControllerTest {
         private String userJWT;
 
         @BeforeEach
-        public void setUp() {
+        void setUp() {
             // Generamos un token con ROLE_USER
             org.springframework.security.core.Authentication auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                     "standardUser",
@@ -800,7 +798,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetClaseForId_Success() throws Exception {
+        void testGetClaseForId_Success() throws Exception {
             // GIVEN
             Long idCurso = 1L;
             Long idClase = 50L;
@@ -831,7 +829,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetClaseForId_ClassNotFoundInCurso() throws Exception {
+        void testGetClaseForId_ClassNotFoundInCurso() throws Exception {
             // GIVEN: El curso existe pero no tiene esa clase
             Long idCurso = 1L;
             Long idClaseInexistente = 999L;
@@ -853,7 +851,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetClaseForId_CursoNotFound() throws Exception {
+        void testGetClaseForId_CursoNotFound() throws Exception {
             // GIVEN: El curso ni siquiera existe
             Long idCurso = 404L;
             when(cursoService.getCurso(idCurso)).thenThrow(new EntityNotFoundException("Curso no existe"));
@@ -869,7 +867,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testGetClaseForId_InternalError() throws Exception {
+        void testGetClaseForId_InternalError() throws Exception {
             // GIVEN
             when(cursoService.getCurso(anyLong())).thenThrow(new RuntimeException("Error imprevisto"));
 
@@ -890,7 +888,7 @@ public class CursoControllerTest {
         private String adminJWT;
 
         @BeforeEach
-        public void setUp() {
+        void setUp() {
             // Token con rol ADMIN para permitir el borrado
             org.springframework.security.core.Authentication auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                     "admin", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
@@ -898,7 +896,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteClase_Success() throws Exception {
+        void testDeleteClase_Success() throws Exception {
             // GIVEN
             Long idCurso = 1L;
             Long idClaseAEliminar = 10L;
@@ -938,7 +936,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteClase_NotFound() throws Exception {
+        void testDeleteClase_NotFound() throws Exception {
             // GIVEN: El curso existe pero la clase no está en su lista
             Long idCurso = 1L;
             Long idClaseInexistente = 999L;
@@ -960,7 +958,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteClase_CursoNotFound() throws Exception {
+        void testDeleteClase_CursoNotFound() throws Exception {
             // GIVEN: El curso no existe
             Long idCurso = 1L;
             when(cursoService.getCurso(idCurso)).thenThrow(new EntityNotFoundException("Curso inexistente"));
@@ -976,7 +974,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testDeleteClase_InternalError() throws Exception {
+        void testDeleteClase_InternalError() throws Exception {
             // GIVEN: Error inesperado al borrar
             when(cursoService.getCurso(anyLong())).thenThrow(new RuntimeException("Error de DB"));
 
@@ -997,7 +995,7 @@ public class CursoControllerTest {
         private String adminJWT;
 
         @BeforeEach
-        public void setUp() {
+        void setUp() {
             // Token con privilegios para PROF/ADMIN
             org.springframework.security.core.Authentication auth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                     "admin", null, java.util.List
@@ -1006,7 +1004,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_Success() throws Exception {
+        void testSubeVideo_Success() throws Exception {
             // GIVEN
             Long idCurso = 1L;
             Long idClase = 10L;
@@ -1032,7 +1030,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_FileEmpty() {
+        void testSubeVideo_FileEmpty() {
             // GIVEN
             byte[] emptyContent = new byte[0];
 
@@ -1048,7 +1046,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_IllegalArgument() throws Exception {
+        void testSubeVideo_IllegalArgument() throws Exception {
             // GIVEN
             when(cursoService.subeVideo(any())).thenThrow(new IllegalArgumentException("Formato no válido"));
 
@@ -1063,7 +1061,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_GeneralException() throws Exception {
+        void testSubeVideo_GeneralException() throws Exception {
             // GIVEN
             // Usamos thenAnswer para "saltar" la validación de checked exceptions si fuera
             // necesario
@@ -1082,7 +1080,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_AccessDenied() throws Exception {
+        void testSubeVideo_AccessDenied() throws Exception {
             // GIVEN: El servicio lanza una AccessDeniedException
             // (org.springframework.security.access.AccessDeniedException)
             when(cursoService.subeVideo(any()))
@@ -1101,7 +1099,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_IllegalState() throws Exception {
+        void testSubeVideo_IllegalState() throws Exception {
             // GIVEN: El servicio lanza IllegalStateException (ej: disco lleno o buffer
             // corrupto)
             when(cursoService.subeVideo(any()))
@@ -1119,7 +1117,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_EntityNotFound() throws Exception {
+        void testSubeVideo_EntityNotFound() throws Exception {
             // GIVEN: No se encuentra el curso o clase al que asociar el video
             when(cursoService.subeVideo(any()))
                     .thenThrow(new jakarta.persistence.EntityNotFoundException("Curso no encontrado para el video"));
@@ -1136,7 +1134,7 @@ public class CursoControllerTest {
         }
 
         @Test
-        public void testSubeVideo_RuntimeException() throws Exception {
+        void testSubeVideo_RuntimeException() throws Exception {
             // GIVEN: Lanzamos una RuntimeException pura
             String errorMsg = "Error inesperado en tiempo de ejecución";
             when(cursoService.subeVideo(any()))
@@ -1171,7 +1169,7 @@ public class CursoControllerTest {
     private String JWT;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         // Configuración para TLS/SSL y Puerto
         RestAssured.port = port;
         RestAssured.baseURI = "https://localhost";
