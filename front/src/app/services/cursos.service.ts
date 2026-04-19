@@ -137,17 +137,17 @@ export class CursosService {
 		);
 	}
 
-	getStatusCurso(idCurso: number): Observable<number | boolean> {
+	getStatusCurso(idCurso: number): Observable<number> {
 		return this.http.get<number>(this.backURLStreaming + '/status/' + idCurso, { observe: 'response' }).pipe(
 			map((response: HttpResponse<number>) => {
 				if (response.ok && response.body) {
 					return response.body;
 				}
-				return false;
+				return 0;
 			}),
 			catchError((e: Error) => {
 				console.error('Error al obtener el estado del curso:', e.message);
-				return of(false);
+				return of(0);
 			}),
 		);
 	}

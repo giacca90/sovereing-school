@@ -51,6 +51,9 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class CompruebaCorreoTests {
+        /**
+         * Prueba que se retorna el ID del usuario cuando el correo existe.
+         */
         @Test
         void compruebaCorreoTest() {
             String correo = "correo@ejemplo.com";
@@ -60,6 +63,9 @@ class LoginServiceTest {
             verify(loginRepository).compruebaCorreo(correo);
         }
 
+        /**
+         * Prueba que se retorna 0L cuando el correo no existe.
+         */
         @Test
         void compruebaCorreoTest_Empty() {
             String correo = "correo@ejemplo.com";
@@ -69,6 +75,9 @@ class LoginServiceTest {
             verify(loginRepository).compruebaCorreo(correo);
         }
 
+        /**
+         * Prueba que se lanza una excepción cuando ocurre un error en el repositorio.
+         */
         @Test
         void compruebaCorreoTest_Error() {
             String correo = "correo@ejemplo.com";
@@ -82,20 +91,28 @@ class LoginServiceTest {
     // ==========================
     // Tests createNuevoLogin()
     // ==========================
+
     @Nested
     class CreateNuevoLoginTests {
+        /**
+         * Prueba la creación exitosa de un login.
+         */
         @Test
         void createNuevoLoginTest() {
             Login login = new Login();
             login.setIdUsuario(1L);
             login.setCorreoElectronico("correo@ejemplo.com");
             login.setPassword("password");
+
             when(loginRepository.save(login)).thenReturn(login);
 
             assertEquals("Nuevo Usuario creado con éxito!!!", loginService.createNuevoLogin(login));
             verify(loginRepository).save(login);
         }
 
+        /**
+         * Prueba el error al crear un login.
+         */
         @Test
         void createNuevoLoginTest_Error() {
             Login login = new Login();
@@ -114,6 +131,9 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class GetCorreoLoginTests {
+        /**
+         * Prueba la obtención exitosa del correo electrónico de un login.
+         */
         @Test
         void getCorreoLoginTest() {
             String correo = "correo@ejemplo.com";
@@ -124,6 +144,9 @@ class LoginServiceTest {
             verify(loginRepository).findCorreoLoginForId(idUsuario);
         }
 
+        /**
+         * Prueba que se lanza EntityNotFoundException cuando el correo no existe.
+         */
         @Test
         void getCorreoLoginTest_Empty() {
             Long idUsuario = 1L;
@@ -133,6 +156,10 @@ class LoginServiceTest {
             verify(loginRepository).findCorreoLoginForId(idUsuario);
         }
 
+        /**
+         * Prueba que se lanza una excepción cuando ocurre un error al obtener el
+         * correo.
+         */
         @Test
         void getCorreoLoginTest_Error() {
             Long idUsuario = 1L;
@@ -149,6 +176,9 @@ class LoginServiceTest {
     @Nested
     class GetPasswordLoginTests {
 
+        /**
+         * Prueba la obtención exitosa de la contraseña de un login.
+         */
         @Test
         void getPasswordLoginTest() {
             String password = "password";
@@ -159,6 +189,9 @@ class LoginServiceTest {
             verify(loginRepository).findPasswordLoginForId(idUsuario);
         }
 
+        /**
+         * Prueba que se lanza EntityNotFoundException cuando la contraseña no existe.
+         */
         @Test
         void getPasswordLoginTest_Empty() {
             Long idUsuario = 1L;
@@ -168,6 +201,10 @@ class LoginServiceTest {
             verify(loginRepository).findPasswordLoginForId(idUsuario);
         }
 
+        /**
+         * Prueba que se lanza una excepción cuando ocurre un error al obtener la
+         * contraseña.
+         */
         @Test
         void getPasswordLoginTest_Error() {
             Long idUsuario = 1L;
@@ -184,6 +221,9 @@ class LoginServiceTest {
     @Nested
     class ChangeCorreoLoginTests {
 
+        /**
+         * Prueba el cambio exitoso del correo electrónico.
+         */
         @Test
         void changeCorreoLoginTest() {
             Login login = new Login();
@@ -196,6 +236,9 @@ class LoginServiceTest {
             verify(loginRepository).changeCorreoLoginForId(1L, "correo@ejemplo.com");
         }
 
+        /**
+         * Prueba el error al cambiar el correo electrónico.
+         */
         @Test
         void changeCorreoLoginTest_Error() {
             Login login = new Login();
@@ -216,6 +259,9 @@ class LoginServiceTest {
     @Nested
     class ChangePasswordLoginTests {
 
+        /**
+         * Prueba el cambio exitoso de la contraseña.
+         */
         @Test
         void changePasswordLoginTest() {
             ChangePassword changepassword = new ChangePassword(
@@ -231,6 +277,9 @@ class LoginServiceTest {
             verify(loginRepository).changePasswordLoginForId(1L, "newPassword");
         }
 
+        /**
+         * Prueba el cambio de contraseña cuando la nueva contraseña está vacía.
+         */
         @Test
         void changePasswordLoginTest_newPasswordEmpty() {
             ChangePassword changepassword = new ChangePassword(
@@ -241,6 +290,9 @@ class LoginServiceTest {
             assertEquals(null, loginService.changePasswordLogin(changepassword));
         }
 
+        /**
+         * Prueba el cambio de contraseña cuando la contraseña antigua está vacía.
+         */
         @Test
         void changePasswordLoginTest_oldPasswordEmpty() {
             ChangePassword changepassword = new ChangePassword(
@@ -251,6 +303,9 @@ class LoginServiceTest {
             assertEquals(null, loginService.changePasswordLogin(changepassword));
         }
 
+        /**
+         * Prueba el cambio de contraseña cuando la contraseña antigua es incorrecta.
+         */
         @Test
         void changePasswordLoginTest_differentOldPassword() {
             ChangePassword changepassword = new ChangePassword(
@@ -270,6 +325,9 @@ class LoginServiceTest {
     // ==========================
     @Nested
     class DeleteLoginTests {
+        /**
+         * Prueba la eliminación exitosa de un login.
+         */
         @Test
         void deleteLoginTest() {
             Long idUsuario = 1L;

@@ -1,7 +1,14 @@
 package com.sovereingschool.back_streaming.Services;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +38,9 @@ import jakarta.transaction.Transactional;
 @Service
 @Transactional
 public class UsuarioCursosService implements IUsuarioCursosService {
+
+    private static final String ID_CURSO_CRITERIA = "cursos.id_curso";
+    private static final String NO_DOCUMENT_FOUND = "No se encontró el documento.";
 
     private StreamingService streamingService;
     private UsuarioRepository usuarioRepository; // Repositorio de PostgreSQL para usuarios
@@ -79,7 +89,8 @@ public class UsuarioCursosService implements IUsuarioCursosService {
                     StatusClase classStatus = new StatusClase();
                     classStatus.setIdClase(clazz.getIdClase());
                     classStatus.setCompleted(false);
-                    classStatus.setProgress(0);
+                    classStatus.setProgress(new HashSet<>());
+                    classStatus.setTotalSegments(this.getTotalSegments(clazz));
                     return classStatus;
                 }).toList();
 
@@ -95,7 +106,6 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             userCourses.setCursos(courseStatuses);
             usuarioCursosRepository.save(userCourses);
         }
-
     }
 
     /**
@@ -194,27 +204,44 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     @Override
     public boolean addClase(Long idCurso, Clase clase) {
         try {
-            // Encuentra el documento que contiene el curso específico
-            Query query = new Query();
-            query.addCriteria(Criteria.where("cursos.id_curso").is(idCurso));
-            List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
-
-            if (usuarioCursos.isEmpty()) {
-                logger.error("No se encontró el documento.");
+            // Validar que el directorio de la clase exista antes de añadirla
+            String fullPath = clase.getDireccionClase();
+            if (fullPath == null || !fullPath.contains("/")) {
+                logger.error("Ruta de clase inválida o nula");
+                return false;
+            }
+            Path claseDir = Paths.get(fullPath).getParent();
+            if (claseDir == null || !Files.exists(claseDir)) {
+                logger.error("No existe el directorio de la clase: {}", claseDir);
                 return false;
             }
 
+            // Encuentra el documento que contiene el curso específico
+            Query query = new Query();
+            query.addCriteria(Criteria.where(ID_CURSO_CRITERIA).is(idCurso));
+            List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
+
+            if (usuarioCursos.isEmpty()) {
+                logger.error(NO_DOCUMENT_FOUND);
+                return false;
+            }
+
+            boolean found = false;
             for (UsuarioCursos usuario : usuarioCursos) {
                 for (StatusCurso curso : usuario.getCursos()) {
                     if (curso.getIdCurso().equals(idCurso)) {
                         curso.getClases()
-                                .add(new StatusClase(clase.getIdClase(), false, 0));
+                                .add(new StatusClase(clase.getIdClase(), false, this.getTotalSegments(clase),
+                                        new HashSet<>()));
                         mongoTemplate.save(usuario);
+                        found = true;
                         break;
                     }
                 }
+                if (found)
+                    break;
             }
-            return true;
+            return found;
         } catch (Exception e) {
             logger.error("Error en añadir la cueva clase: {}", e.getMessage());
             return false;
@@ -233,11 +260,11 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         try {
             // Encuentra el documento que contiene el curso específico
             Query query = new Query();
-            query.addCriteria(Criteria.where("cursos.id_curso").is(idCurso));
+            query.addCriteria(Criteria.where(ID_CURSO_CRITERIA).is(idCurso));
             List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
             if (usuarioCursos.isEmpty()) {
-                logger.error("No se encontró el documento.");
+                logger.error(NO_DOCUMENT_FOUND);
                 return false;
             }
 
@@ -336,11 +363,11 @@ public class UsuarioCursosService implements IUsuarioCursosService {
     public boolean deleteCurso(Long id) {
         // Encuentra el documento que contiene el curso específico
         Query query = new Query();
-        query.addCriteria(Criteria.where("cursos.id_curso").is(id));
+        query.addCriteria(Criteria.where(ID_CURSO_CRITERIA).is(id));
         List<UsuarioCursos> usuarioCursos = mongoTemplate.find(query, UsuarioCursos.class);
 
         if (usuarioCursos.isEmpty()) {
-            logger.error("No se encontró el documento.");
+            logger.error(NO_DOCUMENT_FOUND);
             return false;
         }
 
@@ -387,34 +414,41 @@ public class UsuarioCursosService implements IUsuarioCursosService {
         List<StatusCurso> cursosStatus = usuarioCursos.getCursos();
         // Buscamos cursos nuevos
         for (Curso curso : cursos) {
-            cursosStatus.stream()
+            Optional<StatusCurso> existingCurso = cursosStatus.stream()
                     .filter(c -> c.getIdCurso().equals(curso.getIdCurso()))
-                    .findFirst().orElseGet(() -> {
-                        // Es un curso nuevo, creamos el StatusCurso
-                        StatusCurso cursoStatus = new StatusCurso();
-                        cursoStatus.setIdCurso(curso.getIdCurso());
-                        List<StatusClase> clases = this.createClasesCurso(curso);
-                        cursoStatus.setClases(clases);
-                        // Añadimos el StatusCurso al usuario
-                        usuarioCursos.getCursos().add(cursoStatus);
-                        return cursoStatus;
-                    });
+                    .findFirst();
+            if (existingCurso.isEmpty()) {
+                // Es un curso nuevo, creamos el StatusCurso
+                StatusCurso cursoStatus = new StatusCurso();
+                cursoStatus.setIdCurso(curso.getIdCurso());
+                List<StatusClase> clases = this.createClasesCurso(curso);
+                cursoStatus.setClases(clases);
+                // Añadimos el StatusCurso al usuario
+                usuarioCursos.getCursos().add(cursoStatus);
+            }
         }
         // Actualizamos el usuarioCursos
         this.usuarioCursosRepository.save(usuarioCursos);
     }
 
     protected List<StatusClase> createClasesCurso(Curso curso) {
-        List<Clase> clases = curso.getClasesCurso();
+        List<Clase> clases = this.cursoRepository.findClasesCursoById(curso.getIdCurso());
         return clases.stream().map(clazz -> {
             StatusClase classStatus = new StatusClase();
             classStatus.setIdClase(clazz.getIdClase());
             classStatus.setCompleted(false);
-            classStatus.setProgress(0);
+            classStatus.setTotalSegments(this.getTotalSegments(clazz));
+            classStatus.setProgress(new HashSet<>());
             return classStatus;
         }).toList();
     }
 
+    /**
+     * Actualiza el status de un usuario con los datos de un curso.
+     * 
+     * @param usuario Usuario a actualizar
+     * @param curso   Curso con los datos actuales
+     */
     protected void actualizarStatusUsuario(UsuarioCursos usuario, Curso curso) {
         usuario.getCursos().stream()
                 .filter(cs -> cs.getIdCurso().equals(curso.getIdCurso()))
@@ -431,11 +465,18 @@ public class UsuarioCursosService implements IUsuarioCursosService {
                 });
     }
 
+    /**
+     * Mapea una Clase a un StatusClase.
+     * 
+     * @param clase Clase a mapear
+     * @return StatusClase mapeado
+     */
     protected StatusClase mapToStatusClase(Clase clase) {
         StatusClase claseStatus = new StatusClase();
         claseStatus.setIdClase(clase.getIdClase());
         claseStatus.setCompleted(false);
-        claseStatus.setProgress(0);
+        claseStatus.setTotalSegments(this.getTotalSegments(clase));
+        claseStatus.setProgress(new HashSet<>());
         return claseStatus;
     }
 
@@ -448,6 +489,49 @@ public class UsuarioCursosService implements IUsuarioCursosService {
             // Restaurar interrupción si es necesario
             Thread.currentThread().interrupt();
             throw new InternalServerException("Error al convertir los videos del curso: " + e.getMessage());
+        }
+    }
+
+    protected int getTotalSegments(Clase clase) {
+        String fullPath = clase.getDireccionClase();
+        if (fullPath == null || !fullPath.contains("/")) {
+            logger.error("Ruta de clase inválida o nula");
+            return 0;
+        }
+
+        // 1. Obtenemos la carpeta de la clase
+        Path claseDir = Paths.get(fullPath).getParent();
+
+        if (claseDir == null || !Files.exists(claseDir)) {
+            logger.error("No existe el directorio de la clase: {}", claseDir);
+            return 0;
+        }
+
+        try (Stream<Path> subDirs = Files.list(claseDir)) {
+            // 2. Buscamos la primera carpeta de resolución (ej. 720p/)
+            Optional<Path> resolutionDir = subDirs
+                    .filter(Files::isDirectory)
+                    .findFirst();
+
+            if (resolutionDir.isPresent()) {
+                Path targetDir = resolutionDir.get();
+
+                try (Stream<Path> segments = Files.list(targetDir)) {
+                    // 3. Contamos todos los archivos y restamos 1 (.m3u8 de la resolución)
+                    long count = segments.count();
+                    int total = (int) (count > 0 ? count - 1 : 0);
+
+                    logger.info("Total de segmentos detectados en {}: {}", targetDir.getFileName(), total);
+                    return total;
+                }
+            } else {
+                logger.warn("No se encontraron carpetas de resolución dentro de {}", claseDir);
+                return 0;
+            }
+
+        } catch (IOException e) {
+            logger.error("Error al acceder al sistema de archivos para la clase {}", clase.getIdClase(), e);
+            return 0;
         }
     }
 }

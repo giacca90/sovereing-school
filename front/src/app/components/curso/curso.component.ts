@@ -120,4 +120,9 @@ export class CursoComponent implements OnDestroy {
 			this.cdr.detectChanges();
 		});
 	}
+
+	addCursoAUsuario(curso: Curso) {
+		this.cursoComprado(curso);
+		this.router.navigate(['/repro/' + curso.idCurso + '/0']);
+	}
 }

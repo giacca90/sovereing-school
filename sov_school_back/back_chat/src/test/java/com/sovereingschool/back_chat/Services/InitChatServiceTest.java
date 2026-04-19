@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.ChangeStreamEvent;
@@ -53,9 +54,9 @@ import reactor.core.publisher.Flux;
 @ExtendWith(MockitoExtension.class)
 class InitChatServiceTest {
 
-    // ==========================================
-    // 1. TESTS DE initChat()
-    // ==========================================
+    /**
+     * Tests para el método initChat.
+     */
     @Nested
     class InitChatTests {
 
@@ -115,6 +116,9 @@ class InitChatServiceTest {
             curso.setClasesCurso(List.of(clase));
         }
 
+        /**
+         * Prueba la inicialización exitosa del chat.
+         */
         @Test
         void initChat_success() {
             when(usuarioChatRepo.findByIdUsuario(idUsuario)).thenReturn(Optional.of(usuarioChat));
@@ -127,28 +131,35 @@ class InitChatServiceTest {
 
             InitChatDTO result = initChatService.initChat(idUsuario);
 
-            assertNotNull(result);
-            assertEquals(idUsuario, result.idUsuario());
-            assertEquals(1, result.mensajes().size());
+            assertNotNull(result, "El resultado no debería ser nulo");
+            assertEquals(idUsuario, result.idUsuario(), "El ID del usuario debería coincidir");
+            assertEquals(1, result.mensajes().size(), "Debería haber un mensaje");
             verify(usuarioChatRepo, times(1)).findByIdUsuario(idUsuario);
         }
 
+        /**
+         * Prueba el error cuando el usuario no es encontrado durante la inicialización.
+         */
         @Test
         void initChat_errorUsuarioNoEncontrado() {
             when(usuarioChatRepo.findByIdUsuario(idUsuario)).thenReturn(Optional.empty());
 
-            assertThrows(EntityNotFoundException.class, () -> {
-                initChatService.initChat(idUsuario);
-            });
+            assertThrows(EntityNotFoundException.class, () -> initChatService.initChat(idUsuario),
+                    "Debería lanzar EntityNotFoundException");
         }
 
+        /**
+         * Prueba el error cuando el ID de usuario es nulo durante la inicialización.
+         */
         @Test
         void initChat_errorIdNulo() {
-            assertThrows(IllegalArgumentException.class, () -> {
-                initChatService.initChat(null);
-            });
+            assertThrows(IllegalArgumentException.class, () -> initChatService.initChat(null),
+                    "Debería lanzar IllegalArgumentException");
         }
 
+        /**
+         * Prueba la inicialización del chat cuando el usuario no tiene mensajes.
+         */
         @Test
         void initChat_sinMensajes() {
             usuarioChat.setMensajes(new ArrayList<>());
@@ -160,10 +171,13 @@ class InitChatServiceTest {
 
             InitChatDTO result = initChatService.initChat(idUsuario);
 
-            assertNotNull(result);
-            assertTrue(result.mensajes().isEmpty());
+            assertNotNull(result, "El resultado no debería ser nulo");
+            assertTrue(result.mensajes().isEmpty(), "La lista de mensajes debería estar vacía");
         }
 
+        /**
+         * Prueba la inicialización del chat cuando el usuario no tiene cursos.
+         */
         @Test
         void initChat_sinCursos() {
             usuarioChat.setCursos(new ArrayList<>());
@@ -176,24 +190,13 @@ class InitChatServiceTest {
 
             InitChatDTO result = initChatService.initChat(idUsuario);
 
-            assertNotNull(result);
-            assertTrue(result.cursos().isEmpty());
+            assertNotNull(result, "El resultado no debería ser nulo");
+            assertTrue(result.cursos().isEmpty(), "La lista de cursos debería estar vacía");
         }
 
-        @Test
-        void initChat_errorNombreUsuarioNoEncontrado() {
-            mensaje.setRespuesta(null);
-            when(usuarioChatRepo.findByIdUsuario(idUsuario)).thenReturn(Optional.of(usuarioChat));
-            when(mensajeChatRepo.findAllById(anyList())).thenReturn(List.of(mensaje));
-            when(usuarioRepo.findNombreUsuarioForId(idUsuario)).thenReturn(Optional.empty());
-
-            EntityNotFoundException e = assertThrows(EntityNotFoundException.class, () -> {
-                initChatService.initChat(idUsuario);
-            });
-
-            assertEquals("Error en obtener el nombre del usuario", e.getMessage());
-        }
-
+        /**
+         * Prueba el error cuando no se encuentra un curso durante la inicialización.
+         */
         @Test
         void initChat_errorCursoNoEncontrado() {
             mensaje.setRespuesta(null);
@@ -204,11 +207,16 @@ class InitChatServiceTest {
 
             EntityNotFoundException e = assertThrows(EntityNotFoundException.class, () -> {
                 initChatService.initChat(idUsuario);
-            });
+            }, "Debería lanzar EntityNotFoundException");
 
-            assertEquals("Error en obtener el curso con ID " + mensaje.getIdCurso(), e.getMessage());
+            assertEquals("Error en obtener el curso con ID " + mensaje.getIdCurso(), e.getMessage(),
+                    "El mensaje de error debería coincidir");
         }
 
+        /**
+         * Prueba el error cuando no se encuentra la respuesta de un mensaje durante la
+         * inicialización.
+         */
         @Test
         void initChat_errorRespuestaNoEncontrada() {
             when(usuarioChatRepo.findByIdUsuario(idUsuario)).thenReturn(Optional.of(usuarioChat));
@@ -217,15 +225,13 @@ class InitChatServiceTest {
 
             EntityNotFoundException e = assertThrows(EntityNotFoundException.class, () -> {
                 initChatService.initChat(idUsuario);
-            });
+            }, "Debería lanzar EntityNotFoundException");
 
-            assertEquals("Error en obtener la respuesta del mensaje", e.getMessage());
+            assertEquals("Error en obtener la respuesta del mensaje", e.getMessage(),
+                    "El mensaje de error debería coincidir");
         }
     }
 
-    // ==========================================
-    // 2. TESTS DE getMensajesDTO()
-    // ==========================================
     @Nested
     class GetMensajesDTOTests {
         private Long idUsuario = 1L;
@@ -267,6 +273,9 @@ class InitChatServiceTest {
             curso.setClasesCurso(List.of(clase));
         }
 
+        /**
+         * Prueba la obtención de DTOs de mensajes cuando incluyen respuestas.
+         */
         @Test
         void getMensajesDTO_conRespuesta() {
             when(mensajeChatRepo.findById("idRespuesta")).thenReturn(Optional.of(respuesta));
@@ -282,6 +291,9 @@ class InitChatServiceTest {
             assertEquals("Juan", result.get(0).nombreUsuario());
         }
 
+        /**
+         * Prueba la obtención de DTOs de mensajes cuando no hay respuestas.
+         */
         @Test
         void getMensajesDTO_sinRespuesta() {
             mensaje.setRespuesta(null);
@@ -296,6 +308,10 @@ class InitChatServiceTest {
             assertEquals(null, result.get(0).respuesta());
         }
 
+        /**
+         * Prueba la obtención de DTOs de mensajes cuando la clase no existe en el
+         * curso.
+         */
         @Test
         void getMensajesDTO_claseNoEncontradaEnCurso() {
             mensaje.setIdClase(999L);
@@ -310,6 +326,9 @@ class InitChatServiceTest {
             assertEquals(null, result.get(0).nombreClase());
         }
 
+        /**
+         * Prueba la obtención de DTOs de mensajes cuando la lista está vacía.
+         */
         @Test
         void getMensajesDTO_vacio() {
             List<MensajeChatDTO> result = initChatService.getMensajesDTO(new ArrayList<>());
@@ -317,6 +336,10 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el nombre del usuario al obtener
+         * mensajes.
+         */
         @Test
         void getMensajesDTO_errorNombreUsuarioRespuesta() {
             when(mensajeChatRepo.findById("idRespuesta")).thenReturn(Optional.of(respuesta));
@@ -327,16 +350,31 @@ class InitChatServiceTest {
             });
             assertEquals("Error en obtener el nombre del usuario", e.getMessage());
         }
+
+        /**
+         * Prueba el error cuando no se encuentra la foto del usuario (Caso borde).
+         */
+        @Test
+        void getMensajesDTO_errorFotoUsuarioVacia() {
+            mensaje.setRespuesta(null);
+            when(usuarioRepo.findNombreUsuarioForId(idUsuario)).thenReturn(Optional.of("Juan"));
+            when(usuarioRepo.findFotosUsuarioForId(idUsuario)).thenReturn(new ArrayList<>());
+            when(cursoRepo.findById(idCurso)).thenReturn(Optional.of(curso));
+
+            assertThrows(IndexOutOfBoundsException.class, () -> {
+                initChatService.getMensajesDTO(List.of(mensaje));
+            });
+        }
     }
 
-    // ==========================================
-    // 3. TESTS DE getMessageUser()
-    // ==========================================
     @Nested
     class GetMessageUserTests {
         private Long idUsuario = 1L;
         private Long idCurso = 100L;
 
+        /**
+         * Prueba la obtención de mensajes de un usuario.
+         */
         @Test
         void getMessageUser_conMensajes() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -369,6 +407,9 @@ class InitChatServiceTest {
             assertFalse(result.isEmpty());
         }
 
+        /**
+         * Prueba la obtención de mensajes de un usuario cuando no tiene ninguno.
+         */
         @Test
         void getMessageUser_sinMensajes() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -381,6 +422,10 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la obtención de mensajes de un usuario cuando la lista de mensajes es
+         * nula.
+         */
         @Test
         void getMessageUser_mensajesNulo() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -393,6 +438,10 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la obtención de mensajes de un usuario cuando no se encuentran
+         * mensajes al consultar por ID.
+         */
         @Test
         void getMessageUser_mensajesVaciosAlConsultar() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -408,14 +457,14 @@ class InitChatServiceTest {
         }
     }
 
-    // ==========================================
-    // 4. TESTS DE getCursosUser()
-    // ==========================================
     @Nested
     class GetCursosUserTests {
         private Long idUsuario = 1L;
         private Long idCurso = 100L;
 
+        /**
+         * Prueba la obtención de cursos de un usuario.
+         */
         @Test
         void getCursosUser_conCursos() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -456,6 +505,10 @@ class InitChatServiceTest {
             assertEquals(idCurso, result.get(0).idCurso());
         }
 
+        /**
+         * Prueba el error cuando no se encuentra un curso al obtener los cursos de un
+         * usuario.
+         */
         @Test
         void getCursosUser_conCursosPeroCursoNoEncontrado() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -477,6 +530,9 @@ class InitChatServiceTest {
             assertEquals("Error en obtener el curso con ID " + idCurso, e.getMessage());
         }
 
+        /**
+         * Prueba la obtención de cursos cuando el usuario no tiene ninguno.
+         */
         @Test
         void getCursosUser_sinCursos() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -489,6 +545,9 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la obtención de cursos cuando la lista de cursos es nula.
+         */
         @Test
         void getCursosUser_cursosNulo() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -501,6 +560,9 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la obtención de cursos cuando el curso no tiene un último mensaje.
+         */
         @Test
         void getCursosUser_sinUltimoMensaje() {
             UsuarioChat usuarioChat = new UsuarioChat();
@@ -530,13 +592,13 @@ class InitChatServiceTest {
         }
     }
 
-    // ==========================================
-    // 5. TESTS DE generateNoMessage()
-    // ==========================================
     @Nested
     class GenerateNoMessageTests {
         private Long idCurso = 100L;
 
+        /**
+         * Prueba la generación exitosa de un DTO de "sin mensajes".
+         */
         @Test
         void generateNoMessage_success() {
             CursoChat cursoChat = new CursoChat();
@@ -556,14 +618,14 @@ class InitChatServiceTest {
         }
     }
 
-    // ==========================================
-    // 6. TESTS DE fetchMensajesFromIds()
-    // ==========================================
     @Nested
     class FetchMensajesFromIdsTests {
         private Long idUsuario = 1L;
         private Long idCurso = 100L;
 
+        /**
+         * Prueba la recuperación exitosa de mensajes a partir de una lista de IDs.
+         */
         @Test
         void fetchMensajesFromIds_conMensajes() {
             MensajeChat msg = new MensajeChat();
@@ -592,6 +654,9 @@ class InitChatServiceTest {
             assertEquals(1, result.size());
         }
 
+        /**
+         * Prueba la recuperación de mensajes cuando la lista de IDs está vacía.
+         */
         @Test
         void fetchMensajesFromIds_vacio() {
             List<MensajeChatDTO> result = initChatService.fetchMensajesFromIds(new ArrayList<>());
@@ -599,6 +664,9 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la recuperación de mensajes cuando la lista de IDs es nula.
+         */
         @Test
         void fetchMensajesFromIds_nulo() {
             List<MensajeChatDTO> result = initChatService.fetchMensajesFromIds(null);
@@ -606,6 +674,10 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la recuperación de mensajes cuando no se encuentran mensajes para los
+         * IDs proporcionados.
+         */
         @Test
         void fetchMensajesFromIds_noEncontrados() {
             when(mensajeChatRepo.findAllById(anyList())).thenReturn(new ArrayList<>());
@@ -617,15 +689,15 @@ class InitChatServiceTest {
         }
     }
 
-    // ==========================================
-    // 7. TESTS DE mapClasesToDTO()
-    // ==========================================
     @Nested
     class MapClasesToDTOTests {
         private Long idClase = 50L;
         private Long idCurso = 100L;
         private Long idUsuario = 1L;
 
+        /**
+         * Prueba el mapeo exitoso de clases de chat a DTOs.
+         */
         @Test
         void mapClasesToDTO_conClases() {
             ClaseChat claseChat = new ClaseChat();
@@ -663,6 +735,9 @@ class InitChatServiceTest {
             assertEquals("Introducción", result.get(0).nombreClase());
         }
 
+        /**
+         * Prueba el mapeo de clases de chat cuando la lista está vacía.
+         */
         @Test
         void mapClasesToDTO_vacio() {
             List<ClaseChatDTO> result = initChatService.mapClasesToDTO(new ArrayList<>());
@@ -670,6 +745,9 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba el mapeo de clases de chat cuando la lista es nula.
+         */
         @Test
         void mapClasesToDTO_nulo() {
             List<ClaseChatDTO> result = initChatService.mapClasesToDTO(null);
@@ -677,6 +755,10 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el nombre de la clase durante el
+         * mapeo.
+         */
         @Test
         void mapClasesToDTO_claseNoEncontrada() {
             ClaseChat claseChat = new ClaseChat();
@@ -693,14 +775,15 @@ class InitChatServiceTest {
         }
     }
 
-    // ==========================================
-    // 8. TESTS DE fetchCursosUsuario()
-    // ==========================================
     @Nested
     class FetchCursosUsuarioTests {
         private Long idCurso = 100L;
         private Long idClase = 50L;
 
+        /**
+         * Prueba la recuperación exitosa de cursos de usuario a partir de IDs de
+         * MongoDB.
+         */
         @Test
         void fetchCursosUsuario_conCursos() {
             CursoChat cursoChat = new CursoChat();
@@ -724,6 +807,10 @@ class InitChatServiceTest {
             assertEquals(idCurso, result.get(0).idCurso());
         }
 
+        /**
+         * Prueba la recuperación de cursos de usuario cuando la lista de IDs está
+         * vacía.
+         */
         @Test
         void fetchCursosUsuario_vacio() {
             List<CursoChatDTO> result = initChatService.fetchCursosUsuario(new ArrayList<>());
@@ -731,6 +818,9 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la recuperación de cursos de usuario cuando la lista de IDs es nula.
+         */
         @Test
         void fetchCursosUsuario_nulo() {
             List<CursoChatDTO> result = initChatService.fetchCursosUsuario(null);
@@ -738,6 +828,9 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba el error cuando no se encuentra un curso durante la recuperación.
+         */
         @Test
         void fetchCursosUsuario_cursoNoEncontrado() {
             CursoChat cursoChat = new CursoChat();
@@ -754,6 +847,9 @@ class InitChatServiceTest {
             assertEquals("Error en obtener el curso con ID " + idCurso, e.getMessage());
         }
 
+        /**
+         * Prueba la recuperación de cursos de usuario cuando incluyen clases.
+         */
         @Test
         void fetchCursosUsuario_conClases() {
             ClaseChat claseChat = new ClaseChat();
@@ -784,15 +880,16 @@ class InitChatServiceTest {
         }
     }
 
-    // ==========================================
-    // 9. TESTS DE fetchClasesChat()
-    // ==========================================
     @Nested
     class FetchClasesChatTests {
         private Long idClase = 50L;
         private Long idCurso = 100L;
         private Long idUsuario = 1L;
 
+        /**
+         * Prueba la recuperación exitosa de clases de chat a partir de documentos
+         * MongoDB.
+         */
         @Test
         void fetchClasesChat_conClases() {
             Document doc = new Document()
@@ -829,6 +926,10 @@ class InitChatServiceTest {
             assertEquals(idClase, result.get(0).idClase());
         }
 
+        /**
+         * Prueba la recuperación de clases de chat cuando la lista de documentos está
+         * vacía.
+         */
         @Test
         void fetchClasesChat_vacio() {
             List<ClaseChatDTO> result = initChatService.fetchClasesChat(new ArrayList<>());
@@ -836,6 +937,10 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba la recuperación de clases de chat cuando la lista de documentos es
+         * nula.
+         */
         @Test
         void fetchClasesChat_nulo() {
             List<ClaseChatDTO> result = initChatService.fetchClasesChat(null);
@@ -843,6 +948,10 @@ class InitChatServiceTest {
             assertTrue(result.isEmpty());
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el nombre de la clase durante la
+         * recuperación de documentos.
+         */
         @Test
         void fetchClasesChat_claseNoEncontrada() {
             Document doc = new Document()
@@ -859,15 +968,15 @@ class InitChatServiceTest {
         }
     }
 
-    // ==========================================
-    // 10. TESTS DE notifyCoursesChat()
-    // ==========================================
     @Nested
     class NotifyCoursesChatTests {
         private Long idCurso = 100L;
         private Long idClase = 50L;
         private Long idUsuario = 1L;
 
+        /**
+         * Prueba la notificación exitosa de cursos de chat.
+         */
         @Test
         void notifyCoursesChat_success() {
             Document doc = new Document()
@@ -889,6 +998,9 @@ class InitChatServiceTest {
                     any(CursoChatDTO.class));
         }
 
+        /**
+         * Prueba la notificación de cursos de chat cuando incluyen clases.
+         */
         @Test
         void notifyCoursesChat_conClases() {
             Document claseDoc = new Document()
@@ -916,6 +1028,9 @@ class InitChatServiceTest {
                     any(CursoChatDTO.class));
         }
 
+        /**
+         * Prueba el error cuando no se encuentra un curso durante la notificación.
+         */
         @Test
         void notifyCoursesChat_cursoNoEncontrado() {
             Document doc = new Document()
@@ -933,13 +1048,16 @@ class InitChatServiceTest {
     }
 
     // ==========================================
-    // 11. TESTS DE notifyUsersChat()
+    // 2. TESTS DE getMensajesDTO()
     // ==========================================
     @Nested
     class NotifyUsersChatTests {
         private Long idUsuario = 1L;
         private Long idCurso = 100L;
 
+        /**
+         * Prueba la notificación exitosa de usuarios de chat.
+         */
         @Test
         void notifyUsersChat_success() {
             Document doc = new Document()
@@ -955,6 +1073,9 @@ class InitChatServiceTest {
                     any(InitChatDTO.class));
         }
 
+        /**
+         * Prueba la notificación de usuarios de chat cuando incluyen mensajes.
+         */
         @Test
         void notifyUsersChat_conMensajes() {
             Document doc = new Document()
@@ -1021,7 +1142,7 @@ class InitChatServiceTest {
     }
 
     // ==========================================
-    // 12. TESTS DE observeMultipleCollections()
+    // 3. TESTS DE getMessageUser()
     // ==========================================
     @Nested
     class ObserverTests {
@@ -1097,37 +1218,56 @@ class InitChatServiceTest {
     }
 
     // ==========================================
-    // MOCKS
+    // 4. TESTS DE getCursosUser()
     // ==========================================
     @Mock
     private UsuarioChatRepository usuarioChatRepo;
+
+    // ==========================================
+    // 5. TESTS DE generateNoMessage()
+    // ==========================================
     @Mock
     private MensajeChatRepository mensajeChatRepo;
-    @Mock
-    private UsuarioRepository usuarioRepo;
-    @Mock
-    private CursoRepository cursoRepo;
+
+    // ==========================================
+    // 6. TESTS DE fetchMensajesFromIds()
+    // ==========================================
     @Mock
     private CursoChatRepository cursoChatRepo;
+
+    // ==========================================
+    // 7. TESTS DE mapClasesToDTO()
+    // ==========================================
+    @Mock
+    private CursoRepository cursoRepo;
+
+    // ==========================================
+    // 8. TESTS DE fetchCursosUsuario()
+    // ==========================================
+    @Mock
+    private UsuarioRepository usuarioRepo;
+
+    // ==========================================
+    // 9. TESTS DE fetchClasesChat()
+    // ==========================================
     @Mock
     private ClaseRepository claseRepo;
+
+    // ==========================================
+    // 10. TESTS DE notifyCoursesChat()
+    // ==========================================
     @Mock
     private SimpMessagingTemplate simpMessagingTemplate;
+
+    // ==========================================
+    // 11. TESTS DE notifyUsersChat()
+    // ==========================================
     @Mock
     private ReactiveMongoTemplate reactiveMongoTemplate;
 
+    // ==========================================
+    // 12. TESTS DE observeMultipleCollections()
+    // ==========================================
+    @InjectMocks
     private InitChatService initChatService;
-
-    @BeforeEach
-    void setUp() {
-        initChatService = new InitChatService(
-                cursoChatRepo,
-                claseRepo,
-                usuarioChatRepo,
-                mensajeChatRepo,
-                usuarioRepo,
-                cursoRepo,
-                simpMessagingTemplate,
-                reactiveMongoTemplate);
-    }
 }

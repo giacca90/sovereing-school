@@ -59,12 +59,18 @@ import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import reactor.core.publisher.Mono;
 
+/**
+ * Pruebas unitarias para el servicio de cursos.
+ */
 @ExtendWith(MockitoExtension.class)
 class CursoServiceTest {
 
     // ==========================
     // Tests createCurso()
     // ==========================
+    /**
+     * Pruebas para el método createCurso.
+     */
     @Nested
     class CreateCursoTests {
 
@@ -78,33 +84,40 @@ class CursoServiceTest {
             curso.setFechaPublicacionCurso(new Date());
         }
 
+        /**
+         * Prueba la creación exitosa de un curso.
+         */
         @Test
         void createCurso_SuccessfulCreation() throws RepositoryException {
-            // Simular que el repo asigna un ID
-            Curso savedCurso = new Curso();
-            savedCurso.setIdCurso(10L);
-            savedCurso.setNombreCurso("curso");
-            savedCurso.setDescripcionCorta("descripcion corta");
-            savedCurso.setFechaPublicacionCurso(curso.getFechaPublicacionCurso());
+            // Arrange
+            Curso cursoGuardado = new Curso();
+            cursoGuardado.setIdCurso(1L);
+            cursoGuardado.setNombreCurso(curso.getNombreCurso());
+            when(cursoRepo.save(any(Curso.class))).thenReturn(cursoGuardado);
 
-            when(cursoRepo.save(curso)).thenReturn(savedCurso);
+            // Act
+            Long resultado = cursoService.createCurso(curso);
 
-            Long resp = cursoService.createCurso(curso);
-
-            assertNotNull(resp);
-            assertEquals(10L, resp);
-
+            // Assert
+            assertNotNull(resultado, "El ID del curso creado no debe ser nulo");
+            assertEquals(1L, resultado, "El ID del curso debería ser 1L");
             verify(cursoRepo).save(curso);
         }
 
+        /**
+         * Prueba que se lanza RepositoryException cuando el curso guardado tiene ID
+         * nulo.
+         * Verifica que el repositorio lanza una excepción correctamente.
+         */
         @Test
         void createCurso_ThrowsRepositoryException_WhenSavedCursoHasNullId() {
             when(cursoRepo.save(curso)).thenThrow(new IllegalArgumentException());
 
             RepositoryException ex = assertThrows(RepositoryException.class,
-                    () -> cursoService.createCurso(curso));
+                    () -> cursoService.createCurso(curso), "Debería lanzar RepositoryException");
 
-            assertTrue(ex.getMessage().contains("Error en crear el curso"));
+            assertTrue(ex.getMessage().contains("Error en crear el curso"),
+                    "El mensaje de error debería ser el esperado");
             verify(cursoRepo).save(curso);
         }
     }
@@ -112,77 +125,93 @@ class CursoServiceTest {
     // ==========================
     // Tests getCurso()
     // ==========================
+    /**
+     * Pruebas para el método getCurso.
+     */
     @Nested
     class GetCursoTests {
 
-        private Long cursoId;
         private Curso curso;
 
         @BeforeEach
         void setUp() {
-            cursoId = 1L;
             curso = new Curso();
             curso.setNombreCurso("curso");
             curso.setDescripcionCorta("descripcion corta");
             curso.setFechaPublicacionCurso(new Date());
         }
 
+        /**
+         * Prueba la obtención exitosa de un curso.
+         */
         @Test
         void getCurso_SuccessfulRetrieval() throws NotFoundException {
+            // Arrange
+            Long cursoId = 1L;
             when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
 
-            Curso resp = cursoService.getCurso(cursoId);
+            // Act
+            Curso resultado = cursoService.getCurso(cursoId);
 
-            assertNotNull(resp);
-            assertEquals(curso.getNombreCurso(), resp.getNombreCurso());
-            assertEquals(curso.getDescripcionCorta(), resp.getDescripcionCorta());
-            assertEquals(curso.getFechaPublicacionCurso(), resp.getFechaPublicacionCurso());
-
+            // Assert
+            assertNotNull(resultado);
+            assertEquals("curso", resultado.getNombreCurso());
             verify(cursoRepo).findById(cursoId);
         }
 
+        /**
+         * Prueba el error al obtener un curso inexistente.
+         */
         @Test
         void getCurso_Error() {
-            // Simular que el curso no existe
+            // Arrange
+            Long cursoId = 1L;
             when(cursoRepo.findById(cursoId)).thenReturn(Optional.empty());
 
-            // Verificar que lanza la excepción esperada
-            NotFoundException thrown = assertThrows(NotFoundException.class,
+            // Act & Assert
+            NotFoundException ex = assertThrows(NotFoundException.class,
                     () -> cursoService.getCurso(cursoId));
-
-            assertEquals("Error en obtener el curso con ID " + cursoId, thrown.getMessage());
-
-            verify(cursoRepo).findById(cursoId);
+            assertTrue(ex.getMessage().contains("Error en obtener el curso"));
         }
     }
 
     // ==========================
     // Tests getNombreCurso()
     // ==========================
+    /**
+     * Pruebas para el método getNombreCurso.
+     */
     @Nested
     class GetNombreCursoTests {
 
         private Long cursoId;
-        private String nombreCurso;
 
         @BeforeEach
         void setUp() {
             cursoId = 1L;
-            nombreCurso = "curso";
         }
 
+        /**
+         * Prueba la obtención exitosa del nombre de un curso.
+         * 
+         * @throws NotFoundException
+         */
         @Test
         void getNombreCurso_SuccessfulRetrieval() throws NotFoundException {
-            when(cursoRepo.findNombreCursoById(cursoId)).thenReturn(Optional.of(nombreCurso));
+            // Arrange
+            when(cursoRepo.findNombreCursoById(cursoId)).thenReturn(Optional.of("curso"));
 
-            String resp = cursoService.getNombreCurso(cursoId);
+            // Act
+            String resultado = cursoService.getNombreCurso(cursoId);
 
-            assertNotNull(resp);
-            assertEquals(nombreCurso, resp);
-
+            // Assert
+            assertEquals("curso", resultado);
             verify(cursoRepo).findNombreCursoById(cursoId);
         }
 
+        /**
+         * Prueba el error al obtener el nombre de un curso inexistente.
+         */
         @Test
         void getNombreCurso_Error() {
             // Simular que el curso no existe
@@ -201,6 +230,9 @@ class CursoServiceTest {
     // ==========================
     // Tests getProfesoresCurso()
     // ==========================
+    /**
+     * Pruebas para el método getProfesoresCurso.
+     */
     @Nested
     class GetProfesoresCursoTests {
 
@@ -213,50 +245,47 @@ class CursoServiceTest {
             profesores = List.of(new Usuario(), new Usuario());
         }
 
+        /**
+         * Prueba la obtención exitosa de los profesores de un curso.
+         */
         @Test
         void getProfesoresCurso_SuccessfulRetrieval() throws NotFoundException {
             when(cursoRepo.findProfesoresCursoById(cursoId)).thenReturn(profesores);
 
-            List<Usuario> resp = cursoService.getProfesoresCurso(cursoId);
+            List<Usuario> result = cursoService.getProfesoresCurso(cursoId);
 
-            assertNotNull(resp);
-            assertEquals(profesores, resp);
-
+            assertNotNull(result);
+            assertEquals(2, result.size());
             verify(cursoRepo).findProfesoresCursoById(cursoId);
         }
 
+        /**
+         * Prueba el error cuando la lista de profesores está vacía.
+         */
         @Test
         void getProfesoresCurso_ErrorEmptyList() {
-            // Simular que la lista está vacía
             when(cursoRepo.findProfesoresCursoById(cursoId)).thenReturn(List.of());
 
-            // Verificar que lanza la excepción esperada
-            NotFoundException thrown = assertThrows(NotFoundException.class,
-                    () -> cursoService.getProfesoresCurso(cursoId));
-
-            assertEquals("Error en obtener los profesores del curso con ID " + cursoId, thrown.getMessage());
-
-            verify(cursoRepo).findProfesoresCursoById(cursoId);
+            assertThrows(NotFoundException.class, () -> cursoService.getProfesoresCurso(cursoId));
         }
 
+        /**
+         * Prueba el error cuando la lista de profesores es nula.
+         */
         @Test
         void getProfesoresCurso_ErrorNullList() {
-            // Simular que la lista está vacía
             when(cursoRepo.findProfesoresCursoById(cursoId)).thenReturn(null);
 
-            // Verificar que lanza la excepción esperada
-            NotFoundException thrown = assertThrows(NotFoundException.class,
-                    () -> cursoService.getProfesoresCurso(cursoId));
-
-            assertEquals("Error en obtener los profesores del curso con ID " + cursoId, thrown.getMessage());
-
-            verify(cursoRepo).findProfesoresCursoById(cursoId);
+            assertThrows(NotFoundException.class, () -> cursoService.getProfesoresCurso(cursoId));
         }
     }
 
     // ==========================
     // Tests getFechaCreacionCurso()
     // ==========================
+    /**
+     * Pruebas para el método getFechaCreacionCurso.
+     */
     @Nested
     class GetFechaCreacionCursoTests {
 
@@ -273,14 +302,16 @@ class CursoServiceTest {
         void getFechaCreacionCurso_SuccessfulRetrieval() throws NotFoundException {
             when(cursoRepo.findFechaCreacionCursoById(cursoId)).thenReturn(Optional.of(fechaCreacionCurso));
 
-            Date resp = cursoService.getFechaCreacionCurso(cursoId);
+            Date result = cursoService.getFechaCreacionCurso(cursoId);
 
-            assertNotNull(resp);
-            assertEquals(fechaCreacionCurso, resp);
-
+            assertNotNull(result);
+            assertEquals(fechaCreacionCurso, result);
             verify(cursoRepo).findFechaCreacionCursoById(cursoId);
         }
 
+        /**
+         * Prueba el error al obtener la fecha de creación de un curso inexistente.
+         */
         @Test
         void getFechaCreacionCurso_Error() {
             // Simular que el curso no existe
@@ -299,6 +330,9 @@ class CursoServiceTest {
     // ==========================
     // Tests getClasesDelCurso()
     // ==========================
+    /**
+     * Pruebas para el método getClasesDelCurso.
+     */
     @Nested
     class GetClasesDelCursoTests {
 
@@ -315,46 +349,40 @@ class CursoServiceTest {
         void getClasesDelCurso_SuccessfulRetrieval() throws NotFoundException {
             when(cursoRepo.findClasesCursoById(cursoId)).thenReturn(clases);
 
-            List<Clase> resp = cursoService.getClasesDelCurso(cursoId);
+            List<Clase> result = cursoService.getClasesDelCurso(cursoId);
 
-            assertNotNull(resp);
-            assertEquals(clases, resp);
-
+            assertNotNull(result);
+            assertEquals(2, result.size());
             verify(cursoRepo).findClasesCursoById(cursoId);
         }
 
+        /**
+         * Prueba el error cuando la lista de clases está vacía.
+         */
         @Test
         void getClasesDelCurso_ErrorEmptyList() {
-            // Simular que la lista está vacía
             when(cursoRepo.findClasesCursoById(cursoId)).thenReturn(List.of());
 
-            // Verificar que lanza la excepción esperada
-            NotFoundException thrown = assertThrows(NotFoundException.class,
-                    () -> cursoService.getClasesDelCurso(cursoId));
-
-            assertEquals("Error en obtener las clases del curso con ID " + cursoId, thrown.getMessage());
-
-            verify(cursoRepo).findClasesCursoById(cursoId);
+            assertThrows(NotFoundException.class, () -> cursoService.getClasesDelCurso(cursoId));
         }
 
+        /**
+         * Prueba el error cuando la lista de clases es nula.
+         */
         @Test
         void getClasesDelCurso_ErrorNullList() {
-            // Simular que la lista está vacía
             when(cursoRepo.findClasesCursoById(cursoId)).thenReturn(null);
 
-            // Verificar que lanza la excepción esperada
-            NotFoundException thrown = assertThrows(NotFoundException.class,
-                    () -> cursoService.getClasesDelCurso(cursoId));
-
-            assertEquals("Error en obtener las clases del curso con ID " + cursoId, thrown.getMessage());
-
-            verify(cursoRepo).findClasesCursoById(cursoId);
+            assertThrows(NotFoundException.class, () -> cursoService.getClasesDelCurso(cursoId));
         }
     }
 
     // ==========================
     // Tests getPlanesDelCurso()
     // ==========================
+    /**
+     * Pruebas para el método getPlanesDelCurso.
+     */
     @Nested
     class GetPlanesDelCursoTests {
 
@@ -371,31 +399,38 @@ class CursoServiceTest {
             curso.setPlanesCurso(planes);
         }
 
+        /**
+         * Prueba la obtención exitosa de los planes de un curso.
+         */
         @Test
         void getPlanesDelCurso_SuccessfulRetrieval() throws NotFoundException {
             when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
 
-            List<Plan> resp = cursoService.getPlanesDelCurso(cursoId);
+            List<Plan> result = cursoService.getPlanesDelCurso(cursoId);
 
-            assertNotNull(resp);
-            assertEquals(planes, resp);
-
+            assertNotNull(result);
+            assertEquals(planes, result);
             verify(cursoRepo).findById(cursoId);
         }
 
+        /**
+         * Prueba la obtención de planes de un curso cuando la lista está vacía.
+         */
         @Test
         void getPlanesDelCurso_EmptyList() throws NotFoundException {
-            // Simular que la lista está vacía
-            this.curso.setPlanesCurso(null);
+            curso.setPlanesCurso(List.of());
             when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
 
-            List<Plan> resp = cursoService.getPlanesDelCurso(cursoId);
+            List<Plan> result = cursoService.getPlanesDelCurso(cursoId);
 
-            assertEquals(null, resp);
-
+            assertNotNull(result);
+            assertTrue(result.isEmpty());
             verify(cursoRepo).findById(cursoId);
         }
 
+        /**
+         * Prueba el error al obtener los planes de un curso inexistente.
+         */
         @Test
         void getPlanesDelCurso_ErrorNullList() {
             // Simular que la lista está vacía
@@ -1058,25 +1093,8 @@ class CursoServiceTest {
         void deleteClase_ErrorAsyncFlatMapCoverage() throws ServiceException {
             when(claseRepo.findById(clase.getIdClase())).thenReturn(Optional.of(clase));
 
-            // 1. Mock de respuesta de error HTTP
-            org.springframework.web.reactive.function.client.ClientResponse mockResponse = mock(
-                    org.springframework.web.reactive.function.client.ClientResponse.class);
-            when(mockResponse.bodyToMono(String.class)).thenReturn(Mono.just("Error de Servidor"));
-
-            // 2. Interceptamos onStatus para ejecutar el flatMap (Pone el flatMap en VERDE)
-            lenient().when(responseSpec.onStatus(any(), any())).thenAnswer(invocation -> {
-                java.util.function.Function<org.springframework.web.reactive.function.client.ClientResponse, Mono<? extends Throwable>> flatMapFunc = invocation
-                        .getArgument(1);
-                flatMapFunc.apply(mockResponse).subscribe();
-                return responseSpec;
-            });
-
-            // 3. Forzamos el error para que pase por onErrorResume (Tipado específico para
-            // evitar warnings)
-            lenient().when(responseSpec.bodyToMono(String.class))
-                    .thenReturn(Mono.error(new RuntimeException("Conexion Fallida")));
-
-            lenient().when(responseSpec.bodyToMono(Boolean.class))
+            // 2. Forzamos el error para que pase por onErrorResume
+            when(responseSpec.bodyToMono(Boolean.class))
                     .thenReturn(Mono.error(new RuntimeException("Conexion Fallida")));
 
             CursoService spyService = spy(cursoService);

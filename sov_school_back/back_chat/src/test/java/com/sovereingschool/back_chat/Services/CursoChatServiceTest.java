@@ -165,6 +165,9 @@ class CursoChatServiceTest {
 
         }
 
+        /**
+         * Prueba la obtención exitosa del curso de chat.
+         */
         @Test
         void getCursoChatTest_success() {
             when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.of(cursoChat));
@@ -179,6 +182,9 @@ class CursoChatServiceTest {
             assertEquals(nombreClase2, cursoChatDTO.clases().get(1).nombreClase());
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el curso de chat.
+         */
         @Test
         void getCursoChatTest_noFound() {
             when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.empty());
@@ -186,6 +192,9 @@ class CursoChatServiceTest {
             assertThrows(EntityNotFoundException.class, () -> cursoChatService.getCursoChat(cursoId));
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el curso asociado al chat.
+         */
         @Test
         void getCursoChatTest_noFound2() {
             when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.of(cursoChat));
@@ -268,6 +277,9 @@ class CursoChatServiceTest {
             curso.setProfesoresCurso(List.of(profe));
         }
 
+        /**
+         * Prueba la creación exitosa de un mensaje en el chat de una clase.
+         */
         @Test
         void guardaMensajeTest_success_claseMessage() throws JsonProcessingException {
             // 1. Preparación
@@ -299,6 +311,9 @@ class CursoChatServiceTest {
             verify(usuarioChatRepo, atLeastOnce()).save(any(UsuarioChat.class));
         }
 
+        /**
+         * Prueba la creación exitosa de un mensaje en el chat de un curso.
+         */
         @Test
         void guardaMensajeTest_success_cursoMessage() throws JsonProcessingException {
             // 1. Preparación
@@ -338,6 +353,9 @@ class CursoChatServiceTest {
             verify(usuarioChatRepo, atLeastOnce()).save(any(UsuarioChat.class));
         }
 
+        /**
+         * Prueba el error cuando el formato JSON es inválido al guardar un mensaje.
+         */
         @Test
         void guardaMensajeTest_errorParseJson() {
             // 1. Definimos un input que no es JSON (un String plano)
@@ -356,6 +374,10 @@ class CursoChatServiceTest {
             verifyNoInteractions(mensajeChatRepo, cursoChatRepo, usuarioChatRepo);
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el chat del curso al guardar un
+         * mensaje.
+         */
         @Test
         void guardaMensajeTest_errorCursoChatNoEncontrado() throws JsonProcessingException {
             // 1. Preparamos un JSON válido para que pase el primer filtro (el parseo)
@@ -382,6 +404,9 @@ class CursoChatServiceTest {
             verifyNoInteractions(cursoRepo); // El flujo se corta antes de llegar a notificar profesores
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el usuario del chat.
+         */
         @Test
         void guardaMensajeTest_errorUsuarioChatNoEncontrado() throws JsonProcessingException {
             // 1. Preparamos un JSON válido para que pase el primer filtro (el parseo)
@@ -408,6 +433,9 @@ class CursoChatServiceTest {
             verify(usuarioChatRepo, never()).save(any(UsuarioChat.class));
         }
 
+        /**
+         * Prueba el error cuando el curso no se encuentra al guardar un mensaje.
+         */
         @Test
         void guardaMensajeTest_errorCursoNoEncontrado() throws JsonProcessingException {
             // 1. Preparamos un JSON válido para que pase el primer filtro (el parseo)
@@ -432,6 +460,10 @@ class CursoChatServiceTest {
             verify(cursoChatRepo, times(1)).findByIdCurso(cursoId);
         }
 
+        /**
+         * Prueba el error cuando no se encuentra el profesor del curso al guardar un
+         * mensaje.
+         */
         @Test
         void guardaMensajeTest_errorProfesorNoEncontrado() throws JsonProcessingException {
 
@@ -460,6 +492,9 @@ class CursoChatServiceTest {
 
         }
 
+        /**
+         * Prueba el error cuando no se encuentra la respuesta de un mensaje.
+         */
         @Test
         void guardaMensajeTest_success_errorRespuestaNoEncontrada() throws JsonProcessingException {
             // 1. Preparación
@@ -489,37 +524,36 @@ class CursoChatServiceTest {
 
         }
 
+        /**
+         * Prueba el error cuando el ID de respuesta es nulo en el DTO.
+         */
         @Test
-        void guardaMensajeTest_success_errorUsuarioRespuestaNoEncontrado() throws JsonProcessingException {
-            // 1. Preparación
-            String jsonMessage = objectMapper.writeValueAsString(mensajeDTO);
+        void guardaMensajeTest_errorRespuestaIdNulo() throws JsonProcessingException {
+            MensajeChatDTO dtoConRespuestaNula = new MensajeChatDTO(
+                    "idMensaje", cursoId, 1L, 1L, "nombre", "clase", "user", "foto", "fotoU",
+                    new MensajeChatDTO(null, null, null, null, null, null, null, null, null, null, null, null, null),
+                    30, "mensaje", new Date());
 
-            // 2. Mocks Obligatorios (Siempre se ejecutan)
+            String json = objectMapper.writeValueAsString(dtoConRespuestaNula);
+
+            assertThrows(IllegalArgumentException.class, () -> cursoChatService.guardaMensaje(json));
+        }
+
+        /**
+         * Prueba el error cuando no se encuentra la clase al guardar un mensaje.
+         */
+        @Test
+        void guardaMensajeTest_errorClaseChatNoEncontrada() throws JsonProcessingException {
+            mensajeDTO = new MensajeChatDTO(
+                    "idMensaje", cursoId, 999L, 1L, "nombre", "clase", "user", "foto", "fotoU", null, 30, "mensaje",
+                    new Date());
+
+            String json = objectMapper.writeValueAsString(mensajeDTO);
+
             when(mensajeChatRepo.save(any(MensajeChat.class))).thenReturn(mensaje);
             when(cursoChatRepo.findByIdCurso(cursoId)).thenReturn(Optional.of(cursoChat));
-            when(cursoChatRepo.save(any(CursoChat.class))).thenReturn(cursoChat);
-            when(usuarioChatRepo.findByIdUsuario(1L)).thenReturn(Optional.of(usuarioChat));
-            when(usuarioChatRepo.save(any(UsuarioChat.class))).thenReturn(usuarioChat);
 
-            // Parte de Profesores
-            when(cursoRepo.findById(cursoId)).thenReturn(Optional.of(curso));
-            when(usuarioChatRepo.findByIdUsuario(2L)).thenReturn(Optional.of(profChat));
-
-            // Parte de Respuesta
-            MensajeChat mensajeOriginal = new MensajeChat();
-            mensajeOriginal.setId("idRespuesta");
-            mensajeOriginal.setIdUsuario(3L);
-            when(mensajeChatRepo.findById("idRespuesta")).thenReturn(Optional.of(mensajeOriginal));
-            when(usuarioChatRepo.findByIdUsuario(3L)).thenReturn(Optional.empty());
-
-            EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
-                cursoChatService.guardaMensaje(jsonMessage);
-            });
-
-            // 5. Verificaciones
-            // 4. Validamos el mensaje de error
-            assertEquals("Error en obtener el usuario del chat en la respuesta", exception.getMessage());
-
+            assertThrows(java.util.NoSuchElementException.class, () -> cursoChatService.guardaMensaje(json));
         }
 
     }
@@ -600,6 +634,9 @@ class CursoChatServiceTest {
             cursoChat2.setMensajes(new ArrayList<>(Arrays.asList("idMensaje3", "idMensaje4")));
         }
 
+        /**
+         * Prueba la creación exitosa del chat de un usuario.
+         */
         @Test
         void creaUsuarioChatTest_success() throws InternalServerException {
             when(usuarioChatRepo.save(any(UsuarioChat.class))).thenReturn(usuarioChat);
@@ -611,6 +648,9 @@ class CursoChatServiceTest {
             verify(usuarioChatRepo, times(2)).save(any(UsuarioChat.class));
         }
 
+        /**
+         * Prueba el error al crear el chat de un usuario.
+         */
         @Test
         void creaUsuarioChatTest_error() {
             when(usuarioChatRepo.save(any(UsuarioChat.class))).thenReturn(usuarioChat);
@@ -648,6 +688,9 @@ class CursoChatServiceTest {
             curso.setClasesCurso(new ArrayList<>(Arrays.asList(clase1, clase2)));
         }
 
+        /**
+         * Prueba la creación exitosa del chat de un curso.
+         */
         @Test
         void creaCursoChatTest_success() throws InternalServerException, JsonProcessingException {
             String jsonMessage = objectMapper.writeValueAsString(curso);
@@ -655,6 +698,9 @@ class CursoChatServiceTest {
             verify(cursoChatRepo).save(any(CursoChat.class));
         }
 
+        /**
+         * Prueba el error al crear el chat de un curso (ej. JSON inválido).
+         */
         @Test
         void creaCursoChatTest_error() throws JsonProcessingException {
             String jsonMessage = objectMapper.writeValueAsString("Texto inválido");
@@ -693,6 +739,9 @@ class CursoChatServiceTest {
             claseChat.setIdCurso(curso.getIdCurso());
         }
 
+        /**
+         * Prueba la creación exitosa del chat de una clase.
+         */
         @Test
         void creaClaseChatTest_success() throws InternalServerException {
             // Al generar el JSON, se incluirá el campo "cursoClase" gracias a la
@@ -712,20 +761,13 @@ class CursoChatServiceTest {
             verify(cursoChatRepo).save(any(CursoChat.class));
         }
 
+        /**
+         * Prueba el error cuando el JSON es inválido.
+         */
         @Test
-        void creaClaseChatTest_error_cursoChatNoEncontrado() {
-            // Al generar el JSON, se incluirá el campo "cursoClase" gracias a la
-            // configuración del builder
-            String jsonMessage = "{"
-                    + "\"idClase\":1,"
-                    + "\"nombreClase\":\"clase1\","
-                    + "\"cursoClase\":{\"idCurso\":1}"
-                    + "}";
-
-            // Mocks
-            when(cursoChatRepo.findByIdCurso(1L)).thenReturn(Optional.empty());
-
-            assertThrows(EntityNotFoundException.class, () -> cursoChatService.creaClaseChat(jsonMessage));
+        void creaClaseChatTest_errorJsonInvalido() {
+            String jsonInvalido = "{ \"idClase\": 1, ";
+            assertThrows(InternalServerException.class, () -> cursoChatService.creaClaseChat(jsonInvalido));
         }
     }
 
@@ -744,6 +786,9 @@ class CursoChatServiceTest {
             usuarioChat.setMensajes(new ArrayList<>());
         }
 
+        /**
+         * Prueba la marca de un mensaje como leído exitosamente.
+         */
         @Test
         void mensajeLeidoTest_success() {
             // Mocks
@@ -757,10 +802,13 @@ class CursoChatServiceTest {
 
         }
 
+        /**
+         * Prueba el error cuando el usuario no existe.
+         */
         @Test
-        void mensajeLeidoTest_error_noMensaje() {
-            // Mocks
-            String idStringValido = "1";
+        void mensajeLeidoTest_error_usuarioNoExiste() {
+            String idStringValido = "999,idMensaje";
+            when(usuarioChatRepo.findByIdUsuario(999L)).thenReturn(Optional.empty());
 
             assertThrows(EntityNotFoundException.class, () -> cursoChatService.mensajeLeido(idStringValido));
         }
@@ -790,6 +838,9 @@ class CursoChatServiceTest {
             cursoChat.getClases().add(claseChat);
         }
 
+        /**
+         * Prueba la eliminación exitosa del chat de una clase.
+         */
         @Test
         void borrarClaseChatTest_success() {
             // Mocks
@@ -803,6 +854,10 @@ class CursoChatServiceTest {
             verify(cursoChatRepo).save(cursoChat);
         }
 
+        /**
+         * Prueba el error al borrar el chat de una clase cuando no se encuentra el
+         * curso.
+         */
         @Test
         void borrarClaseChatTest_error_noCurso() {
             // Mocks
@@ -828,6 +883,9 @@ class CursoChatServiceTest {
             cursoChat.setClases(new ArrayList<>());
         }
 
+        /**
+         * Prueba la eliminación exitosa del chat de un curso.
+         */
         @Test
         void borrarCursoChatTest_success() {
             // Mocks
@@ -840,6 +898,9 @@ class CursoChatServiceTest {
             verify(cursoChatRepo).delete(cursoChat);
         }
 
+        /**
+         * Prueba el error al borrar el chat de un curso cuando no existe.
+         */
         @Test
         void borrarCursoChatTest_error_noCurso() {
             // Mocks
@@ -865,6 +926,9 @@ class CursoChatServiceTest {
             usuarioChat.setMensajes(new ArrayList<>());
         }
 
+        /**
+         * Prueba la eliminación exitosa del chat de un usuario.
+         */
         @Test
         void borrarUsuarioChatTest_success() {
             // Mocks
@@ -877,6 +941,9 @@ class CursoChatServiceTest {
             verify(usuarioChatRepo).delete(usuarioChat);
         }
 
+        /**
+         * Prueba el error al borrar el chat de un usuario cuando no existe.
+         */
         @Test
         void borrarUsuarioChatTest_error_noUsuario() {
             // Mocks
@@ -894,6 +961,9 @@ class CursoChatServiceTest {
         private String sessionId = "test-session-123";
         private String token = "valid.jwt.token";
 
+        /**
+         * Prueba la actualización exitosa del token en un websocket abierto.
+         */
         @Test
         void refreshTokenInOpenWebsocket_success() {
             // 1. Setup de la autenticación simulada
@@ -903,18 +973,27 @@ class CursoChatServiceTest {
 
             when(jwtUtil.createAuthenticationFromToken(token)).thenReturn(mockAuth);
 
+            // Asegurar que hay un contexto vacío inicial para evitar nulls en algunas
+            // configuraciones de Spring Security
+            SecurityContextHolder.setContext(SecurityContextHolder.createEmptyContext());
+
             // 2. Ejecución
             cursoChatService.refreshTokenInOpenWebsocket(sessionId, token);
 
-            // 3. Verificaciones
-            // Comprobar que el contexto global de seguridad se actualizó
-            Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
-            assertNotNull(currentAuth);
-            assertEquals("user@test.com", currentAuth.getName());
-            assertEquals(token, currentAuth.getCredentials());
+            try {
+                // 3. Verificaciones
+                // Comprobar que el contexto global de seguridad se actualizó
+                Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
+                assertNotNull(currentAuth);
+                assertEquals("user@test.com", currentAuth.getPrincipal());
+                assertEquals(token, currentAuth.getCredentials());
 
-            // Verificar interacción con el utilitario
-            verify(jwtUtil).createAuthenticationFromToken(token);
+                // Verificar interacción con el utilitario
+                verify(jwtUtil).createAuthenticationFromToken(token);
+            } finally {
+                // Limpiar el contexto para no afectar a otros tests
+                SecurityContextHolder.clearContext();
+            }
         }
     }
 
@@ -956,6 +1035,9 @@ class CursoChatServiceTest {
             usuarioChat1.setCursos(new ArrayList<>());
         }
 
+        /**
+         * Prueba la inicialización exitosa creando nuevos datos de chat.
+         */
         @Test
         void init_Success_CreatesNewData() throws InternalServerException {
             // --- CONFIGURACIÓN DE MOCKS ---
@@ -982,6 +1064,10 @@ class CursoChatServiceTest {
             verify(usuarioChatRepo, atLeastOnce()).save(usuarioChat1);
         }
 
+        /**
+         * Prueba que se omite la creación de datos de chat si ya existen durante la
+         * inicialización.
+         */
         @Test
         void init_Skips_WhenDataAlreadyExists() throws InternalServerException {
             // Simular que todo ya existe

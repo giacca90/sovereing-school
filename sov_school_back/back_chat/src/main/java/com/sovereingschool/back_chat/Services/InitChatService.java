@@ -399,7 +399,7 @@ public class InitChatService {
             // Datos del curso principal
             Curso curso = cursoRepo.findById(idCurso).orElseThrow(() -> {
                 logger.error("InitChatService: notifyUsersChat: Error en obtener el curso con ID {}", idCurso);
-                return new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
+                throw new EntityNotFoundException("Error en obtener el curso con ID " + idCurso);
             });
 
             return new CursoChatDTO(
@@ -426,7 +426,7 @@ public class InitChatService {
 
             String nombreClase = claseRepo.findNombreClaseById(claseChat.getIdClase()).orElseThrow(() -> {
                 logger.error("Error en obtener el nombre de la clase {}", claseChat.getIdClase());
-                return new EntityNotFoundException("Error en obtener el nombre de la clase");
+                throw new EntityNotFoundException("Error en obtener el nombre de la clase");
             });
 
             return new ClaseChatDTO(

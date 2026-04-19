@@ -552,7 +552,7 @@ public class UsuarioService implements IUsuarioService {
                     .onStatus(
                             HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                logger.error("!Error HTTP del microservicio de chat: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)
@@ -590,7 +590,7 @@ public class UsuarioService implements IUsuarioService {
                     .onStatus(
                             HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                logger.error("!!Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)
@@ -639,7 +639,7 @@ public class UsuarioService implements IUsuarioService {
                     .onStatus(
                             HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                logger.error("!!!Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)
@@ -674,7 +674,7 @@ public class UsuarioService implements IUsuarioService {
                     .onStatus(
                             HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                logger.error("!!!!Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(String.class)

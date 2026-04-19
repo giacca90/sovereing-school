@@ -41,29 +41,14 @@ import io.restassured.http.ContentType;
 import jakarta.servlet.http.Cookie;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "server.http.port=0")
-public class LoginControllerTest {
+class LoginControllerTest {
 
     @Nested
     class BasicGetTests {
 
-        @Test
-        public void testCompruebaCorreo_Success() {
-            String correo = "test@test.com";
-            Long mockId = 1L;
-
-            // Configuramos el mock para devolver el Long que mencionas
-            when(loginService.compruebaCorreo(correo)).thenReturn(mockId);
-
-            given()
-                    .cookie("refreshToken", validToken)
-                    .when()
-                    .get("/" + correo)
-                    .then()
-                    .statusCode(HttpStatus.OK.value())
-                    // Verificamos que el body contiene el número (como string en el body HTTP)
-                    .body(equalTo(mockId.toString()));
-        }
-
+        /**
+         * Prueba el error al comprobar el correo electrónico.
+         */
         @Test
         public void testCompruebaCorreo_Exception() {
             String correo = "invalid@test.com";
@@ -77,6 +62,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba la obtención exitosa del correo electrónico de un login.
+         */
         @Test
         public void testGetCorreoLogin_Success() {
             Long id = 1L;
@@ -92,6 +80,9 @@ public class LoginControllerTest {
                     .body(equalTo(mockCorreo));
         }
 
+        /**
+         * Prueba la obtención del correo electrónico cuando no se encuentra el login.
+         */
         @Test
         public void testGetCorreoLogin_NotFound() {
             Long id = 999L;
@@ -105,6 +96,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.NOT_FOUND.value());
         }
 
+        /**
+         * Prueba la obtención exitosa de la contraseña de un login.
+         */
         @Test
         public void testGetPasswordLogin_Success() {
             Long id = 1L;
@@ -120,6 +114,9 @@ public class LoginControllerTest {
                     .body(equalTo(mockPassword));
         }
 
+        /**
+         * Prueba la obtención de la contraseña cuando no se encuentra el login.
+         */
         @Test
         public void testGetPasswordLogin_NotFound() {
             Long id = 999L;
@@ -132,11 +129,35 @@ public class LoginControllerTest {
                     .then()
                     .statusCode(HttpStatus.NOT_FOUND.value());
         }
+
+        /**
+         * Prueba la comprobación exitosa del correo electrónico.
+         */
+        @Test
+        void testCompruebaCorreo_Success() {
+            String correo = "test@test.com";
+            Long mockId = 1L;
+
+            // Configuramos el mock para devolver el Long que mencionas
+            when(loginService.compruebaCorreo(correo)).thenReturn(mockId);
+
+            given()
+                    .cookie("refreshToken", validToken)
+                    .when()
+                    .get("/" + correo)
+                    .then()
+                    .statusCode(HttpStatus.OK.value())
+                    // Verificamos que el body contiene el número (como string en el body HTTP)
+                    .body(equalTo(mockId.toString()));
+        }
     }
 
     @Nested
     class AuthenticationFlowTests {
 
+        /**
+         * Prueba el proceso de login exitoso.
+         */
         @Test
         public void testGetUsuario_LoginSuccess() {
             Long id = 1L;
@@ -163,6 +184,9 @@ public class LoginControllerTest {
                     .header("Set-Cookie", containsString("Secure"));
         }
 
+        /**
+         * Prueba el login cuando la respuesta de autenticación indica fallo.
+         */
         @Test
         public void testGetUsuario_AuthResponseNullStatus() {
             Long id = 1L;
@@ -182,6 +206,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.NOT_FOUND.value());
         }
 
+        /**
+         * Prueba la actualización exitosa del token de acceso.
+         */
         @Test
         public void testRefreshAccessToken_Success() {
             Long idUsuario = 1L;
@@ -201,6 +228,9 @@ public class LoginControllerTest {
                     .header("Set-Cookie", containsString("refreshToken=refreshed-123"));
         }
 
+        /**
+         * Prueba la actualización del token de acceso cuando no se proporciona token.
+         */
         @Test
         public void testRefreshAccessToken_NoToken() {
             given()
@@ -210,6 +240,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.UNAUTHORIZED.value());
         }
 
+        /**
+         * Prueba el cierre de sesión exitoso.
+         */
         @Test
         public void testLogout_Success() {
             given()
@@ -221,6 +254,10 @@ public class LoginControllerTest {
                     .header("Set-Cookie", containsString("Max-Age=0"));
         }
 
+        /**
+         * Prueba la actualización del token de acceso cuando ocurre una excepción en el
+         * servicio.
+         */
         @Test
         public void testRefreshAccessToken_Exception2() {
             Long idUsuario = 1L;
@@ -234,6 +271,10 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba la actualización del token de acceso cuando el servicio no encuentra
+         * el recurso.
+         */
         @Test
         public void testRefreshAccessToken_NotFound2() {
             Long idUsuario = 1L;
@@ -250,6 +291,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.NOT_FOUND.value());
         }
 
+        /**
+         * Prueba el proceso de login cuando ocurre una excepción en el servicio.
+         */
         @Test
         public void testGetUsuario_Exception() {
             Long id = 1L;
@@ -265,6 +309,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba el proceso de login cuando la respuesta del servicio es nula.
+         */
         @Test
         public void testGetUsuario_AuthResponseNull() {
             Long id = 1L;
@@ -280,6 +327,10 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.NOT_FOUND.value());
         }
 
+        /**
+         * Prueba la actualización del token de acceso cuando ocurre una excepción
+         * genérica.
+         */
         @Test
         public void testRefreshAccessToken_Exception() {
             Long idUsuario = 1L;
@@ -293,6 +344,10 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba la actualización del token de acceso cuando el servicio devuelve
+         * NotFound.
+         */
         @Test
         public void testRefreshAccessToken_NotFound() {
             Long idUsuario = 1L;
@@ -309,6 +364,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.NOT_FOUND.value());
         }
 
+        /**
+         * Prueba la actualización del token de acceso cuando la respuesta es nula.
+         */
         @Test
         public void testRefreshAccessToken_NullAuthResponse() {
             Long idUsuario = 1L;
@@ -327,6 +385,9 @@ public class LoginControllerTest {
     @Nested
     class ManagementTests {
 
+        /**
+         * Prueba la creación exitosa de un nuevo login.
+         */
         @Test
         public void testCreateNuevoLogin_Success() {
             com.sovereingschool.back_common.Models.Login login = new com.sovereingschool.back_common.Models.Login();
@@ -346,6 +407,10 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.OK.value());
         }
 
+        /**
+         * Prueba la creación de un login cuando ocurre una excepción (ej. email
+         * duplicado).
+         */
         @Test
         public void testCreateNuevoLogin_Exception() {
             com.sovereingschool.back_common.Models.Login login = new com.sovereingschool.back_common.Models.Login();
@@ -364,6 +429,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba la eliminación de un login cuando ocurre una excepción.
+         */
         @Test
         public void testDeleteLogin_Exception2() {
             Long idToDelete = 99L;
@@ -377,6 +445,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba el cambio exitoso de la contraseña.
+         */
         @Test
         public void testChangePassword_Success() {
             ChangePassword cp = new ChangePassword(1L, "oldPassword", "newPassword");
@@ -393,6 +464,9 @@ public class LoginControllerTest {
                     .body(containsString("Contraseña cambiada con éxito"));
         }
 
+        /**
+         * Prueba el cambio de contraseña cuando las contraseñas no coinciden.
+         */
         @Test
         public void testChangePassword_PasswordMismatch() {
             ChangePassword cp = new ChangePassword(1L, "wrongPassword", "newPassword");
@@ -409,6 +483,9 @@ public class LoginControllerTest {
                     .body(containsString("Las contraseñas no coinciden"));
         }
 
+        /**
+         * Prueba el cambio de contraseña cuando la contraseña es nula.
+         */
         @Test
         public void testChangePassword_NullPassword() {
             ChangePassword cp = new ChangePassword(1L, null, "newPassword");
@@ -424,6 +501,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.FAILED_DEPENDENCY.value());
         }
 
+        /**
+         * Prueba la eliminación exitosa de un login.
+         */
         @Test
         public void testDeleteLogin_Success() {
             Long idToDelete = 99L;
@@ -438,6 +518,9 @@ public class LoginControllerTest {
                     .body(equalTo("Eliminado"));
         }
 
+        /**
+         * Prueba el cambio exitoso del correo electrónico.
+         */
         @Test
         public void testChangeCorreo_Success() {
             com.sovereingschool.back_common.Models.Login login = new com.sovereingschool.back_common.Models.Login();
@@ -457,6 +540,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.OK.value());
         }
 
+        /**
+         * Prueba el cambio de correo cuando el nuevo correo es nulo.
+         */
         @Test
         public void testChangeCorreo_NoEmail() {
             com.sovereingschool.back_common.Models.Login login = new com.sovereingschool.back_common.Models.Login();
@@ -473,6 +559,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.NOT_FOUND.value());
         }
 
+        /**
+         * Prueba el cambio de correo cuando el nuevo correo está vacío.
+         */
         @Test
         public void testChangeCorreo_EmptyEmail() {
             com.sovereingschool.back_common.Models.Login login = new com.sovereingschool.back_common.Models.Login();
@@ -489,6 +578,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.FAILED_DEPENDENCY.value());
         }
 
+        /**
+         * Prueba el cambio de correo cuando ocurre una excepción en el servicio.
+         */
         @Test
         public void testChangeCorreo_Exception() {
             com.sovereingschool.back_common.Models.Login login = new com.sovereingschool.back_common.Models.Login();
@@ -508,6 +600,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba el cambio de contraseña cuando ocurre una excepción en el servicio.
+         */
         @Test
         public void testChangePassword_Exception() {
             ChangePassword cp = new ChangePassword(1L, "oldPassword", "newPassword");
@@ -524,6 +619,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba la eliminación de un login cuando ocurre una excepción genérica.
+         */
         @Test
         public void testDeleteLogin_Exception() {
             Long idToDelete = 99L;
@@ -537,6 +635,10 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba la obtención del correo electrónico cuando ocurre una excepción en el
+         * servicio.
+         */
         @Test
         public void testGetCorreoLogin_Exception() {
             Long id = 1L;
@@ -550,6 +652,10 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         }
 
+        /**
+         * Prueba la obtención de la contraseña cuando ocurre una excepción en el
+         * servicio.
+         */
         @Test
         public void testGetPasswordLogin_Exception() {
             Long id = 1L;
@@ -567,6 +673,9 @@ public class LoginControllerTest {
     @Nested
     class TokenTests {
 
+        /**
+         * Prueba el login con token cuando ocurre una JWTVerificationException.
+         */
         @Test
         public void testLoginWithToken_JWTVerificationException() {
             String token = "invalid-jwt-token";
@@ -583,6 +692,9 @@ public class LoginControllerTest {
                     .statusCode(HttpStatus.UNAUTHORIZED.value());
         }
 
+        /**
+         * Prueba el login con token cuando ocurre una excepción genérica.
+         */
         @Test
         public void testLoginWithToken_GeneralException() {
             String token = "valid-token";
@@ -600,6 +712,9 @@ public class LoginControllerTest {
                     .body(containsString("Error en login con token"));
         }
 
+        /**
+         * Prueba el cierre de sesión cuando ocurre una excepción.
+         */
         @Test
         public void testLogout_Exception() {
             // Para forzar una excepción en logout, hacemos una request normal
@@ -616,6 +731,10 @@ public class LoginControllerTest {
     @Nested
     class EdgeCaseTests {
 
+        /**
+         * Prueba la actualización del token de acceso con un token vacío usando
+         * MockMvc.
+         */
         @Test
         @WithMockUser(roles = "USER")
         public void testRefreshAccessToken_EmptyTokenMock() throws Exception {
@@ -627,6 +746,9 @@ public class LoginControllerTest {
                     .andExpect(status().isUnauthorized());
         }
 
+        /**
+         * Prueba el cierre de sesión usando MockMvc.
+         */
         @Test
         @WithMockUser(roles = "USER")
         public void testLogoutWithMockMvc() throws Exception {

@@ -39,10 +39,9 @@ export class UserGuard implements CanActivate {
 				return false;
 			}
 
-			//TODO: comprobar si el usuario tiene uno de los planes de este curso
-			if (usuario.planUsuario && !curso.planesCurso?.includes(usuario.planUsuario.idPlan)) {
-				this.router.navigate(['/']);
-				return false;
+			//comprobar si el usuario tiene uno de los planes de este curso
+			if (usuario.planUsuario && curso.planesCurso?.includes(usuario.planUsuario.idPlan)) {
+				return true;
 			}
 
 			if (!usuario.cursosUsuario?.some((cursoUs) => cursoUs.idCurso === curso.idCurso)) {

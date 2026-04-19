@@ -80,6 +80,9 @@ public class UsuarioControllerTest {
 	@DisplayName("GET /usuario/{id}")
 	class GetUsuarioTests {
 
+		/**
+		 * Prueba la obtención exitosa de un usuario por ID.
+		 */
 		@Test
 		@DisplayName("Should return usuario when found")
 		public void testGetUsuario_Success() throws Exception {
@@ -93,6 +96,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba la obtención de un usuario cuando no se encuentra.
+		 */
 		@Test
 		@DisplayName("Should return 404 when usuario not found")
 		public void testGetUsuario_NotFound() throws Exception {
@@ -104,6 +110,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.NOT_FOUND.value());
 		}
 
+		/**
+		 * Prueba el error interno al obtener un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 on internal server error")
 		public void testGetUsuario_InternalError() throws Exception {
@@ -119,6 +128,9 @@ public class UsuarioControllerTest {
 	@DisplayName("GET /usuario/nombre/{id}")
 	class GetNombreTests {
 
+		/**
+		 * Prueba la obtención exitosa del nombre de usuario.
+		 */
 		@Test
 		@DisplayName("Should return nombre when usuario exists")
 		public void testGetNombreUsuario_Success() throws Exception {
@@ -132,6 +144,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Test User"));
 		}
 
+		/**
+		 * Prueba la obtención del nombre de usuario cuando no se encuentra.
+		 */
 		@Test
 		@DisplayName("Should return 404 when usuario not found")
 		public void testGetNombreUsuario_NotFound() throws Exception {
@@ -146,6 +161,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba la obtención del nombre de usuario cuando se lanza
+		 * IllegalArgumentException.
+		 */
 		@Test
 		@DisplayName("Should return 404 when usuario not found")
 		public void testGetNombreUsuario_BadRequest() throws Exception {
@@ -160,6 +179,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba el error de ejecución al obtener el nombre de usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 on runtime exception")
 		public void testGetNombreUsuario_RuntimeError() throws Exception {
@@ -173,6 +195,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Unexpected error"));
 		}
 
+		/**
+		 * Prueba el error desconocido al obtener el nombre de usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 on unknown exception")
 		public void testGetNombreUsuario_UnknownError() throws Exception {
@@ -190,6 +215,9 @@ public class UsuarioControllerTest {
 	@DisplayName("GET /usuario/roll/{id}")
 	class GetRollTests {
 
+		/**
+		 * Prueba la obtención exitosa del rol de usuario.
+		 */
 		@Test
 		@DisplayName("Should return roll when usuario exists")
 		public void testGetRollUsuario_Success() throws Exception {
@@ -200,6 +228,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba la obtención del rol de usuario cuando no se encuentra.
+		 */
 		@Test
 		@DisplayName("Should return 404 when usuario not found")
 		public void testGetRollUsuario_NotFound() throws Exception {
@@ -213,6 +244,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba la obtención del rol de usuario cuando se lanza
+		 * IllegalArgumentException.
+		 */
 		@Test
 		@DisplayName("Should return 400 when bad request")
 		public void testGetRollUsuario_BadRequest() throws Exception {
@@ -226,6 +261,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Argumento no valido"));
 		}
 
+		/**
+		 * Prueba el error de ejecución al obtener el rol de usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when server error")
 		public void testGetRollUsuario_RuntimeError() throws Exception {
@@ -239,6 +277,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Error en el servidor"));
 		}
 
+		/**
+		 * Prueba el error desconocido al obtener el rol de usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when server error")
 		public void testGetRollUsuario_UnknownError() throws Exception {
@@ -257,6 +298,9 @@ public class UsuarioControllerTest {
 	@DisplayName("GET /usuario/plan/{id}")
 	class GetPlanTests {
 
+		/**
+		 * Prueba la obtención exitosa del plan de usuario.
+		 */
 		@Test
 		@DisplayName("Should return plan when usuario exists")
 		public void testGetPlanUsuario_Success() throws Exception {
@@ -270,6 +314,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba la obtención del plan de usuario cuando no se encuentra.
+		 */
 		@Test
 		@DisplayName("Should return 404 when usuario not found")
 		public void testGetPlanUsuario_NotFound() throws Exception {
@@ -283,6 +330,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba la obtención del plan de usuario cuando se lanza
+		 * IllegalArgumentException.
+		 */
 		@Test
 		@DisplayName("Should return 400 when bad request")
 		public void testGetPlanUsuario_BadRequest() throws Exception {
@@ -296,6 +347,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba el error de ejecución al obtener el plan de usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when runtime error")
 		public void testGetPlanUsuario_RuntimeError() throws Exception {
@@ -309,6 +363,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba el error desconocido al obtener el plan de usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when runtime error")
 		public void testGetPlanUsuario_UnknownError() throws Exception {
@@ -327,6 +384,9 @@ public class UsuarioControllerTest {
 	@DisplayName("GET /usuario/cursos/{id}")
 	class GetCursosTests {
 
+		/**
+		 * Prueba la obtención exitosa de los cursos de un usuario.
+		 */
 		@Test
 		@DisplayName("Should return cursos when usuario exists")
 		public void testGetCursosUsuario_Success() throws Exception {
@@ -340,6 +400,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba la obtención de cursos cuando el usuario no tiene ninguno.
+		 */
 		@Test
 		@DisplayName("Should return empty list when no cursos")
 		public void testGetCursosUsuario_Empty() throws Exception {
@@ -350,6 +413,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba la obtención de cursos cuando el usuario no se encuentra.
+		 */
 		@Test
 		@DisplayName("Should return 404 when usuario not found")
 		public void testGetCursosUsuario_NotFound() throws Exception {
@@ -363,6 +429,9 @@ public class UsuarioControllerTest {
 					.body(containsString("No existe el usuario"));
 		}
 
+		/**
+		 * Prueba la obtención de cursos cuando se lanza IllegalArgumentException.
+		 */
 		@Test
 		@DisplayName("Should return 400 when bad request")
 		public void testGetCursosUsuario_BadRequest() throws Exception {
@@ -376,6 +445,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba el error de ejecución al obtener los cursos de un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when runtime error")
 		public void testGetCursosUsuario_RuntimeError() throws Exception {
@@ -389,6 +461,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba el error desconocido al obtener los cursos de un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when unknown error")
 		public void testGetCursosUsuario_UnknownError() throws Exception {
@@ -407,6 +482,9 @@ public class UsuarioControllerTest {
 	@DisplayName("GET /usuario/profes")
 	class GetProfesTests {
 
+		/**
+		 * Prueba la obtención exitosa de la lista de profesores.
+		 */
 		@Test
 		@DisplayName("Should return list of profes successfully")
 		public void testGetProfes_Success() throws Exception {
@@ -419,6 +497,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba la obtención de la lista de profesores cuando está vacía.
+		 */
 		@Test
 		@DisplayName("Should return empty list when no profes")
 		public void testGetProfes_Empty() throws Exception {
@@ -428,6 +509,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba el error al obtener la lista de profesores.
+		 */
 		@Test
 		@DisplayName("Should error when have a error")
 		public void testGetProfes_Error() throws Exception {
@@ -442,6 +526,9 @@ public class UsuarioControllerTest {
 	@DisplayName("GET /usuario/getAll")
 	class GetAllTests {
 
+		/**
+		 * Prueba la obtención exitosa de todos los usuarios (solo admin).
+		 */
 		@Test
 		@DisplayName("Should return all usuarios successfully")
 		public void testGetAllUsuarios_Success() throws RepositoryException, Exception {
@@ -454,6 +541,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba la obtención de todos los usuarios cuando la lista está vacía.
+		 */
 		@Test
 		@DisplayName("Should return empty list when no usuarios")
 		public void testGetAllUsuarios_Empty() throws RepositoryException, Exception {
@@ -463,6 +553,10 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba que se devuelve Forbidden cuando un usuario no admin intenta obtener
+		 * todos los usuarios.
+		 */
 		@Test
 		@DisplayName("Should return Unautorized when user is not admin")
 		public void testGetAllUsuarios_Unautorized() throws RepositoryException, Exception {
@@ -476,6 +570,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.FORBIDDEN.value());
 		}
 
+		/**
+		 * Prueba el error de ejecución al obtener todos los usuarios.
+		 */
 		@Test
 		@DisplayName("Should return RuntimeError when runtime error")
 		public void testGetAllUsuarios_RuntimeError() throws RepositoryException, Exception {
@@ -491,6 +588,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Database error"));
 		}
 
+		/**
+		 * Prueba el error desconocido al obtener todos los usuarios.
+		 */
 		@Test
 		@DisplayName("Should return UnknownError when unknown error")
 		public void testGetAllUsuarios_UnknownError() throws RepositoryException, Exception {
@@ -515,6 +615,9 @@ public class UsuarioControllerTest {
 				new ArrayList<>(), null,
 				new ArrayList<>(), new Date());
 
+		/**
+		 * Prueba la creación exitosa de un nuevo usuario.
+		 */
 		@Test
 		@DisplayName("Should successfully create a new user")
 		public void testCreateUsuario_Success() throws RepositoryException, InternalComunicationException {
@@ -540,6 +643,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba el error de acceso denegado al crear un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 403 on AccessDeniedException")
 		public void testCreateUsuario_AccessDenied() throws Exception {
@@ -555,6 +661,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Acceso denegado"));
 		}
 
+		/**
+		 * Prueba que se devuelve NotFound cuando falla la creación por entidad no
+		 * encontrada.
+		 */
 		@Test
 		@DisplayName("Should return 404 on EntityNotFoundException")
 		public void testCreateUsuario_NotFound() throws Exception {
@@ -570,6 +680,10 @@ public class UsuarioControllerTest {
 					.body(containsString("No encontrado"));
 		}
 
+		/**
+		 * Prueba que se devuelve BadRequest cuando se pasan argumentos inválidos al
+		 * crear un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 400 on IllegalArgumentException")
 		public void testCreateUsuario_IllegalArgument() throws Exception {
@@ -586,6 +700,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Datos inválidos"));
 		}
 
+		/**
+		 * Prueba el error de ejecución al crear un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 on RuntimeException")
 		public void testCreateUsuario_RuntimeError() throws Exception {
@@ -601,6 +718,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Error de ejecución"));
 		}
 
+		/**
+		 * Prueba el error genérico al crear un usuario y la limpieza de archivos SVG.
+		 */
 		@Test
 		@DisplayName("Should return 500 on generic Exception and clean SVG")
 		public void testCreateUsuario_GenericException() throws Exception {
@@ -646,6 +766,9 @@ public class UsuarioControllerTest {
 		@MockitoBean
 		private JwtUtil jwtUtil;
 
+		/**
+		 * Prueba la confirmación exitosa de un usuario.
+		 */
 		@Test
 		@DisplayName("Success: Should return 200 and set secure cookie")
 		public void testConfirmation_Success() throws Exception {
@@ -671,6 +794,10 @@ public class UsuarioControllerTest {
 					.body("refreshToken", nullValue());
 		}
 
+		/**
+		 * Prueba que se devuelve Unauthorized cuando falta el claim necesario en el
+		 * token de confirmación.
+		 */
 		@Test
 		@DisplayName("Unauthorized: Should return 401 when claim containsString missing")
 		public void testConfirmation_NoClaim() throws Exception {
@@ -686,6 +813,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Error en el token de acceso"));
 		}
 
+		/**
+		 * Prueba que se devuelve Conflict cuando el usuario ya existe durante la
+		 * confirmación.
+		 */
 		@Test
 		@DisplayName("Conflict: Should return 400 on DataIntegrityViolationException")
 		public void testConfirmation_DataIntegrity() throws Exception {
@@ -703,6 +834,10 @@ public class UsuarioControllerTest {
 					.body(containsString("El usuario ya existe"));
 		}
 
+		/**
+		 * Prueba que se devuelve Forbidden cuando el acceso es denegado durante la
+		 * confirmación.
+		 */
 		@Test
 		@DisplayName("Forbidden: Should handle AccessDeniedException")
 		public void testConfirmation_AccessDenied() throws Exception {
@@ -719,6 +854,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Prohibido"));
 		}
 
+		/**
+		 * Prueba el manejo de RuntimeException durante la confirmación.
+		 */
 		@Test
 		@DisplayName("Runtime: Should handle RuntimeException")
 		public void testConfirmation_Runtime() throws Exception {
@@ -734,6 +872,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Bug interno"));
 		}
 
+		/**
+		 * Prueba el error genérico durante la confirmación.
+		 */
 		@Test
 		@DisplayName("Coverage: Should return 500 on generic Exception")
 		public void testConfirmation_GenericException() throws Exception {
@@ -779,6 +920,9 @@ public class UsuarioControllerTest {
 	@DisplayName("PUT /usuario/edit")
 	class EditTests {
 
+		/**
+		 * Prueba la edición exitosa de un usuario.
+		 */
 		@Test
 		@DisplayName("Should edit usuario successfully")
 		public void testEditUsuario_Success() throws InternalServerException {
@@ -797,6 +941,10 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba que se devuelve Unauthorized cuando un usuario intenta editar a otro
+		 * usuario.
+		 */
 		@Test
 		@DisplayName("Should return 401 on Different user")
 		public void testEditUsuario_NoAuthentication() throws InternalServerException {
@@ -820,6 +968,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Error en el token de acceso"));
 		}
 
+		/**
+		 * Prueba que se devuelve BadRequest cuando se pasan argumentos inválidos al
+		 * editar un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 400 on illegal argument")
 		public void testEditUsuario_BadRequest() throws InternalServerException {
@@ -831,6 +983,9 @@ public class UsuarioControllerTest {
 					.put("/usuario/edit").then().statusCode(HttpStatus.BAD_REQUEST.value());
 		}
 
+		/**
+		 * Prueba que se devuelve NotFound cuando el usuario a editar no existe.
+		 */
 		@Test
 		@DisplayName("Should return 404 on Entity NotFound")
 		public void testEditUsuario_EntityNotFound() throws InternalServerException {
@@ -845,6 +1000,10 @@ public class UsuarioControllerTest {
 					.assertThat().body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba que se devuelve BadRequest cuando ocurre un IllegalArgumentException
+		 * al editar.
+		 */
 		@Test
 		@DisplayName("Should return 400 on illegal argument")
 		public void testEditUsuario_IllegalArgument() throws InternalServerException {
@@ -859,6 +1018,9 @@ public class UsuarioControllerTest {
 					.assertThat().body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba el error interno al editar un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 on internal error")
 		public void testEditUsuario_InternalError() throws InternalServerException {
@@ -871,6 +1033,9 @@ public class UsuarioControllerTest {
 					.statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
 		}
 
+		/**
+		 * Prueba el error desconocido al editar un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 on internal error")
 		public void testEditUsuario_Error() throws InternalServerException {
@@ -886,6 +1051,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Error en editar el usuario:"));
 		}
 
+		/**
+		 * Prueba que se devuelve Unauthorized cuando no se proporciona la cookie de
+		 * token de actualización al editar.
+		 */
 		@Test
 		@DisplayName("Should return 401 when no refreshToken cookie is provided")
 		public void testEditUsuario_AuthenticationNull_NoCookie() {
@@ -901,6 +1070,9 @@ public class UsuarioControllerTest {
 	@DisplayName("PUT /usuario/plan")
 	class ChangePlanTests {
 
+		/**
+		 * Prueba el cambio exitoso del plan de un usuario.
+		 */
 		@Test
 		@DisplayName("Should change usuario plan successfully")
 		public void testChangePlanUsuario_Success() throws Exception {
@@ -914,6 +1086,10 @@ public class UsuarioControllerTest {
 					.put("/usuario/plan").then().statusCode(HttpStatus.OK.value());
 		}
 
+		/**
+		 * Prueba que se devuelve Unauthorized cuando el usuario es inválido al cambiar
+		 * el plan.
+		 */
 		@Test
 		@DisplayName("Should return 401 when usuario is invalid")
 		public void testChangePlanUsuario_Invalid() throws Exception {
@@ -933,6 +1109,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Error en el token de acceso"));
 		}
 
+		/**
+		 * Prueba que se devuelve NotFound cuando el usuario no existe al cambiar el
+		 * plan.
+		 */
 		@Test
 		@DisplayName("Should return 404 when usuario not found")
 		public void testChangePlanUsuario_NotFound() throws Exception {
@@ -952,6 +1132,10 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba que se devuelve BadRequest cuando ocurre un IllegalArgumentException
+		 * al cambiar el plan.
+		 */
 		@Test
 		@DisplayName("Should return 400 when bad request")
 		public void testChangePlanUsuario_IllegalArgument() throws Exception {
@@ -972,6 +1156,9 @@ public class UsuarioControllerTest {
 					.body(containsString("Usuario no encontrado"));
 		}
 
+		/**
+		 * Prueba el error de ejecución al cambiar el plan de un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when runtime error")
 		public void testChangePlanUsuario_RuntimeError() throws Exception {
@@ -984,6 +1171,9 @@ public class UsuarioControllerTest {
 					.put("/usuario/plan").then().statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
 		}
 
+		/**
+		 * Prueba el error desconocido al cambiar el plan de un usuario.
+		 */
 		@Test
 		@DisplayName("Should return 500 when unknown error")
 		public void testChangePlanUsuario_UnknownError() throws Exception {

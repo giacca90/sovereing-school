@@ -20,8 +20,10 @@
 	<div class="flex items-center justify-center">
 		<span class="font-bold">Precio: {{ curso?.precioCurso }}€</span>
 		@if (this.loginService.usuario && this.loginService.usuario.rollUsuario !== undefined && curso) {
-			@if (loginService.usuario.rollUsuario === 'ADMIN' || loginService.usuario.rollUsuario === 'PROF' || hasCurso(curso) || compruebaPlan(loginService.usuario.planUsuario) !== null) {
+			@if (loginService.usuario.rollUsuario === 'ADMIN' || loginService.usuario.rollUsuario === 'PROF' || hasCurso(curso)) {
 				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.router.navigate(['/repro/' + this.curso.idCurso + '/0'])">Ir al curso</button>
+			} @else if (compruebaPlan(loginService.usuario.planUsuario) !== null) {
+				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="this.addCursoAUsuario(curso)">Ir al curso</button>
 			} @else {
 				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="compraCurso(curso)">Compra este curso</button>
 			}

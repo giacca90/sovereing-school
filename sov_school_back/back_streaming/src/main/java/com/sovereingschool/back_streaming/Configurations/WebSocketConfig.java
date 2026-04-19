@@ -1,7 +1,6 @@
 package com.sovereingschool.back_streaming.Configurations;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -39,19 +38,21 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private String uploadDir;
 
-    private final ScheduledExecutorService pingScheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService pingScheduler;
 
     public WebSocketConfig(
             @Value("${variable.RTMP}") String RTMP_URL,
             @Value("${variable.RTMP_DOCKER}") String RTMP_DOCKER,
             @Value("${variable.VIDEOS_DIR}") String uploadDir,
             StreamingService streamingService,
-            WebsocketAuthHandshakeInterceptor authHandshakeInterceptor) {
+            WebsocketAuthHandshakeInterceptor authHandshakeInterceptor,
+            ScheduledExecutorService pingScheduler) {
         this.RTMP_URL = RTMP_URL;
         this.RTMP_DOCKER = RTMP_DOCKER;
         this.uploadDir = uploadDir;
         this.streamingService = streamingService;
         this.authHandshakeInterceptor = authHandshakeInterceptor;
+        this.pingScheduler = pingScheduler;
     }
 
     @Override
@@ -100,11 +101,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
         executor.setThreadNamePrefix("WS-");
         executor.initialize();
         return executor;
-    }
-
-    @Bean
-    public ScheduledExecutorService pingScheduler() {
-        return pingScheduler;
     }
 
     public void startPingPong(WebSocketSession session) {

@@ -155,7 +155,7 @@ VALUES (
 		'Entendemos el Fideicomiso',
 		'Contenido de la clase',
 		0,
-		'http://curso2/clase1',
+		'/home/matt/Escritorio/Proyectos/SovereingSchool/Videos/2/5/master.m3u8',
 		1,
 		2
 	),

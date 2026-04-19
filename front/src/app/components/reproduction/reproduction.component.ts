@@ -7,6 +7,7 @@ import { Clase } from '../../models/Clase';
 import { ClaseChat } from '../../models/ClaseChat';
 import { Curso } from '../../models/Curso';
 import { CursosService } from '../../services/cursos.service';
+import { StreamingService } from '../../services/streaming.service'; // Importar el servicio
 import { ChatComponent } from '../chat/chat/chat.component';
 
 @Component({
@@ -34,6 +35,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		private readonly cdr: ChangeDetectorRef,
 		@Inject(PLATFORM_ID) private readonly platformId: object,
 		public cursoService: CursosService,
+		public streamingService: StreamingService,
 		public router: Router,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
@@ -52,7 +54,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				if (this.idClase === 0) {
 					this.cursoService.getStatusCurso(this.idCurso).subscribe({
 						next: (resp) => {
-							if (resp === 0) {
+							if (resp === 0 || resp === null) {
 								alert('Este curso no está disponible');
 								this.router.navigate(['/']);
 							} else {
@@ -334,6 +336,28 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 			this.player.on('play', () => {
 				if (this.player) {
 					this.esperarChatComponent(this.player);
+				}
+			});
+
+			// Registrar progreso de fragmentos
+			let lastSegmentReported = -1;
+			this.player.on('timeupdate', () => {
+				if (this.player) {
+					const currentTime = this.player.currentTime();
+					if (currentTime === undefined) return;
+
+					// Obtenemos el índice del segmento actual basado en la duración del fragmento (ej. 2s)
+					// Ajusta este valor según la configuración de tu HLS
+					const fragmentDuration = 2;
+					const segmentIndex = Math.floor(currentTime / fragmentDuration);
+
+					// Solo registrar si hemos cambiado de segmento
+					if (segmentIndex !== lastSegmentReported) {
+						lastSegmentReported = segmentIndex;
+						this.streamingService.registrarProgreso(this.idCurso, this.idClase, segmentIndex).subscribe({
+							error: (err) => console.error('Error al registrar progreso:', err),
+						});
+					}
 				}
 			});
 		} catch (error) {

@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_streaming.Models.ResolutionProfile;
+import com.sovereingschool.back_streaming.Repositories.UsuarioCursosRepository;
 import com.sovereingschool.back_streaming.Utils.GPUDetector;
 
 @Service
@@ -41,7 +43,9 @@ import com.sovereingschool.back_streaming.Utils.GPUDetector;
 public class StreamingService {
     private final Map<String, Process> ffmpegProcesses = new ConcurrentHashMap<>();
 
-    private ClaseRepository claseRepo;
+    private final ClaseRepository claseRepo;
+    private final UsuarioCursosRepository usuarioCursosRepository;
+    private final MongoTemplate mongoTemplate;
 
     private Logger logger = LoggerFactory.getLogger(StreamingService.class);
 
@@ -52,14 +56,21 @@ public class StreamingService {
     /**
      * Constructor de StreamingService
      *
-     * @param uploadDir Ruta de carga de archivos
-     * @param claseRepo Repositorio de clases
+     * @param uploadDir               Ruta de carga de archivos
+     * @param claseRepo               Repositorio de clases
+     * @param usuarioCursosRepository Repositorio de usuarios y cursos
+     * @param mongoTemplate           MongoTemplate para operaciones de base de
+     *                                datos
      */
     public StreamingService(
             @Value("${variable.VIDEOS_DIR}") String uploadDir,
-            ClaseRepository claseRepo) {
+            ClaseRepository claseRepo,
+            UsuarioCursosRepository usuarioCursosRepository,
+            MongoTemplate mongoTemplate) {
         this.uploadDir = uploadDir;
         this.claseRepo = claseRepo;
+        this.usuarioCursosRepository = usuarioCursosRepository;
+        this.mongoTemplate = mongoTemplate;
         // Cambiar si hay más de una GPU, o si se procesan todos los videos con CPU
         this.executor = Executors.newFixedThreadPool(1);
     }
@@ -116,7 +127,6 @@ public class StreamingService {
      * @param inputStream  InputStream con el flujo
      * @param videoSetting String[] con la configuración de la transmisión
      * @throws IOException
-     * @throws InterruptedException
      * @throws IllegalArgumentException
      * @throws RepositoryException
      * @throws InternalServerException
@@ -222,6 +232,11 @@ public class StreamingService {
             }
         }
         return m3u8;
+    }
+
+    public void registrarProgreso(Long idUsuario, Long idCurso, Long idClase, int segmentIndex) {
+        // Delegar la actualización a la capa de repositorio
+        usuarioCursosRepository.updateProgress(idUsuario, idCurso, idClase, segmentIndex, mongoTemplate);
     }
 
     /**
@@ -451,17 +466,17 @@ public class StreamingService {
                 while ((line = reader.readLine()) != null) {
                     logger.info("FFProbe line: {}", line);
                     String[] parts = line.split(",");
-                    if (line.contains("video")) {
-                        width = parts[2];
-                        height = parts[3];
-                        String[] frameRateParts = parts[4].split("/");
+                    if (parts.length >= 4 && "video".equals(parts[3])) {
+                        width = parts[0];
+                        height = parts[1];
+                        String[] frameRateParts = parts[2].split("/");
                         if (frameRateParts.length == 2) {
                             fps = String.valueOf((int) Math
                                     .round(Double.parseDouble(frameRateParts[0])
                                             / Double.parseDouble(frameRateParts[1])));
                         }
-                    } else if (line.contains("audio")) {
-                        audioCodec = parts[1]; // codec_name
+                    } else if (parts.length >= 5 && "audio".equals(parts[3])) {
+                        audioCodec = parts[4]; // codec_name
                     }
                 }
             }

@@ -15,8 +15,6 @@ import org.springframework.http.HttpRange;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,17 +24,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sovereingschool.back_common.Exceptions.InternalServerException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Usuario;
+import com.sovereingschool.back_streaming.Repositories.UsuarioCursosRepository;
 import com.sovereingschool.back_streaming.Services.StreamingService;
 import com.sovereingschool.back_streaming.Services.UsuarioCursosService;
 
 @RestController
-@PreAuthorize("hasAnyRole('USER', 'PROF', 'ADMIN')")
 public class StreamingController {
 
     private static class LimitedInputStream extends java.io.InputStream {
@@ -68,19 +67,23 @@ public class StreamingController {
 
     private UsuarioCursosService usuarioCursosService;
     private StreamingService streamingService;
+    private UsuarioCursosRepository usuarioCursosRepository;
 
     private Logger logger = LoggerFactory.getLogger(StreamingController.class);
 
     /**
      * Constructor de StreamingController
      *
-     * @param usuarioCursosService Servicio de usuarios de cursos
-     * @param streamingService     Servicio de streaming
+     * @param usuarioCursosService    Servicio de usuarios de cursos
+     * @param streamingService        Servicio de streaming
+     * @param usuarioCursosRepository Repositorio de cursos de usuario
      */
     public StreamingController(UsuarioCursosService usuarioCursosService,
-            StreamingService streamingService) {
+            StreamingService streamingService,
+            UsuarioCursosRepository usuarioCursosRepository) {
         this.usuarioCursosService = usuarioCursosService;
         this.streamingService = streamingService;
+        this.usuarioCursosRepository = usuarioCursosRepository;
     }
 
     /**
@@ -114,14 +117,16 @@ public class StreamingController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("No se encuentra la carpeta del curso: " + direccionCarpeta);
             }
-            direccionCarpeta = direccionCarpeta.substring(0, direccionCarpeta.lastIndexOf("/"));
-            if (direccionCarpeta == null) {
-                logger.error("El video no tiene ruta");
+
+            // CORRECCIÓN: Asegurarnos de obtener la ruta del directorio padre
+            Path pathClase = Paths.get(direccionCarpeta);
+            Path carpetaPath = pathClase.getParent();
+
+            if (carpetaPath == null) {
+                logger.error("El video no tiene ruta padre");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("El video no tiene ruta");
             }
-
-            Path carpetaPath = Paths.get(direccionCarpeta);
 
             Path videoPath = carpetaPath.resolve(lista);
 
@@ -172,8 +177,9 @@ public class StreamingController {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new AccessDeniedException("No autenticado");
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
         Long idUsuario = (Long) authentication.getDetails();
         String direccionCarpeta = this.usuarioCursosService.getClase(idUsuario, idCurso, idClase);
@@ -190,7 +196,7 @@ public class StreamingController {
         videoPath = videoPath.resolve(video);
 
         if (!Files.exists(videoPath)) {
-            logger.error("No existe el archivo: {}", videoPath);
+            logger.error("!No existe el archivo: {}", videoPath);
             return ResponseEntity.notFound().build();
         }
 
@@ -212,7 +218,7 @@ public class StreamingController {
 
         HttpRange range = ranges.get(0);
         long start = range.getRangeStart(0);
-        long end = range.getRangeEnd(fileLength - 1);
+        long end = range.getRangeEnd(fileLength);
         if (end > fileLength - 1) {
             end = fileLength - 1;
         }
@@ -242,7 +248,7 @@ public class StreamingController {
             this.usuarioCursosService.syncUserCourses();
             return new ResponseEntity<>("Iniciado stream con exito!!!", HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -263,6 +269,38 @@ public class StreamingController {
             return new ResponseEntity<>(this.usuarioCursosService.getStatus(idUsuario, idCurso), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Error en obtener la clase: " + e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/progreso/{idCurso}/{idClase}")
+    public ResponseEntity<?> getProgresoClase(@PathVariable Long idCurso, @PathVariable Long idClase) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return new ResponseEntity<>("Error en el token: no autenticado", HttpStatus.UNAUTHORIZED);
+            }
+            Long idUsuario = (Long) authentication.getDetails();
+
+            // Obtener el documento del usuario
+            var usuarioCursos = usuarioCursosRepository.findByIdUsuario(idUsuario)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+            // Buscar el curso y la clase
+            double progreso = usuarioCursos.getCursos().stream()
+                    .filter(c -> c.getIdCurso().equals(idCurso))
+                    .flatMap(c -> c.getClases().stream())
+                    .filter(cl -> cl.getIdClase().equals(idClase))
+                    .map(cl -> {
+                        if (cl.getTotalSegments() == 0)
+                            return 0.0;
+                        return ((double) cl.getProgress().size() / cl.getTotalSegments()) * 100;
+                    })
+                    .findFirst()
+                    .orElse(0.0);
+
+            return ResponseEntity.ok(progreso);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al calcular progreso: " + e.getMessage());
         }
     }
 
@@ -393,7 +431,8 @@ public class StreamingController {
                 return new ResponseEntity<>(false, HttpStatus.OK);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            String message = (e.getCause() != null) ? e.getCause().toString() : e.getMessage();
+            return new ResponseEntity<>(message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -413,7 +452,8 @@ public class StreamingController {
                 return new ResponseEntity<>(false, HttpStatus.OK);
             }
         } catch (Exception e) {
-            return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            String message = (e.getCause() != null) ? e.getCause().toString() : e.getMessage();
+            return new ResponseEntity<>(message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -443,7 +483,27 @@ public class StreamingController {
         try {
             return new ResponseEntity<>(this.usuarioCursosService.deleteUsuarioCursos(id), HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(e.getCause().toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+            String message = (e.getCause() != null) ? e.getCause().toString() : e.getMessage();
+            return new ResponseEntity<>(message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/registrar-fragmento")
+    public ResponseEntity<?> pingFragmento(
+            @RequestParam Long idCurso,
+            @RequestParam Long idClase,
+            @RequestParam int segment) {
+
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
+            }
+            Long idUsuario = Long.parseLong(authentication.getName());
+            this.streamingService.registrarProgreso(idUsuario, idCurso, idClase, segment);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error al registrar: " + e.getMessage());
         }
     }
 

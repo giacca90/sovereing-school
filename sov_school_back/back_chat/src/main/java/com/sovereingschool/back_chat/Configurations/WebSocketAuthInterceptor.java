@@ -13,6 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
@@ -88,7 +89,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 };
                 SecurityContextHolder.getContext().setAuthentication(wsAuth);
                 accessor.setUser(wsAuth);
-                return message;
+                return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
             } catch (AuthenticationException ex) {
                 SecurityContextHolder.clearContext();
                 logger.error("Error en el token de acceso: {}", ex.getMessage());

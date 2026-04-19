@@ -46,6 +46,9 @@ class InitAppServiceTest {
     @Nested
     class GetProfesoresTests {
 
+        /**
+         * Prueba la obtención exitosa de la lista de profesores.
+         */
         @Test
         void getProfesores_SuccessfulRetrieval() {
             // Arrange
@@ -75,6 +78,9 @@ class InitAppServiceTest {
             verify(usuarioRepo).getInit();
         }
 
+        /**
+         * Prueba la obtención de la lista de profesores cuando está vacía.
+         */
         @Test
         void getProfesores_EmptyList() {
             // Arrange
@@ -96,6 +102,9 @@ class InitAppServiceTest {
     @Nested
     class GetInitTests {
 
+        /**
+         * Prueba la obtención exitosa de la información de inicio de la aplicación.
+         */
         @Test
         void getInit_SuccessfulRetrieval() {
             // Arrange
@@ -140,6 +149,10 @@ class InitAppServiceTest {
             verify(cursoRepo).getAllCursos();
             verify(usuarioRepo).count();
             verify(cursoRepo).count();
+            /**
+             * Prueba la obtención de la información de inicio cuando las listas están
+             * vacías.
+             */
             verify(claseRepo).count();
         }
 
@@ -172,6 +185,9 @@ class InitAppServiceTest {
     @Nested
     class GetInitTokenTests {
 
+        /**
+         * Prueba la generación exitosa del token de inicio.
+         */
         @Test
         void getInitToken_SuccessfulGeneration() {
             // Arrange
@@ -214,6 +230,9 @@ class InitAppServiceTest {
             lenient().when(cursoRepo.getAllCursos()).thenReturn(List.of(curso));
             lenient().when(usuarioRepo.count()).thenReturn(1L);
             lenient().when(cursoRepo.count()).thenReturn(1L);
+            /**
+             * Prueba la actualización exitosa del SSR con cobertura completa.
+             */
             lenient().when(claseRepo.count()).thenReturn(1L);
         }
 
@@ -228,6 +247,9 @@ class InitAppServiceTest {
 
             // ASSERT
             verify(webClient).post();
+            /**
+             * Prueba la respuesta de error para cubrir el flatMap en refreshSSR.
+             */
             verify(responseSpec).bodyToMono(String.class);
         }
 
@@ -249,6 +271,9 @@ class InitAppServiceTest {
                     .thenReturn(Mono.error(new RuntimeException("Conn error")));
 
             // ACT
+            /**
+             * Prueba la cobertura cuando la respuesta no contiene el mensaje de éxito.
+             */
             initAppService.refreshSSR();
 
             // ASSERT
@@ -268,12 +293,14 @@ class InitAppServiceTest {
             verify(responseSpec).bodyToMono(String.class);
         }
 
+        /**
+         * Prueba que se lanza InternalComunicationException ante una excepción crítica.
+         */
         @Test
         void refreshSSR_CriticalException_ThrowsInternalComunicationException()
                 throws SSLException, URISyntaxException {
-            // GIVEN - Forzamos el error después de que getInit() haya funcionado o lo
-            // rompemos directamente
-            // Aquí rompemos la cadena del WebClient para que entre en el catch(Exception e)
+            // GIVEN - Rompemos la cadena del WebClient para que entre en el catch(Exception
+            // e)
             when(webClientConfig.createSecureWebClient(anyString())).thenThrow(new RuntimeException("WebClient crash"));
 
             // ACT & ASSERT
@@ -313,10 +340,6 @@ class InitAppServiceTest {
         lenient().when(webClientConfig.createSecureWebClient(anyString())).thenReturn(webClient);
         lenient().when(webClient.post()).thenReturn(requestBodyUriSpec);
         lenient().when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
-
-        // CORRECCIÓN AQUÍ: Usamos any() genérico para los eslabones de body
-        lenient().when(requestBodySpec.body(any()))
-                .thenReturn((WebClient.RequestHeadersSpec) requestHeadersSpec);
         lenient().when(requestBodySpec.body(any(), any(Class.class))).thenReturn(requestHeadersSpec);
 
         lenient().when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);

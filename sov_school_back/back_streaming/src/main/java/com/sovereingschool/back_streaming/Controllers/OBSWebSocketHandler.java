@@ -99,7 +99,9 @@ public class OBSWebSocketHandler extends TextWebSocketHandler {
             } catch (IOException ex) {
                 logger.error("Error en cerrar la conexión: {}", ex.getMessage());
             } finally {
-                sessions.remove(session.getId());
+                if (session.getId() != null) {
+                    sessions.remove(session.getId());
+                }
             }
         }
     }

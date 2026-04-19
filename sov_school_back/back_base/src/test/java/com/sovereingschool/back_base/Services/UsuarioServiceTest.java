@@ -83,6 +83,9 @@ class UsuarioServiceTest {
     @Nested
     class CreateUsuarioTests {
 
+        /**
+         * Prueba la creación exitosa de un usuario.
+         */
         @Test
         void createUsuario_SuccessfulCreation() throws RepositoryException, InternalComunicationException {
             NewUsuario newUsuario = new NewUsuario(
@@ -110,7 +113,6 @@ class UsuarioServiceTest {
             when(jwtUtil.generateToken(any(Authentication.class), eq("refresh"), eq(10L))).thenReturn("refresh-token");
 
             UsuarioService spyService = spy(usuarioService);
-            // doNothing().when(spyService).updateSSR();
 
             AuthResponse resp = spyService.createUsuario(newUsuario);
 
@@ -129,6 +131,10 @@ class UsuarioServiceTest {
             verify(spyService).updateSSR();
         }
 
+        /**
+         * Prueba que se lanza RepositoryException cuando el usuario guardado tiene ID
+         * nulo.
+         */
         @Test
         void createUsuario_ThrowsRepositoryException_WhenSavedUserHasNullId() {
             NewUsuario newUsuario = new NewUsuario(
@@ -151,6 +157,9 @@ class UsuarioServiceTest {
             verify(jwtUtil, never()).generateToken(any(), anyString(), any());
         }
 
+        /**
+         * Prueba que se propaga la excepción de violación de integridad de datos.
+         */
         @Test
         void createUsuario_PropagatesDataIntegrityViolationException() {
             NewUsuario newUsuario = new NewUsuario(
@@ -169,6 +178,9 @@ class UsuarioServiceTest {
             verify(jwtUtil, never()).generateToken(any(), anyString(), any());
         }
 
+        /**
+         * Prueba la creación de usuario asignando correctamente la foto.
+         */
         @Test
         void createUsuario_WithFotoUsuario_AssignsCorrectly()
                 throws RepositoryException, InternalComunicationException {
@@ -208,6 +220,9 @@ class UsuarioServiceTest {
             assertEquals(newUsuario.fotoUsuario(), resp.usuario().getFotoUsuario());
         }
 
+        /**
+         * Prueba la creación de usuario asignando una lista vacía de fotos.
+         */
         @Test
         void createUsuario_WithEmptyFotoUsuario_AssignsEmptyList()
                 throws RepositoryException, InternalComunicationException {
@@ -253,6 +268,9 @@ class UsuarioServiceTest {
     // ===================
     @Nested
     class GetUsuarioTests {
+        /**
+         * Prueba la obtención exitosa de un usuario por ID.
+         */
         @Test
         void getUsuario_SuccessfulRetrieval() {
             Long userId = 1L;
@@ -276,6 +294,9 @@ class UsuarioServiceTest {
 
         }
 
+        /**
+         * Prueba el error al obtener un usuario que no existe.
+         */
         @Test
         void getUsuario_Error() {
             Long userId = 1L;
@@ -298,8 +319,11 @@ class UsuarioServiceTest {
     // ==========================
     @Nested
     class GetNombreUsuarioTests {
+        /**
+         * Prueba la obtención exitosa del nombre de usuario.
+         */
         @Test
-        void getNombreUsuario_SuccessfulRetrieval() throws Exception {
+        void getNombreUsuario_SuccessfulRetrieval() {
             Long userId = 1L;
             String nombreUsuario = "pepito";
             Usuario usuario = new Usuario();
@@ -316,6 +340,9 @@ class UsuarioServiceTest {
             verify(usuarioRepo).findNombreUsuarioForId(userId);
         }
 
+        /**
+         * Prueba el error al obtener el nombre de un usuario que no existe.
+         */
         @Test
         void getNombreUsuario_Error() {
             Long userId = 1L;
@@ -338,6 +365,9 @@ class UsuarioServiceTest {
     // ==========================
     @Nested
     class GetFotosUsuarioTests {
+        /**
+         * Prueba la obtención exitosa de las fotos de un usuario.
+         */
         @Test
         void getFotosUsuario_SuccessfulRetrieval() {
             Long userId = 1L;
@@ -356,6 +386,10 @@ class UsuarioServiceTest {
             verify(usuarioRepo).findUsuarioForId(userId);
         }
 
+        /**
+         * Prueba que devuelve null cuando no se encuentra el usuario al obtener sus
+         * fotos.
+         */
         @Test
         void getFotosUsuario_UsuarioNoEncontrado() {
             Long userId = 1L;
@@ -379,8 +413,11 @@ class UsuarioServiceTest {
     // ========================
     @Nested
     class GetRollUsuarioTests {
+        /**
+         * Prueba la obtención exitosa del rol del usuario.
+         */
         @Test
-        void getRollUsuario_SuccessfulRetrieval() throws Exception {
+        void getRollUsuario_SuccessfulRetrieval() {
             Long userId = 1L; // Usuario 1
             RoleEnum roll = RoleEnum.USER;
             Usuario usuario = new Usuario();
@@ -397,6 +434,9 @@ class UsuarioServiceTest {
             verify(usuarioRepo).findRollUsuarioForId(userId);
         }
 
+        /**
+         * Prueba el error al obtener el rol de un usuario que no existe.
+         */
         @Test
         void getRollUsuario_Error() {
             Long userId = 1L;
@@ -417,10 +457,14 @@ class UsuarioServiceTest {
     // =========================
     // Tests getPlanUsuario()
     // =========================
+
     @Nested
     class GetPlanUsuarioTests {
+        /**
+         * Prueba la obtención exitosa del plan de un usuario.
+         */
         @Test
-        void getPlanUsuario_SuccessfulRetrieval() throws Exception {
+        void getPlanUsuario_SuccessfulRetrieval() {
             Long userId = 1L;
             Plan plan = new Plan();
             plan.setIdPlan(1L);
@@ -437,6 +481,9 @@ class UsuarioServiceTest {
             assertEquals(plan.getCursosPlan(), resp.getCursosPlan());
         }
 
+        /**
+         * Prueba el error al obtener el plan de un usuario que no existe.
+         */
         @Test
         void getPlanUsuario_Error() {
             Long userId = 1L;
@@ -459,6 +506,9 @@ class UsuarioServiceTest {
     // =========================
     @Nested
     class GetCursosUsuarioTests {
+        /**
+         * Prueba la obtención exitosa de los cursos de un usuario.
+         */
         @Test
         void getCursosUsuario_SuccessfulRetrieval() throws Exception {
             Long userId = 1L;
@@ -477,6 +527,9 @@ class UsuarioServiceTest {
             verify(usuarioRepo).findUsuarioForId(userId);
         }
 
+        /**
+         * Prueba que devuelve null al obtener cursos de un usuario que no existe.
+         */
         @Test
         void getCursosUsuario_Error() throws Exception {
             Long userId = 1L;
@@ -496,6 +549,9 @@ class UsuarioServiceTest {
     // =========================
     @Nested
     class UpdateUsuarioTests {
+        /**
+         * Prueba la actualización exitosa de un usuario.
+         */
         @Test
         void updateUsuario_SuccessfulUpdate() throws InternalServerException {
             Usuario usuario = new Usuario();
@@ -520,6 +576,10 @@ class UsuarioServiceTest {
             verify(spyService).getUsuario(1L);
         }
 
+        /**
+         * Prueba que se lanza InternalServerException cuando falla la eliminación de la
+         * foto.
+         */
         @Test
         void updateUsuario_WhenDeletePhotoFails_ThrowsInternalServerException(@TempDir Path tempDir) throws Exception {
             // Arrange
@@ -556,6 +616,9 @@ class UsuarioServiceTest {
             assertTrue(ex.getMessage().contains("Error al eliminar la foto"));
         }
 
+        /**
+         * Prueba que la foto se elimina físicamente cuando existe.
+         */
         @Test
         void updateUsuario_WhenPhotoExists_IsDeleted(@TempDir Path tempDir) throws Exception {
             // Usuario viejo con foto
@@ -590,6 +653,10 @@ class UsuarioServiceTest {
             assertFalse(Files.exists(fotoPath));
         }
 
+        /**
+         * Prueba que no se lanza excepción cuando la foto a eliminar no existe
+         * físicamente.
+         */
         @Test
         void updateUsuario_WhenPhotoDoesNotExist_DoesNotThrow(@TempDir Path tempDir) throws Exception {
             // Usuario viejo con una foto que no existe físicamente
@@ -633,6 +700,9 @@ class UsuarioServiceTest {
     // =========================
     @Nested
     class ChangePlanUsuarioTests {
+        /**
+         * Prueba el cambio exitoso del plan de un usuario.
+         */
         @Test
         void changePlanUsuario_SuccessfulUpdate() {
             // Arrange
@@ -660,6 +730,10 @@ class UsuarioServiceTest {
             verify(usuarioRepo).changePlanUsuarioForId(usuario.getIdUsuario(), usuario.getPlanUsuario());
         }
 
+        /**
+         * Prueba que se lanza EntityNotFoundException cuando el repositorio devuelve
+         * vacío al cambiar el plan.
+         */
         @Test
         void changePlanUsuario_WhenRepoReturnsEmpty_ThrowsEntityNotFoundException() {
             // Arrange
@@ -690,6 +764,10 @@ class UsuarioServiceTest {
     // =========================
     @Nested
     class ChangeCursosUsuarioTests {
+        /**
+         * Prueba el cambio exitoso de los cursos de un usuario con respuestas simuladas
+         * de WebClient.
+         */
         @Test
         void changeCursosUsuario_SuccessfulUpdate_MockWebClientResponses() throws Exception {
             // Arrange
@@ -730,6 +808,10 @@ class UsuarioServiceTest {
             verify(spyService).createUsuarioChat(oldUsuario);
         }
 
+        /**
+         * Prueba que se lanza EntityNotFoundException cuando el usuario no es
+         * encontrado al cambiar sus cursos.
+         */
         @Test
         void changeCursosUsuario_WhenUserNotFound_ThrowsIllegalArgumentException() {
             // Arrange
@@ -747,6 +829,10 @@ class UsuarioServiceTest {
             verifyNoInteractions(cursoRepo);
         }
 
+        /**
+         * Prueba el manejo de respuestas de error en el flatMap de la llamada al
+         * microservicio.
+         */
         @Test
         void changeCursosUsuario_ErrorResponse_CoverageFlatMap() throws Exception {
             // GIVEN
@@ -789,6 +875,9 @@ class UsuarioServiceTest {
             verify(spyService).createUsuarioChat(any());
         }
 
+        /**
+         * Prueba la cobertura del bloque catch interno ante errores de conexión.
+         */
         @Test
         void changeCursosUsuario_ConnectionError_InternalCatchCoverage() throws Exception {
             // GIVEN
@@ -816,6 +905,10 @@ class UsuarioServiceTest {
             verify(usuarioRepo).changeUsuarioForId(eq(id), any());
         }
 
+        /**
+         * Prueba que se lanza RepositoryException cuando ocurre un error en el
+         * repositorio al cambiar los cursos.
+         */
         @Test
         void changeCursosUsuario_RepositoryError_ThrowsRepositoryException() {
             // Arrange
@@ -851,6 +944,9 @@ class UsuarioServiceTest {
     @Nested
     class DeleteUsuarioTests {
 
+        /**
+         * Prueba la eliminación exitosa de un usuario con cobertura asíncrona completa.
+         */
         @Test
         void deleteUsuario_SuccessfulDeletion_WithFullAsyncCoverage()
                 throws RepositoryException, InternalComunicationException {
@@ -889,6 +985,10 @@ class UsuarioServiceTest {
             verify(responseSpec, times(2)).bodyToMono(String.class);
         }
 
+        /**
+         * Prueba la cobertura del flatMap ante errores asíncronos durante la
+         * eliminación.
+         */
         @Test
         void deleteUsuario_AsyncError_FlatMapCoverage() throws RepositoryException, InternalComunicationException {
             // GIVEN
@@ -923,6 +1023,10 @@ class UsuarioServiceTest {
             verify(responseSpec, atLeastOnce()).onStatus(any(), any());
         }
 
+        /**
+         * Prueba que se lanza EntityNotFoundException cuando el usuario no es
+         * encontrado al eliminarlo.
+         */
         @Test
         void deleteUsuario_UsuarioNotFound_ThrowsEntityNotFoundException() {
             Long userId = 1L;
@@ -936,6 +1040,10 @@ class UsuarioServiceTest {
             verifyNoInteractions(loginRepo);
         }
 
+        /**
+         * Prueba que se lanza IllegalArgumentException cuando falla la eliminación del
+         * login.
+         */
         @Test
         void deleteUsuario_ErrorDeletingLogin_ThrowsIllegalArgumentException() {
             Long userId = 1L;
@@ -982,7 +1090,6 @@ class UsuarioServiceTest {
             when(usuarioRepo.findUsuarioForId(userId)).thenReturn(Optional.of(new Usuario()));
 
             UsuarioService spy = spy(usuarioService);
-            // Forzamos una excepción física en el método para cubrir el catch(Exception e)
             doThrow(new RuntimeException("Explosión interna")).when(spy).deleteUsuarioChat(userId);
 
             // ACT

@@ -43,7 +43,7 @@ public class Usuario implements Serializable {
     @Column(name = "nombre_usuario", nullable = false)
     private String nombreUsuario;
 
-    @Column(name = "foto_usuario", columnDefinition = "text[]")
+    @Column(name = "foto_usuario", columnDefinition = "varchar array")
     private List<String> fotoUsuario;
 
     @Column(length = 1500)

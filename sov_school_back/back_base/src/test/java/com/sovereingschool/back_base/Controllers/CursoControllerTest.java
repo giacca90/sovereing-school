@@ -50,6 +50,9 @@ class CursoControllerTest {
     @Nested
     class GetAllTests {
 
+        /**
+         * Prueba la obtención exitosa de todos los cursos.
+         */
         @Test
         void testGetAll_Success() {
             // GIVEN
@@ -74,6 +77,9 @@ class CursoControllerTest {
                     .body("[0].nombreCurso", equalTo("Java Spring"));
         }
 
+        /**
+         * Prueba el error interno al obtener todos los cursos.
+         */
         @Test
         void testGetAll_InternalError() {
             when(cursoService.getAll()).thenThrow(new RuntimeException("Error de BD"));
@@ -92,6 +98,9 @@ class CursoControllerTest {
     @Nested
     class GetCursoByIdTests {
 
+        /**
+         * Prueba la obtención exitosa de un curso por ID.
+         */
         @Test
         void testGetCurso_Success() throws NotFoundException {
             // GIVEN
@@ -116,6 +125,9 @@ class CursoControllerTest {
                     .body("nombreCurso", equalTo("Curso Expert"));
         }
 
+        /**
+         * Prueba la obtención de un curso cuando no se encuentra.
+         */
         @Test
         void testGetCurso_NotFound() throws NotFoundException {
             // GIVEN
@@ -133,6 +145,9 @@ class CursoControllerTest {
                     .body(equalTo("No existe"));
         }
 
+        /**
+         * Prueba el error interno al obtener un curso por ID.
+         */
         @Test
         void testGetCurso_InternalError() throws NotFoundException {
             // GIVEN
@@ -154,6 +169,9 @@ class CursoControllerTest {
     @Nested
     class GetNombreCursoTests {
 
+        /**
+         * Prueba la obtención exitosa del nombre de un curso.
+         */
         @Test
         void testGetNombreCurso_Success() throws NotFoundException {
             // GIVEN
@@ -175,6 +193,9 @@ class CursoControllerTest {
                     .body(equalTo(nombreEsperado));
         }
 
+        /**
+         * Prueba la obtención del nombre de un curso cuando no se encuentra.
+         */
         @Test
         void testGetNombreCurso_NotFound() throws NotFoundException {
             // GIVEN
@@ -193,6 +214,9 @@ class CursoControllerTest {
                     .body(equalTo(errorMsg));
         }
 
+        /**
+         * Prueba el error interno al obtener el nombre de un curso.
+         */
         @Test
         void testGetNombreCurso_InternalError() throws NotFoundException {
             // GIVEN
@@ -214,6 +238,9 @@ class CursoControllerTest {
     @Nested
     class GetNombresProfesoresCursoTests {
 
+        /**
+         * Prueba la obtención exitosa de los nombres de los profesores de un curso.
+         */
         @Test
         void testGetNombresProfesoresCurso_Success() throws NotFoundException {
             // GIVEN
@@ -242,6 +269,9 @@ class CursoControllerTest {
                     .body("[0]", equalTo("Dr. Strange")); // Comprueba una posición específica
         }
 
+        /**
+         * Prueba la obtención de nombres de profesores cuando la lista está vacía.
+         */
         @Test
         void testGetNombresProfesoresCurso_Empty() throws NotFoundException {
             // GIVEN: El curso existe pero no tiene profesores asignados
@@ -259,6 +289,9 @@ class CursoControllerTest {
                     .body("$", hasSize(0));
         }
 
+        /**
+         * Prueba la obtención de nombres de profesores cuando el curso no se encuentra.
+         */
         @Test
         void testGetNombresProfesoresCurso_NotFound() throws NotFoundException {
             // GIVEN
@@ -277,6 +310,9 @@ class CursoControllerTest {
                     .body(equalTo("Curso no encontrado"));
         }
 
+        /**
+         * Prueba el error interno al obtener los nombres de los profesores.
+         */
         @Test
         void testGetNombresProfesoresCurso_InternalError() throws NotFoundException {
             // GIVEN
@@ -298,6 +334,9 @@ class CursoControllerTest {
     @Nested
     class GetFechaCreacionCursoTests {
 
+        /**
+         * Prueba la obtención exitosa de la fecha de creación de un curso.
+         */
         @Test
         void testGetFechaCreacionCurso_Success() throws NotFoundException {
             // GIVEN
@@ -319,6 +358,9 @@ class CursoControllerTest {
                     .body(notNullValue());
         }
 
+        /**
+         * Prueba la obtención de la fecha de creación cuando no se encuentra el curso.
+         */
         @Test
         void testGetFechaCreacionCurso_NotFound() throws NotFoundException {
             // GIVEN
@@ -337,6 +379,9 @@ class CursoControllerTest {
                     .body(equalTo("Fecha no encontrada"));
         }
 
+        /**
+         * Prueba el error interno al obtener la fecha de creación.
+         */
         @Test
         void testGetFechaCreacionCurso_InternalError() throws NotFoundException {
             // GIVEN
@@ -359,6 +404,9 @@ class CursoControllerTest {
     @Nested
     class GetClasesDelCursoTests {
 
+        /**
+         * Prueba la obtención exitosa de las clases de un curso.
+         */
         @Test
         void testGetClasesDelCurso_Success() throws NotFoundException {
             // GIVEN
@@ -384,6 +432,10 @@ class CursoControllerTest {
                     .body("[0].nombreClase", equalTo("Introducción a Spring"));
         }
 
+        /**
+         * Prueba que se devuelve NotFound cuando el curso no tiene clases o no se
+         * encuentra.
+         */
         @Test
         void testGetClasesDelCurso_Empty_ReturnsNotFound() throws NotFoundException {
             Long idCurso = 1L;
@@ -400,6 +452,9 @@ class CursoControllerTest {
                     .body(equalTo("Curso no encontrado"));
         }
 
+        /**
+         * Prueba el error interno al obtener las clases de un curso.
+         */
         @Test
         void testGetClasesDelCurso_InternalError() throws NotFoundException {
             // GIVEN
@@ -421,6 +476,9 @@ class CursoControllerTest {
     @Nested
     class GetPlanesDelCursoTests {
 
+        /**
+         * Prueba la obtención exitosa de los planes de un curso.
+         */
         @Test
         void testGetPlanesDelCurso_Success() throws NotFoundException {
             // GIVEN
@@ -448,6 +506,9 @@ class CursoControllerTest {
                     .body("[0].nombrePlan", equalTo("Plan Premium"));
         }
 
+        /**
+         * Prueba que se devuelve un mensaje cuando el curso no tiene planes.
+         */
         @Test
         void testGetPlanesDelCurso_Empty_ReturnsMessage() throws NotFoundException {
             // GIVEN
@@ -465,6 +526,9 @@ class CursoControllerTest {
                     .body(equalTo("El curso no tiene planes"));
         }
 
+        /**
+         * Prueba el error interno al obtener los planes de un curso.
+         */
         @Test
         void testGetPlanesDelCurso_InternalError() throws NotFoundException {
             // GIVEN
@@ -486,6 +550,9 @@ class CursoControllerTest {
     @Nested
     class GetPrecioCursoTests {
 
+        /**
+         * Prueba la obtención exitosa del precio de un curso.
+         */
         @Test
         void testGetPrecioCurso_Success() throws NotFoundException {
             // GIVEN
@@ -508,6 +575,9 @@ class CursoControllerTest {
             org.junit.jupiter.api.Assertions.assertEquals(99.99f, precioRespuesta, 0.001);
         }
 
+        /**
+         * Prueba la obtención del precio cuando no se encuentra el curso.
+         */
         @Test
         void testGetPrecioCurso_NotFound() throws NotFoundException {
             // GIVEN
@@ -526,6 +596,9 @@ class CursoControllerTest {
                     .body(equalTo("Precio no disponible"));
         }
 
+        /**
+         * Prueba el error interno al obtener el precio de un curso.
+         */
         @Test
         void testGetPrecioCurso_InternalError() throws NotFoundException {
             // GIVEN
@@ -567,6 +640,9 @@ class CursoControllerTest {
             adminJWT = jwtUtil.generateToken(auth, "access", 1L);
         }
 
+        /**
+         * Prueba la actualización exitosa de un curso.
+         */
         @Test
         void testUpdateCurso_Success() throws Exception {
             // GIVEN
@@ -593,6 +669,9 @@ class CursoControllerTest {
                     .body("nombreCurso", equalTo("Java Updated"));
         }
 
+        /**
+         * Prueba la actualización de un curso cuando no se encuentra.
+         */
         @Test
         void testUpdateCurso_NotFound() throws Exception {
             // GIVEN
@@ -614,6 +693,9 @@ class CursoControllerTest {
                     .body(equalTo("Curso no encontrado"));
         }
 
+        /**
+         * Prueba la actualización de un curso cuando falla la comunicación interna.
+         */
         @Test
         void testUpdateCurso_FailedDependency() throws Exception {
             // GIVEN
@@ -636,6 +718,9 @@ class CursoControllerTest {
                     .body(equalTo("Error comunicación"));
         }
 
+        /**
+         * Prueba el error interno de servidor al actualizar un curso.
+         */
         @Test
         void testUpdateCurso_InternalServerError() throws Exception {
             // GIVEN
@@ -658,6 +743,10 @@ class CursoControllerTest {
                     .body(equalTo("Error interno de servidor"));
         }
 
+        /**
+         * Prueba que se devuelve NotModified cuando el repositorio no puede modificar
+         * el curso.
+         */
         @Test
         void testUpdateCurso_NotModified() throws Exception {
             // GIVEN
@@ -697,6 +786,9 @@ class CursoControllerTest {
             adminJWT = jwtUtil.generateToken(auth, "access", 1L);
         }
 
+        /**
+         * Prueba la eliminación exitosa de un curso.
+         */
         @Test
         void testDeleteCurso_Success() throws Exception {
             // GIVEN
@@ -718,6 +810,9 @@ class CursoControllerTest {
                     .body(equalTo("Curso eliminado con éxito!!!"));
         }
 
+        /**
+         * Prueba la eliminación de un curso cuando no se encuentra.
+         */
         @Test
         void testDeleteCurso_NotFound() throws Exception {
             // GIVEN
@@ -736,6 +831,9 @@ class CursoControllerTest {
                     .body(equalTo("Curso no existe"));
         }
 
+        /**
+         * Prueba el error interno al eliminar un curso.
+         */
         @Test
         void testDeleteCurso_InternalError() throws Exception {
             // GIVEN
@@ -754,6 +852,9 @@ class CursoControllerTest {
                     .body(equalTo("Fallo en la base de datos"));
         }
 
+        /**
+         * Prueba la eliminación de un curso cuando ocurre una excepción genérica.
+         */
         @Test
         void testDeleteCurso_GeneralException() throws Exception {
             // GIVEN
@@ -797,6 +898,9 @@ class CursoControllerTest {
             userJWT = jwtUtil.generateToken(auth, "access", 123L);
         }
 
+        /**
+         * Prueba la obtención exitosa de una clase por ID dentro de un curso.
+         */
         @Test
         void testGetClaseForId_Success() throws Exception {
             // GIVEN
@@ -828,6 +932,9 @@ class CursoControllerTest {
                     .body("nombreClase", equalTo("Lección de Java"));
         }
 
+        /**
+         * Prueba la obtención de una clase cuando no existe dentro del curso.
+         */
         @Test
         void testGetClaseForId_ClassNotFoundInCurso() throws Exception {
             // GIVEN: El curso existe pero no tiene esa clase
@@ -850,6 +957,9 @@ class CursoControllerTest {
                     .body(equalTo("Clase no encontrada"));
         }
 
+        /**
+         * Prueba la obtención de una clase cuando el curso no se encuentra.
+         */
         @Test
         void testGetClaseForId_CursoNotFound() throws Exception {
             // GIVEN: El curso ni siquiera existe
@@ -866,6 +976,9 @@ class CursoControllerTest {
                     .body(equalTo("Curso no existe"));
         }
 
+        /**
+         * Prueba el error interno al intentar encontrar una clase.
+         */
         @Test
         void testGetClaseForId_InternalError() throws Exception {
             // GIVEN
@@ -895,6 +1008,9 @@ class CursoControllerTest {
             adminJWT = jwtUtil.generateToken(auth, "access", 1L);
         }
 
+        /**
+         * Prueba la eliminación exitosa de una clase.
+         */
         @Test
         void testDeleteClase_Success() throws Exception {
             // GIVEN
@@ -935,6 +1051,9 @@ class CursoControllerTest {
             verify(cursoService, times(1)).deleteClase(clase1);
         }
 
+        /**
+         * Prueba la eliminación de una clase cuando no se encuentra en el curso.
+         */
         @Test
         void testDeleteClase_NotFound() throws Exception {
             // GIVEN: El curso existe pero la clase no está en su lista
@@ -957,6 +1076,9 @@ class CursoControllerTest {
                     .body(equalTo("Clase no encontrada"));
         }
 
+        /**
+         * Prueba la eliminación de una clase cuando el curso no se encuentra.
+         */
         @Test
         void testDeleteClase_CursoNotFound() throws Exception {
             // GIVEN: El curso no existe
@@ -973,6 +1095,9 @@ class CursoControllerTest {
                     .body(equalTo("Curso inexistente"));
         }
 
+        /**
+         * Prueba el error interno al intentar borrar una clase.
+         */
         @Test
         void testDeleteClase_InternalError() throws Exception {
             // GIVEN: Error inesperado al borrar

@@ -51,6 +51,11 @@ export class StreamingService {
 		return win?.__env?.BACK_BASE ?? '';
 	}
 
+	get backStreamURL(): string {
+		const win = globalThis?.window as any;
+		return win?.__env?.BACK_STREAM ?? '';
+	}
+
 	get webSocketUrlWebcam(): string {
 		const win = globalThis?.window as any;
 		return win?.__env ? `${win.__env.BACK_STREAM_WSS ?? ''}/live-webcam` : '';
@@ -243,6 +248,23 @@ export class StreamingService {
 
 		// Configura todos los manejadores
 		this.setupWebSocketHandlersOBS();
+	}
+
+	/**
+	 * Registra el progreso de visualización de un fragmento
+	 * @param idCurso ID del curso
+	 * @param idClase ID de la clase
+	 * @param segment Índice del segmento visto
+	 */
+	registrarProgreso(idCurso: number, idClase: number, segment: number): Observable<any> {
+		return this.http.post(`${this.backStreamURL}/registrar-fragmento`, null, {
+			params: {
+				idCurso: idCurso.toString(),
+				idClase: idClase.toString(),
+				segment: segment.toString(),
+			},
+			withCredentials: true,
+		});
 	}
 
 	/**

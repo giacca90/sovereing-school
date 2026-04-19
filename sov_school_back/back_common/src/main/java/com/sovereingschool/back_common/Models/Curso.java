@@ -21,12 +21,16 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Builder
+@ToString
 @Entity
 @Table(name = "curso")
 public class Curso implements Serializable {
@@ -64,5 +68,4 @@ public class Curso implements Serializable {
 	private String imagenCurso;
 
 	private BigDecimal precioCurso;
-
 }

@@ -28,238 +28,265 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "server.http.port=0")
-public class InitControllerTest {
+class InitControllerTest {
 
-    @Nested
-    class GetInitTests {
+        @Nested
+        class GetInitTests {
 
-        @Test
-        public void testGetInit_Success() {
-            InitApp mockResponse = mock(InitApp.class);
-            String mockToken = "token-secret-123";
+                /**
+                 * Prueba el error interno al obtener la inicialización.
+                 */
+                @Test
+                public void testGetInit_Exception() {
+                        String mensajeError = "Error interno del servidor";
+                        when(initAppService.getInit()).thenThrow(new RuntimeException(mensajeError));
 
-            when(initAppService.getInit()).thenReturn(mockResponse);
-            when(initAppService.getInitToken()).thenReturn(mockToken);
+                        given()
+                                        .header("Authorization", "Bearer " + guestJWT)
+                                        .when()
+                                        .get("")
+                                        .then()
+                                        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                                        .body(equalTo(mensajeError));
+                }
 
-            given()
-                    .header("Authorization", "Bearer " + guestJWT)
-                    .contentType(ContentType.JSON)
-                    .when()
-                    .get("")
-                    .then()
-                    .log().ifValidationFails()
-                    .statusCode(HttpStatus.OK.value())
-                    .header("Set-Cookie", containsString("initToken=" + mockToken));
+                /**
+                 * Prueba la obtención exitosa de la inicialización de la aplicación.
+                 */
+                @Test
+                void testGetInit_Success() {
+                        InitApp mockResponse = mock(InitApp.class);
+                        String mockToken = "token-secret-123";
+
+                        when(initAppService.getInit()).thenReturn(mockResponse);
+                        when(initAppService.getInitToken()).thenReturn(mockToken);
+
+                        given()
+                                        .header("Authorization", "Bearer " + guestJWT)
+                                        .contentType(ContentType.JSON)
+                                        .when()
+                                        .get("")
+                                        .then()
+                                        .log().ifValidationFails()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .header("Set-Cookie", containsString("initToken=" + mockToken));
+                }
         }
 
-        @Test
-        public void testGetInit_Exception() {
-            String mensajeError = "Error interno del servidor";
-            when(initAppService.getInit()).thenThrow(new RuntimeException(mensajeError));
+        @Nested
+        class AuthTests {
 
-            given()
-                    .header("Authorization", "Bearer " + guestJWT)
-                    .when()
-                    .get("")
-                    .then()
-                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                    .body(equalTo(mensajeError));
-        }
-    }
+                /**
+                 * Prueba la autenticación exitosa.
+                 */
+                @Test
+                public void testAuth_Success() {
+                        // GIVEN
+                        String mockInitToken = "auth-token-999";
+                        when(initAppService.getInitToken()).thenReturn(mockInitToken);
 
-    @Nested
-    class AuthTests {
+                        // 1. Generamos el JWT que el filtro usará para autenticar
+                        Authentication auth = new UsernamePasswordAuthenticationToken(
+                                        "guestUser", null, List.of(new SimpleGrantedAuthority("ROLE_GUEST")));
+                        String jwtParaFiltro = jwtUtil.generateToken(auth, "access", 3600000L);
 
-        @Test
-        public void testAuth_Success() {
-            // GIVEN
-            String mockInitToken = "auth-token-999";
-            when(initAppService.getInitToken()).thenReturn(mockInitToken);
+                        // WHEN & THEN
+                        given()
+                                        .relaxedHTTPSValidation()
+                                        // 2. IMPORTANTE: Tu filtro busca "refreshToken" para autenticar
+                                        // Ponemos el JWT aquí para que 'jwtUtil.createAuthenticationFromToken' funcione
+                                        .cookie("refreshToken", jwtParaFiltro)
+                                        .when()
+                                        .get("/auth")
+                                        .then()
+                                        .log().ifValidationFails()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .body(equalTo("OK"))
+                                        .header("Set-Cookie", containsString("initToken=" + mockInitToken));
+                }
 
-            // 1. Generamos el JWT que el filtro usará para autenticar
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    "guestUser", null, List.of(new SimpleGrantedAuthority("ROLE_GUEST")));
-            String jwtParaFiltro = jwtUtil.generateToken(auth, "access", 3600000L);
+                /**
+                 * Prueba la autenticación sin enviar la cookie.
+                 */
+                @Test
+                public void testAuth_WithoutCookie() {
+                        // GIVEN - sin enviar cookie pero con JWT en header para autenticación
+                        String mockInitToken = "auth-token-without-cookie";
+                        when(initAppService.getInitToken()).thenReturn(mockInitToken);
 
-            // WHEN & THEN
-            given()
-                    .relaxedHTTPSValidation()
-                    // 2. IMPORTANTE: Tu filtro busca "refreshToken" para autenticar
-                    // Ponemos el JWT aquí para que 'jwtUtil.createAuthenticationFromToken' funcione
-                    .cookie("refreshToken", jwtParaFiltro)
-                    .when()
-                    .get("/auth")
-                    .then()
-                    .log().ifValidationFails()
-                    .statusCode(HttpStatus.OK.value())
-                    .body(equalTo("OK"))
-                    .header("Set-Cookie", containsString("initToken=" + mockInitToken));
-        }
+                        Authentication auth = new UsernamePasswordAuthenticationToken(
+                                        "guestUser", null, List.of(new SimpleGrantedAuthority("ROLE_GUEST")));
+                        String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
 
-        @Test
-        public void testAuth_WithoutCookie() {
-            // GIVEN - sin enviar cookie pero con JWT en header para autenticación
-            String mockInitToken = "auth-token-without-cookie";
-            when(initAppService.getInitToken()).thenReturn(mockInitToken);
+                        // WHEN & THEN - el endpoint debe funcionar sin la cookie (required=false)
+                        given()
+                                        .relaxedHTTPSValidation()
+                                        .header("Authorization", "Bearer " + jwt)
+                                        .when()
+                                        .get("/auth")
+                                        .then()
+                                        .log().ifValidationFails()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .body(equalTo("OK"))
+                                        .header("Set-Cookie", containsString("initToken=" + mockInitToken));
+                }
 
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    "guestUser", null, List.of(new SimpleGrantedAuthority("ROLE_GUEST")));
-            String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
+                /**
+                 * Prueba el error durante la autenticación.
+                 */
+                @Test
+                public void testAuth_Exception() {
+                        // GIVEN
+                        Authentication auth = new UsernamePasswordAuthenticationToken(
+                                        "guestUser", null, List.of(new SimpleGrantedAuthority("ROLE_GUEST")));
+                        String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
 
-            // WHEN & THEN - el endpoint debe funcionar sin la cookie (required=false)
-            given()
-                    .relaxedHTTPSValidation()
-                    .header("Authorization", "Bearer " + jwt)
-                    .when()
-                    .get("/auth")
-                    .then()
-                    .log().ifValidationFails()
-                    .statusCode(HttpStatus.OK.value())
-                    .body(equalTo("OK"))
-                    .header("Set-Cookie", containsString("initToken=" + mockInitToken));
-        }
+                        when(initAppService.getInitToken()).thenThrow(new RuntimeException("Token generation failed"));
 
-        @Test
-        public void testAuth_Exception() {
-            // GIVEN
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    "guestUser", null, List.of(new SimpleGrantedAuthority("ROLE_GUEST")));
-            String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
+                        // WHEN & THEN
+                        given()
+                                        .relaxedHTTPSValidation()
+                                        .header("Authorization", "Bearer " + jwt)
+                                        .when()
+                                        .get("/auth")
+                                        .then()
+                                        .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                }
 
-            when(initAppService.getInitToken()).thenThrow(new RuntimeException("Token generation failed"));
+                /**
+                 * Prueba la autenticación con el rol de usuario estándar.
+                 */
+                @Test
+                public void testAuth_WithUserRole() {
+                        // GIVEN - usando rol USER en lugar de GUEST
+                        String mockInitToken = "auth-token-user-role";
+                        when(initAppService.getInitToken()).thenReturn(mockInitToken);
 
-            // WHEN & THEN
-            given()
-                    .relaxedHTTPSValidation()
-                    .header("Authorization", "Bearer " + jwt)
-                    .when()
-                    .get("/auth")
-                    .then()
-                    .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        }
+                        Authentication auth = new UsernamePasswordAuthenticationToken(
+                                        "regularUser", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                        String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
 
-        @Test
-        public void testAuth_WithUserRole() {
-            // GIVEN - usando rol USER en lugar de GUEST
-            String mockInitToken = "auth-token-user-role";
-            when(initAppService.getInitToken()).thenReturn(mockInitToken);
-
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    "regularUser", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-            String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
-
-            // WHEN & THEN
-            given()
-                    .relaxedHTTPSValidation()
-                    .header("Authorization", "Bearer " + jwt)
-                    .when()
-                    .get("/auth")
-                    .then()
-                    .log().ifValidationFails()
-                    .statusCode(HttpStatus.OK.value())
-                    .body(equalTo("OK"))
-                    .header("Set-Cookie", containsString("initToken=" + mockInitToken));
-        }
-    }
-
-    @Nested
-    class DifferentRolesTests {
-
-        @Test
-        public void testGetInit_WithUserRole() {
-            // GIVEN - usando rol USER
-            InitApp mockResponse = mock(InitApp.class);
-            String mockToken = "token-user-role-123";
-
-            when(initAppService.getInit()).thenReturn(mockResponse);
-            when(initAppService.getInitToken()).thenReturn(mockToken);
-
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    "user", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-            String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
-
-            // WHEN & THEN
-            given()
-                    .header("Authorization", "Bearer " + jwt)
-                    .contentType(ContentType.JSON)
-                    .when()
-                    .get("")
-                    .then()
-                    .log().ifValidationFails()
-                    .statusCode(HttpStatus.OK.value())
-                    .header("Set-Cookie", containsString("initToken=" + mockToken));
+                        // WHEN & THEN
+                        given()
+                                        .relaxedHTTPSValidation()
+                                        .header("Authorization", "Bearer " + jwt)
+                                        .when()
+                                        .get("/auth")
+                                        .then()
+                                        .log().ifValidationFails()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .body(equalTo("OK"))
+                                        .header("Set-Cookie", containsString("initToken=" + mockInitToken));
+                }
         }
 
-        @Test
-        public void testGetInit_WithProfRole() {
-            // GIVEN - usando rol PROF
-            InitApp mockResponse = mock(InitApp.class);
-            String mockToken = "token-prof-role-456";
+        @Nested
+        class DifferentRolesTests {
 
-            when(initAppService.getInit()).thenReturn(mockResponse);
-            when(initAppService.getInitToken()).thenReturn(mockToken);
+                /**
+                 * Prueba la obtención de inicialización con el rol de usuario estándar.
+                 */
+                @Test
+                public void testGetInit_WithUserRole() {
+                        // GIVEN - usando rol USER
+                        InitApp mockResponse = mock(InitApp.class);
+                        String mockToken = "token-user-role-123";
 
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    "profesor", null, List.of(new SimpleGrantedAuthority("ROLE_PROF")));
-            String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
+                        when(initAppService.getInit()).thenReturn(mockResponse);
+                        when(initAppService.getInitToken()).thenReturn(mockToken);
 
-            // WHEN & THEN
-            given()
-                    .header("Authorization", "Bearer " + jwt)
-                    .contentType(ContentType.JSON)
-                    .when()
-                    .get("")
-                    .then()
-                    .log().ifValidationFails()
-                    .statusCode(HttpStatus.OK.value())
-                    .header("Set-Cookie", containsString("initToken=" + mockToken));
+                        Authentication auth = new UsernamePasswordAuthenticationToken(
+                                        "user", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                        String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
+
+                        // WHEN & THEN
+                        given()
+                                        .header("Authorization", "Bearer " + jwt)
+                                        .contentType(ContentType.JSON)
+                                        .when()
+                                        .get("")
+                                        .then()
+                                        .log().ifValidationFails()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .header("Set-Cookie", containsString("initToken=" + mockToken));
+                }
+
+                /**
+                 * Prueba la obtención de inicialización con el rol de profesor.
+                 */
+                @Test
+                public void testGetInit_WithProfRole() {
+                        // GIVEN - usando rol PROF
+                        InitApp mockResponse = mock(InitApp.class);
+                        String mockToken = "token-prof-role-456";
+
+                        when(initAppService.getInit()).thenReturn(mockResponse);
+                        when(initAppService.getInitToken()).thenReturn(mockToken);
+
+                        Authentication auth = new UsernamePasswordAuthenticationToken(
+                                        "profesor", null, List.of(new SimpleGrantedAuthority("ROLE_PROF")));
+                        String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
+
+                        // WHEN & THEN
+                        given()
+                                        .header("Authorization", "Bearer " + jwt)
+                                        .contentType(ContentType.JSON)
+                                        .when()
+                                        .get("")
+                                        .then()
+                                        .log().ifValidationFails()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .header("Set-Cookie", containsString("initToken=" + mockToken));
+                }
+
+                /**
+                 * Prueba la obtención de inicialización con el rol de administrador.
+                 */
+                @Test
+                public void testGetInit_WithAdminRole() {
+                        // GIVEN - usando rol ADMIN
+                        InitApp mockResponse = mock(InitApp.class);
+                        String mockToken = "token-admin-role-789";
+
+                        when(initAppService.getInit()).thenReturn(mockResponse);
+                        when(initAppService.getInitToken()).thenReturn(mockToken);
+
+                        Authentication auth = new UsernamePasswordAuthenticationToken(
+                                        "admin", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+                        String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
+
+                        // WHEN & THEN
+                        given()
+                                        .header("Authorization", "Bearer " + jwt)
+                                        .contentType(ContentType.JSON)
+                                        .when()
+                                        .get("")
+                                        .then()
+                                        .log().ifValidationFails()
+                                        .statusCode(HttpStatus.OK.value())
+                                        .header("Set-Cookie", containsString("initToken=" + mockToken));
+                }
         }
 
-        @Test
-        public void testGetInit_WithAdminRole() {
-            // GIVEN - usando rol ADMIN
-            InitApp mockResponse = mock(InitApp.class);
-            String mockToken = "token-admin-role-789";
+        @LocalServerPort
+        private int port;
 
-            when(initAppService.getInit()).thenReturn(mockResponse);
-            when(initAppService.getInitToken()).thenReturn(mockToken);
+        @MockitoBean
+        private InitAppService initAppService;
 
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    "admin", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
-            String jwt = jwtUtil.generateToken(auth, "access", 3600000L);
+        @Autowired
+        private JwtUtil jwtUtil;
 
-            // WHEN & THEN
-            given()
-                    .header("Authorization", "Bearer " + jwt)
-                    .contentType(ContentType.JSON)
-                    .when()
-                    .get("")
-                    .then()
-                    .log().ifValidationFails()
-                    .statusCode(HttpStatus.OK.value())
-                    .header("Set-Cookie", containsString("initToken=" + mockToken));
+        private String guestJWT;
+
+        @BeforeEach
+        public void setup() {
+                RestAssured.baseURI = "https://localhost";
+                RestAssured.port = port;
+                RestAssured.basePath = "/init";
+                RestAssured.useRelaxedHTTPSValidation();
+
+                // Generamos un JWT de invitado usando el helper específico
+                guestJWT = jwtUtil.generateInitToken();
         }
-    }
-
-    @LocalServerPort
-    private int port;
-
-    @MockitoBean
-    private InitAppService initAppService;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    private String guestJWT;
-
-    @BeforeEach
-    public void setup() {
-        RestAssured.baseURI = "https://localhost";
-        RestAssured.port = port;
-        RestAssured.basePath = "/init";
-        RestAssured.useRelaxedHTTPSValidation();
-
-        // Generamos un JWT de invitado usando el helper específico
-        guestJWT = jwtUtil.generateInitToken();
-    }
 }

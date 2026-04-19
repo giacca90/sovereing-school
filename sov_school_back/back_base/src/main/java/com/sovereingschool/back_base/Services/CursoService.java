@@ -538,7 +538,7 @@ public class CursoService implements ICursoService {
                             HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class)
                                     .flatMap(errorBody -> {
-                                        logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                        logger.error("$Error HTTP del microservicio de stream: {}", errorBody);
                                         return Mono
                                                 .error(new RuntimeException("Error del microservicio: " + errorBody));
                                     }))
@@ -717,7 +717,7 @@ public class CursoService implements ICursoService {
                     .onStatus(
                             HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class).flatMap(errorBody -> {
-                                logger.error("Error HTTP del microservicio de stream: {}", errorBody);
+                                logger.error("$$Error HTTP del microservicio de stream: {}", errorBody);
                                 return Mono.error(new RuntimeException("Error del microservicio: " + errorBody));
                             }))
                     .bodyToMono(Boolean.class)
