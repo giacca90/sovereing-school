@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -36,6 +36,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		public loginService: LoginService,
 		public streamingService: StreamingService,
 		private readonly initService: InitService,
+		private readonly cdr: ChangeDetectorRef,
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {
 		this.subscription.add(
@@ -87,6 +88,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 							clase.cursoClase = this.curso.idCurso;
 						}
 					}
+					this.cdr.detectChanges();
 				})
 				.catch((err) => {
 					console.error('Error al obtener el curso:', err);

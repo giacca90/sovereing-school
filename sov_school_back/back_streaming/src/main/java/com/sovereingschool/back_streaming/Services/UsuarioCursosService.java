@@ -39,7 +39,7 @@ import jakarta.transaction.Transactional;
 @Transactional
 public class UsuarioCursosService implements IUsuarioCursosService {
 
-    private static final String ID_CURSO_CRITERIA = "cursos.id_curso";
+    private static final String ID_CURSO_CRITERIA = "cursos.idCurso";
     private static final String NO_DOCUMENT_FOUND = "No se encontró el documento.";
 
     private StreamingService streamingService;

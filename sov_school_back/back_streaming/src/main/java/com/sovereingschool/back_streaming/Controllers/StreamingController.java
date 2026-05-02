@@ -499,7 +499,7 @@ public class StreamingController {
             if (authentication == null || !authentication.isAuthenticated()) {
                 return new ResponseEntity<>("Error en el token de acceso", HttpStatus.UNAUTHORIZED);
             }
-            Long idUsuario = Long.parseLong(authentication.getName());
+            Long idUsuario = (Long) authentication.getDetails();
             this.streamingService.registrarProgreso(idUsuario, idCurso, idClase, segment);
             return ResponseEntity.ok().build();
         } catch (Exception e) {

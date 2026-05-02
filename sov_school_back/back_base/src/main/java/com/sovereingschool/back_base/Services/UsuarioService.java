@@ -582,6 +582,12 @@ public class UsuarioService implements IUsuarioService {
      */
     protected void createUsuarioStream(Usuario usuario) throws InternalComunicationException {
         try {
+            List<Curso> cursos = usuario.getCursosUsuario();
+            cursos.forEach((curso) -> {
+                curso.setProfesoresCurso(null);
+            });
+            usuario.setCursosUsuario(cursos);
+
             WebClient webClientStream = webClientConfig.createSecureWebClient(backStreamURL);
             webClientStream.put()
                     .uri("/nuevoUsuario")

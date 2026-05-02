@@ -1,6 +1,7 @@
 package com.sovereingschool.back_streaming.Services;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,11 +39,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.sovereingschool.back_common.Exceptions.InternalServerException;
@@ -50,6 +51,7 @@ import com.sovereingschool.back_common.Exceptions.NotFoundException;
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Repositories.ClaseRepository;
+import com.sovereingschool.back_streaming.Models.ResolutionProfile;
 import com.sovereingschool.back_streaming.Repositories.UsuarioCursosRepository;
 
 /**
@@ -57,9 +59,6 @@ import com.sovereingschool.back_streaming.Repositories.UsuarioCursosRepository;
  */
 @ExtendWith(MockitoExtension.class)
 class StreamingServiceTest {
-    // ==========================
-    // Tests convertVideos()
-    // ==========================
 
     @Nested
     class ConvertVideosTests {
@@ -198,6 +197,41 @@ class StreamingServiceTest {
             assertTrue(commandLive.contains("original.mp4"));
         }
 
+        @Test
+        @DisplayName("Éxito: buildStreamMap sin audio")
+        void buildStreamMap_noAudio() {
+            ResolutionProfile p1 = ResolutionProfile.RES_720P_30;
+            ResolutionProfile p2 = ResolutionProfile.RES_360P_30;
+            List<ResolutionProfile> profiles = List.of(p1, p2);
+
+            String result = streamingService.buildStreamMap(profiles, false);
+
+            assertTrue(result.contains("v:0,name:1280x720@30"));
+            assertTrue(result.contains("v:1,name:640x360@30"));
+            assertFalse(result.contains("a:0"));
+            assertFalse(result.contains("a:1"));
+        }
+
+        @Test
+        @DisplayName("Cobertura: creaComandoFFmpeg con pipe y settings nulos")
+        void testCreaComandoFFmpegPipeDefaultSettings() throws Exception {
+            StreamingService spyService = spy(streamingService);
+
+            // Caso 1: videoSetting es nulo
+            List<String> command1 = spyService.creaComandoFFmpeg("pipe:0", true, null);
+            // Debería usar 1280x720@30 por defecto
+            System.out.println("Command: " + command1);
+            assertTrue(command1.toString().contains("1280x720@30"));
+
+            // Caso 2: videoSetting tiene longitud insuficiente
+            List<String> command2 = spyService.creaComandoFFmpeg("pipe:0", true, new String[] { "800" });
+            assertTrue(command2.toString().contains("1280x720@30"));
+
+            // Caso 3: videoSetting[0] es nulo
+            List<String> command3 = spyService.creaComandoFFmpeg("pipe:0", true, new String[] { null, "720", "30" });
+            assertTrue(command3.toString().contains("1280x720@30"));
+        }
+
         /**
          * Prueba el inicio exitoso del streaming RTMP.
          */
@@ -212,46 +246,17 @@ class StreamingServiceTest {
             Clase claseMock = createMockClase(1L, 100L, "Clase RTMP");
             when(claseRepo.findByDireccionClase(streamId)).thenReturn(Optional.of(claseMock));
 
+            StreamingService spyService = spy(streamingService);
+            doReturn(new String[] { "1280", "720", "25", "aac" }).when(spyService).ffprobe(anyString());
+
             // Mocks de procesos
-            Process mockFfprobe = mock(Process.class);
-            Process mockGpu = mock(Process.class);
             Process mockFfmpeg = mock(Process.class);
-
-            // IMPORTANTE: Este String debe coincidir con tus índices 2, 3 y 4
-            // parts[0]=h264, parts[1]=video, parts[2]=1280, parts[3]=720, parts[4]=25/1
-            String ffprobeOutput = "1280,720,25/1,video,h264\n,,,audio,aac\n";
-
-            when(mockFfprobe.getInputStream()).thenAnswer(inv -> new ByteArrayInputStream(ffprobeOutput.getBytes()));
-            when(mockFfprobe.waitFor()).thenReturn(0);
-            when(mockGpu.getInputStream()).thenAnswer(inv -> new ByteArrayInputStream("".getBytes()));
-            // when(mockGpu.waitFor()).thenReturn(0);
             when(mockFfmpeg.getInputStream()).thenAnswer(inv -> new ByteArrayInputStream("ffmpeg log\n".getBytes()));
-            // when(mockFfmpeg.getOutputStream()).thenReturn(new ByteArrayOutputStream());
 
             try (MockedStatic<Files> filesMock = mockStatic(Files.class);
                     MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class,
                             (mock, context) -> {
-
-                                // SOLUCIÓN AL MOCK: Extraer el comando correctamente del array o lista
-                                List<?> args = context.arguments();
-                                String fullCommand = "";
-                                if (!args.isEmpty()) {
-                                    Object firstArg = args.get(0);
-                                    if (firstArg instanceof String[]) {
-                                        fullCommand = String.join(" ", (String[]) firstArg);
-                                    } else {
-                                        fullCommand = args.toString();
-                                    }
-                                }
-
-                                if (fullCommand.contains("ffprobe")) {
-                                    when(mock.start()).thenReturn(mockFfprobe);
-                                } else if (fullCommand.contains("nvidia-smi") || fullCommand.contains("gpu")) {
-                                    when(mock.start()).thenReturn(mockGpu);
-                                } else {
-                                    when(mock.start()).thenReturn(mockFfmpeg);
-                                }
-
+                                when(mock.start()).thenReturn(mockFfmpeg);
                                 when(mock.directory(any())).thenReturn(mock);
                                 when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
                             })) {
@@ -259,18 +264,12 @@ class StreamingServiceTest {
                 filesMock.when(() -> Files.exists(any())).thenReturn(true);
                 filesMock.when(() -> Files.createDirectories(any())).thenReturn(null);
 
-                streamingService.startLiveStreamingFromStream(streamId, rtmpUrl, videoSetting);
+                spyService.startLiveStreamingFromStream(streamId, rtmpUrl, videoSetting);
 
                 verify(claseRepo).updateClase(eq(100L), anyString(), anyInt(), contains("master.m3u8"), anyInt());
-                Map<String, Process> processes = (Map) ReflectionTestUtils.getField(streamingService,
-                        "ffmpegProcesses");
-                // assertTrue(processes.containsKey("123"));
             }
         }
 
-        /**
-         * Prueba la cobertura total incluyendo el envío de SDP.
-         */
         @Test
         @DisplayName("Cobertura total: Forzar entrada en sendSDP")
         void startLiveStreamingFromStream_Pion_FullCoverage() throws Exception {
@@ -340,28 +339,21 @@ class StreamingServiceTest {
             ReflectionTestUtils.setField(streamingService, "executor", (java.util.concurrent.Executor) Runnable::run);
             when(claseRepo.findByDireccionClase(streamId)).thenReturn(Optional.of(createMockClase(1L, 100L, "NVIDIA")));
 
-            Process mockFfprobe = mock(Process.class);
+            StreamingService spyService = spy(streamingService);
+            doReturn(new String[] { "1920", "1080", "30", "aac" }).when(spyService).ffprobe(anyString());
+
             Process mockNvidiaSmi = mock(Process.class);
             Process mockFfmpeg = mock(Process.class);
-
-            // Salida FFprobe
-            when(mockFfprobe.getInputStream())
-                    .thenReturn(new ByteArrayInputStream("1920,1080,30/1,video,h264\n,,,audio,aac\n".getBytes()));
-            when(mockFfprobe.waitFor()).thenReturn(0);
 
             // Salida NVIDIA-SMI para que el detector la reconozca
             when(mockNvidiaSmi.getInputStream())
                     .thenReturn(new ByteArrayInputStream("NVIDIA-SMI 525.60.13".getBytes()));
-            // when(mockNvidiaSmi.waitFor()).thenReturn(0);
 
             when(mockFfmpeg.getInputStream()).thenReturn(new ByteArrayInputStream("ffmpeg log".getBytes()));
-            // when(mockFfmpeg.getOutputStream()).thenReturn(new ByteArrayOutputStream());
 
             try (MockedStatic<Files> filesMock = mockStatic(Files.class);
                     MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class,
                             (mock, context) -> {
-
-                                // --- LÓGICA DE EXTRACCIÓN ROBUSTA ---
                                 List<?> args = context.arguments();
                                 String fullCommand = "";
 
@@ -374,10 +366,7 @@ class StreamingServiceTest {
                                 }
                                 fullCommand = fullCommand.toLowerCase();
 
-                                // Asignación de Mocks basada en el comando detectado
-                                if (fullCommand.contains("ffprobe")) {
-                                    when(mock.start()).thenReturn(mockFfprobe);
-                                } else if (fullCommand.contains("nvidia-smi")) {
+                                if (fullCommand.contains("nvidia-smi")) {
                                     when(mock.start()).thenReturn(mockNvidiaSmi);
                                 } else {
                                     when(mock.start()).thenReturn(mockFfmpeg);
@@ -390,10 +379,8 @@ class StreamingServiceTest {
                 filesMock.when(() -> Files.exists(any())).thenReturn(true);
 
                 // Ejecución
-                streamingService.startLiveStreamingFromStream(streamId, rtmpUrl, videoSetting);
+                spyService.startLiveStreamingFromStream(streamId, rtmpUrl, videoSetting);
 
-                // Verificamos que se llamó al repo, lo que indica que ffprobe y la lógica de
-                // GPU terminaron bien
                 verify(claseRepo).updateClase(eq(100L), anyString(), anyInt(), contains("master.m3u8"), anyInt());
             }
         }
@@ -411,14 +398,11 @@ class StreamingServiceTest {
             ReflectionTestUtils.setField(streamingService, "executor", (java.util.concurrent.Executor) Runnable::run);
             when(claseRepo.findByDireccionClase(streamId)).thenReturn(Optional.of(createMockClase(2L, 200L, "Intel")));
 
-            Process mockFfprobe = mock(Process.class);
+            StreamingService spyService = spy(streamingService);
+            doReturn(new String[] { "1280", "720", "30", "aac" }).when(spyService).ffprobe(anyString());
+
             Process mockVainfo = mock(Process.class);
             Process mockFfmpeg = mock(Process.class);
-
-            // Salida FFprobe
-            when(mockFfprobe.getInputStream())
-                    .thenReturn(new ByteArrayInputStream("1280,720,30/1,video,h264\n,,,audio,aac\n".getBytes()));
-            when(mockFfprobe.waitFor()).thenReturn(0);
 
             // Salida Vainfo muy completa (estilo Linux real)
             String intelOutput = "libva info: VA-API version 1.17.0\n" +
@@ -427,10 +411,8 @@ class StreamingServiceTest {
                     "libva info: va_openDriver() returns 0\n" +
                     "vainfo: Driver version: Intel iHD driver for Intel(R) Gen Graphics - 23.1.1";
             when(mockVainfo.getInputStream()).thenReturn(new ByteArrayInputStream(intelOutput.getBytes()));
-            // when(mockVainfo.waitFor()).thenReturn(0);
 
             when(mockFfmpeg.getInputStream()).thenReturn(new ByteArrayInputStream("ffmpeg log".getBytes()));
-            // when(mockFfmpeg.getOutputStream()).thenReturn(new ByteArrayOutputStream());
 
             try (MockedStatic<Files> filesMock = mockStatic(Files.class);
                     MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class,
@@ -446,15 +428,10 @@ class StreamingServiceTest {
                                 }
                                 fullCommand = fullCommand.toLowerCase();
 
-                                // Encadenamos los mocks
-                                if (fullCommand.contains("ffprobe")) {
-                                    when(mock.start()).thenReturn(mockFfprobe);
-                                } else if (fullCommand.contains("vainfo") || fullCommand.contains("intel")) {
+                                if (fullCommand.contains("vainfo") || fullCommand.contains("intel")) {
                                     when(mock.start()).thenReturn(mockVainfo);
                                 } else if (fullCommand.contains("nvidia-smi")) {
-                                    // Si pregunta por NVIDIA, devolvemos error para que salte a la siguiente opción
                                     Process mockFail = mock(Process.class);
-                                    // when(mockFail.waitFor()).thenReturn(1);
                                     when(mockFail.getInputStream()).thenReturn(new ByteArrayInputStream("".getBytes()));
                                     when(mock.start()).thenReturn(mockFail);
                                 } else {
@@ -464,30 +441,18 @@ class StreamingServiceTest {
                                 when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
                             })) {
 
-                // --- CLAVE: Simulación de archivos específica ---
                 filesMock.when(() -> Files.exists(any())).thenAnswer(invocation -> {
                     String path = invocation.getArgument(0).toString();
                     if (path.contains("nvidia"))
-                        return false; // No hay NVIDIA
+                        return false;
                     if (path.contains("dri") || path.contains("render"))
-                        return true; // Sí hay Intel/VAAPI
+                        return true;
                     return true;
                 });
 
-                streamingService.startLiveStreamingFromStream(streamId, rtmpUrl, videoSetting);
+                spyService.startLiveStreamingFromStream(streamId, rtmpUrl, videoSetting);
 
-                // --- DEBUG & ASSERT ---
-                List<String> allCommands = pbMock.constructed().stream()
-                        .flatMap(pb -> pb.command().stream())
-                        .collect(java.util.stream.Collectors.toList());
-
-                // Imprime esto en tu consola para ver qué está generando realmente si falla
-                // System.out.println("Comandos generados: " + String.join(" ", allCommands));
-
-                // boolean foundVaapi = allCommands.stream().anyMatch(arg ->
-                // arg.contains("vaapi"));
-                // assertTrue(foundVaapi, "El comando debería contener 'vaapi'. Comandos reales:
-                // " + allCommands);
+                verify(claseRepo).updateClase(eq(200L), anyString(), anyInt(), contains("master.m3u8"), anyInt());
             }
         }
     }
@@ -521,21 +486,20 @@ class StreamingServiceTest {
          * Prueba la detención forzada del proceso FFmpeg si no responde.
          */
         @Test
-        @DisplayName("Éxito: Forzar detención si no termina amablemente")
-        void stopFFmpegProcess_forceDestroy() throws Exception {
+        @DisplayName("Error: stopFFmpegProcessForUser interrumpido")
+        void stopFFmpegProcess_interrupted() throws Exception {
             String sessionId = "123";
             Process mockProcess = mock(Process.class);
             Map<String, Process> processes = (Map<String, Process>) ReflectionTestUtils.getField(streamingService,
                     "ffmpegProcesses");
             processes.put(sessionId, mockProcess);
 
-            when(mockProcess.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)).thenReturn(false);
+            when(mockProcess.waitFor(3, java.util.concurrent.TimeUnit.SECONDS))
+                    .thenThrow(new InterruptedException("Interrupted"));
 
-            streamingService.stopFFmpegProcessForUser("user_stream_123");
-
-            verify(mockProcess).destroy();
-            verify(mockProcess).destroyForcibly();
-            assertTrue(processes.isEmpty());
+            assertThrows(InternalServerException.class,
+                    () -> streamingService.stopFFmpegProcessForUser("user_stream_123"));
+            assertTrue(Thread.interrupted());
         }
     }
 
@@ -548,26 +512,109 @@ class StreamingServiceTest {
          * Prueba la obtención exitosa de la previsualización.
          */
         @Test
-        @DisplayName("Éxito: Obtener preview cuando el archivo existe")
-        void getPreview_success() throws Exception {
+        @DisplayName("Error: getPreview interrumpido")
+        void getPreview_interrupted() throws Exception {
             String idPreview = "preview1";
             try (MockedStatic<Files> filesMock = mockStatic(Files.class)) {
-                filesMock.when(() -> Files.exists(any(Path.class))).thenReturn(true);
+                filesMock.when(() -> Files.exists(any(Path.class))).thenReturn(false);
 
-                Path result = streamingService.getPreview(idPreview);
-                assertTrue(result.toString().contains(idPreview + ".m3u8"));
+                // Simular interrupción del hilo
+                Thread.currentThread().interrupt();
+
+                assertThrows(InternalServerException.class, () -> streamingService.getPreview(idPreview));
+                assertTrue(Thread.interrupted());
             }
         }
     }
+
+    // ==========================
+    // Tests convertVideos()
+    // ==========================
 
     @Nested
     class FfprobeTests {
 
         @Test
+        @DisplayName("Error: ffprobe lanza IOException al leer")
+        void ffprobe_readIOException() throws Exception {
+            String inputPath = "video.mp4";
+            Process mockProcess = mock(Process.class);
+            InputStream mockIn = mock(InputStream.class);
+            when(mockIn.read(any(byte[].class), anyInt(), anyInt())).thenThrow(new IOException("Read error"));
+            when(mockProcess.getInputStream()).thenReturn(mockIn);
+
+            try (MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class,
+                    (mock, context) -> {
+                        when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
+                        when(mock.start()).thenReturn(mockProcess);
+                    })) {
+                assertThrows(InternalServerException.class, () -> streamingService.ffprobe(inputPath));
+            }
+        }
+
+        @Test
+        @DisplayName("Error: ffprobe interrumpido")
+        void ffprobe_interrupted() throws Exception {
+            String inputPath = "video.mp4";
+            Process mockProcess = mock(Process.class);
+            when(mockProcess.getInputStream())
+                    .thenReturn(new ByteArrayInputStream("1280,720,30/1,video,h264\n".getBytes()));
+            when(mockProcess.waitFor()).thenThrow(new InterruptedException("Interrupted"));
+
+            try (MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class,
+                    (mock, context) -> {
+                        when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
+                        when(mock.start()).thenReturn(mockProcess);
+                    })) {
+                assertThrows(InternalServerException.class, () -> streamingService.ffprobe(inputPath));
+                assertTrue(Thread.interrupted());
+            }
+        }
+
+        @Test
+        @DisplayName("Cobertura: ffprobe con FPS malformados")
+        void ffprobe_numberFormatException() throws Exception {
+            String inputPath = "video.mp4";
+            Process mockProcess = mock(Process.class);
+            // frameRate malformado (no tiene /) y otro que causa den=0
+            String output = "1280,720,invalid,video,h264\n" +
+                    "1280,720,30/0,video,h264\n" +
+                    "1280,720,60/2,video,h264\n";
+            when(mockProcess.getInputStream()).thenReturn(new ByteArrayInputStream(output.getBytes()));
+
+            try (MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class,
+                    (mock, context) -> {
+                        when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
+                        when(mock.start()).thenReturn(mockProcess);
+                    })) {
+                String[] result = streamingService.ffprobe(inputPath);
+                // Debería haber tomado el 60/2 = 30
+                assertEquals("30", result[2]);
+            }
+        }
+
+        @Test
+        @DisplayName("Error: ffprobe no encuentra stream de video")
+        void ffprobe_noVideoFound() throws Exception {
+            String inputPath = "video.mp4";
+            Process mockProcess = mock(Process.class);
+            // Solo audio
+            String output = ",,,audio,aac\n";
+            when(mockProcess.getInputStream()).thenReturn(new ByteArrayInputStream(output.getBytes()));
+
+            try (MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class,
+                    (mock, context) -> {
+                        when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
+                        when(mock.start()).thenReturn(mockProcess);
+                    })) {
+                assertThrows(InternalServerException.class, () -> streamingService.ffprobe(inputPath));
+            }
+        }
+
+        @Test
         @DisplayName("Error: ffprobe lanza IOException al iniciar")
         void ffprobe_startIOException() throws Exception {
             String inputPath = "some/path/video.mp4";
-
             try (MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class, (mock, context) -> {
                 when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
                 when(mock.start()).thenThrow(new IOException("Cannot start process"));
@@ -625,7 +672,7 @@ class StreamingServiceTest {
 
         @Test
         @DisplayName("Error: InterruptedException durante waitFor de ffprobe")
-        void ffprobe_interrupted() throws Exception {
+        void ffprobe_interrupted_waitFor() throws Exception {
             String inputPath = "some/path/video.mp4";
 
             Process mockProcess = mock(Process.class);
@@ -882,6 +929,7 @@ class StreamingServiceTest {
 
     @Nested
     class AdditionalCoverageTests {
+
         @Test
         @DisplayName("Cobertura: createNvidiaGPUFilter con lista vacía")
         void testCreateNvidiaGPUFilterEmptyProfiles() {
@@ -920,77 +968,27 @@ class StreamingServiceTest {
             Clase claseMock = createMockClase(1L, 999L, "Test Lambda");
             when(claseRepo.findByDireccionClase(streamId)).thenReturn(Optional.of(claseMock));
 
+            StreamingService spyService = spy(streamingService);
+            doReturn(new String[] { "1920", "1080", "30", "aac" }).when(spyService).ffprobe(anyString());
+
             // Simular proceso FFmpeg
             Process mockProcess = mock(Process.class);
             when(mockProcess.getInputStream()).thenReturn(new ByteArrayInputStream(
-                    "1920,1080,30/1,video,h264\n,,,audio,aac\n"
-                            .getBytes()));
-            when(mockProcess.waitFor()).thenReturn(0);
+                    "ffmpeg log".getBytes()));
 
             try (MockedConstruction<ProcessBuilder> pbMock = mockConstruction(ProcessBuilder.class, (mock, context) -> {
                 when(mock.directory(any())).thenReturn(mock);
                 when(mock.redirectErrorStream(anyBoolean())).thenReturn(mock);
                 when(mock.start()).thenReturn(mockProcess);
             })) {
-                // Usar un executor real que sea síncrono para este test o esperar
-                ReflectionTestUtils.setField(streamingService, "executor",
+                ReflectionTestUtils.setField(spyService, "executor",
                         (java.util.concurrent.Executor) Runnable::run);
 
-                streamingService.startLiveStreamingFromStream(streamId, "rtmp://test",
+                spyService.startLiveStreamingFromStream(streamId, "rtmp://test",
                         new String[] { "1280", "720", "30" });
-
-                // Al ser Runnable::run, se ejecuta inmediatamente y cubre la lambda
             }
         }
 
-        @Test
-        @DisplayName("Error: orElseThrow en startLiveStreamingFromStream")
-        void testStartLiveStreamingFromStream_NotFound() {
-            when(claseRepo.findByDireccionClase("non-existent")).thenReturn(Optional.empty());
-            assertThrows(com.sovereingschool.back_common.Exceptions.RepositoryException.class,
-                    () -> streamingService.startLiveStreamingFromStream("non-existent", "test", null));
-        }
-
-        @Test
-        @DisplayName("Cobertura: startLiveStreamingFromStream con entrada no soportada")
-        void startLiveStreamingFromStream_UnsupportedInput() throws Exception {
-            String streamId = "test_123";
-            Clase claseMock = createMockClase(1L, 100L, "Test");
-            when(claseRepo.findByDireccionClase(streamId)).thenReturn(Optional.of(claseMock));
-
-            streamingService.startLiveStreamingFromStream(streamId, 123, null);
-
-            verify(claseRepo, times(1)).findByDireccionClase(streamId);
-        }
-
-        @Test
-        @DisplayName("Cobertura: configureInputSource con varias ramas")
-        void testConfigureInputSourceCoverage() {
-            List<String> command = new java.util.ArrayList<>();
-            // Caso: live=true, path=rtmp://...
-            streamingService.configureInputSource(command, "rtmp://test", true, null);
-            assertTrue(command.contains("-re"));
-
-            // Caso: pipe
-            List<String> commandPipe = new java.util.ArrayList<>();
-            streamingService.configureInputSource(commandPipe, "pipe:0", true, new String[] { "1280", "720", "30" });
-            assertTrue(commandPipe.contains("-f"));
-            assertTrue(commandPipe.contains("sdp"));
-        }
-
-        @Test
-        @DisplayName("Cobertura: applyHardwareAcceleration todas las ramas")
-        void testApplyHardwareAccelerationCoverage() {
-            List<String> command = new java.util.ArrayList<>();
-            streamingService.applyHardwareAcceleration(command,
-                    com.sovereingschool.back_streaming.Utils.GPUDetector.VideoAcceleration.VAAPI);
-            assertTrue(command.contains("/dev/dri/renderD128"));
-
-            List<String> commandNvidia = new java.util.ArrayList<>();
-            streamingService.applyHardwareAcceleration(commandNvidia,
-                    com.sovereingschool.back_streaming.Utils.GPUDetector.VideoAcceleration.NVIDIA);
-            assertTrue(commandNvidia.contains("cuda"));
-        }
     }
 
     @Mock
@@ -999,18 +997,81 @@ class StreamingServiceTest {
     @Mock
     private ClaseRepository claseRepo;
 
-    @Mock
-    private MongoTemplate mongoTemplate;
+    @InjectMocks
+    private StreamingService streamingService;
 
     @TempDir
     Path tempDir;
 
-    private StreamingService streamingService;
+    @Test
+    @DisplayName("Error: orElseThrow en startLiveStreamingFromStream")
+    void testStartLiveStreamingFromStream_NotFound() {
+        when(claseRepo.findByDireccionClase("non-existent")).thenReturn(Optional.empty());
+        assertThrows(com.sovereingschool.back_common.Exceptions.RepositoryException.class,
+                () -> streamingService.startLiveStreamingFromStream("non-existent", "test", null));
+    }
+
+    @Test
+    @DisplayName("Cobertura: startLiveStreamingFromStream con entrada no soportada")
+    void startLiveStreamingFromStream_UnsupportedInput() throws Exception {
+        String streamId = "test_123";
+        Clase claseMock = createMockClase(1L, 100L, "Test");
+        when(claseRepo.findByDireccionClase(streamId)).thenReturn(Optional.of(claseMock));
+
+        streamingService.startLiveStreamingFromStream(streamId, 123, null);
+
+        verify(claseRepo, times(1)).findByDireccionClase(streamId);
+    }
+
+    @Test
+    @DisplayName("Cobertura: configureInputSource con varias ramas")
+    void testConfigureInputSourceCoverage() {
+        List<String> command = new java.util.ArrayList<>();
+        // Caso: live=true, path=rtmp://...
+        streamingService.configureInputSource(command, "rtmp://test", true, null);
+        assertTrue(command.contains("-re"));
+
+        // Caso: pipe
+        List<String> commandPipe = new java.util.ArrayList<>();
+        streamingService.configureInputSource(commandPipe, "pipe:0", true, new String[] { "1280", "720", "30" });
+        assertTrue(commandPipe.contains("-f"));
+        assertTrue(commandPipe.contains("sdp"));
+    }
+
+    @Test
+    @DisplayName("Cobertura: applyHardwareAcceleration todas las ramas")
+    void testApplyHardwareAccelerationCoverage() {
+        List<String> command = new java.util.ArrayList<>();
+        streamingService.applyHardwareAcceleration(command,
+                com.sovereingschool.back_streaming.Utils.GPUDetector.VideoAcceleration.VAAPI);
+        assertTrue(command.contains("/dev/dri/renderD128"));
+
+        List<String> commandNvidia = new java.util.ArrayList<>();
+        streamingService.applyHardwareAcceleration(commandNvidia,
+                com.sovereingschool.back_streaming.Utils.GPUDetector.VideoAcceleration.NVIDIA);
+        assertTrue(commandNvidia.contains("cuda"));
+    }
 
     @BeforeEach
     void setUp() {
         String uploadDir = tempDir.toString();
-        streamingService = new StreamingService(uploadDir, claseRepo, usuarioCursosRepository, mongoTemplate);
+        // streamingService ya está inyectado por @InjectMocks,
+        // pero necesitamos configurar el directorio de subida manualmente si es
+        // necesario
+        ReflectionTestUtils.setField(streamingService, "uploadDir", uploadDir);
+    }
+
+    @Test
+    @DisplayName("Éxito: Registrar progreso correctamente")
+    void registrarProgreso_success() {
+        Long idUsuario = 1L;
+        Long idCurso = 10L;
+        Long idClase = 100L;
+        int segmentIndex = 5;
+
+        streamingService.registrarProgreso(idUsuario, idCurso, idClase, segmentIndex);
+
+        verify(usuarioCursosRepository).updateProgress(idUsuario, idCurso, idClase, segmentIndex);
     }
 
     private Clase createMockClase(Long cursoId, Long claseId, String nombre) {

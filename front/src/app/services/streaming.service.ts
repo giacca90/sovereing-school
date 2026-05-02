@@ -138,7 +138,7 @@ export class StreamingService {
 	async emitirWebOBS(stream: MediaStream) {
 		try {
 			if (!stream) throw new Error('No se proporcionó un MediaStream válido.');
-			if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error('WebSocket no está abierto.');
+			if (this.ws?.readyState !== WebSocket.OPEN) throw new Error('WebSocket no está abierto.');
 			if (!this.streamId) throw new Error('No hay streamId disponible.');
 
 			const videoTrack = stream.getVideoTracks()[0];
@@ -271,7 +271,7 @@ export class StreamingService {
 	 * Función para emitir una clase en OBS
 	 */
 	async emitirOBS() {
-		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+		if (this.ws?.readyState !== WebSocket.OPEN) {
 			this.emitiendo = false;
 			throw new Error('No se puede conectar con WebSocket');
 		}

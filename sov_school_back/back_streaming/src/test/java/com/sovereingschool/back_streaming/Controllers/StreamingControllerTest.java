@@ -27,6 +27,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -47,6 +48,10 @@ import jakarta.persistence.EntityManagerFactory;
                 SecurityAutoConfiguration.class,
                 DataSourceAutoConfiguration.class,
                 HibernateJpaAutoConfiguration.class
+}, excludeName = {
+                "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration",
+                "org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration",
+                "org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration"
 })
 @AutoConfigureMockMvc(addFilters = false)
 class StreamingControllerTest {
@@ -79,6 +84,9 @@ class StreamingControllerTest {
 
         @MockitoBean
         private com.sovereingschool.back_streaming.Services.UsuarioPresetsService usuarioPresetsService;
+
+        @MockitoBean
+        private MongoTemplate mongoTemplate;
 
         @MockitoBean
         private com.sovereingschool.back_common.Repositories.UsuarioRepository usuarioRepository;
@@ -725,6 +733,7 @@ class StreamingControllerTest {
                                                         java.util.List.of(
                                                                         new org.springframework.security.core.authority.SimpleGrantedAuthority(
                                                                                         "ROLE_USER")));
+                                        auth.setDetails(1L);
                                         org.springframework.security.core.context.SecurityContextHolder.getContext()
                                                         .setAuthentication(auth);
                                         request.setUserPrincipal(auth);
@@ -756,6 +765,7 @@ class StreamingControllerTest {
                                                         java.util.List.of(
                                                                         new org.springframework.security.core.authority.SimpleGrantedAuthority(
                                                                                         "ROLE_USER")));
+                                        auth.setDetails(1L);
                                         org.springframework.security.core.context.SecurityContextHolder.getContext()
                                                         .setAuthentication(auth);
                                         request.setUserPrincipal(auth);

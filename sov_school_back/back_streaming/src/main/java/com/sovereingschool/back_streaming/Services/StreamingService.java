@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +44,6 @@ public class StreamingService {
 
     private final ClaseRepository claseRepo;
     private final UsuarioCursosRepository usuarioCursosRepository;
-    private final MongoTemplate mongoTemplate;
 
     private Logger logger = LoggerFactory.getLogger(StreamingService.class);
 
@@ -65,12 +63,10 @@ public class StreamingService {
     public StreamingService(
             @Value("${variable.VIDEOS_DIR}") String uploadDir,
             ClaseRepository claseRepo,
-            UsuarioCursosRepository usuarioCursosRepository,
-            MongoTemplate mongoTemplate) {
+            UsuarioCursosRepository usuarioCursosRepository) {
         this.uploadDir = uploadDir;
         this.claseRepo = claseRepo;
         this.usuarioCursosRepository = usuarioCursosRepository;
-        this.mongoTemplate = mongoTemplate;
         // Cambiar si hay más de una GPU, o si se procesan todos los videos con CPU
         this.executor = Executors.newFixedThreadPool(1);
     }
@@ -236,7 +232,7 @@ public class StreamingService {
 
     public void registrarProgreso(Long idUsuario, Long idCurso, Long idClase, int segmentIndex) {
         // Delegar la actualización a la capa de repositorio
-        usuarioCursosRepository.updateProgress(idUsuario, idCurso, idClase, segmentIndex, mongoTemplate);
+        usuarioCursosRepository.updateProgress(idUsuario, idCurso, idClase, segmentIndex);
     }
 
     /**
@@ -446,10 +442,9 @@ public class StreamingService {
         String audioCodec = null;
 
         logger.info("Obteniendo la resolución del video con ffprobe");
-        // Buscamos info de video y audio simultáneamente
         ProcessBuilder processBuilder = new ProcessBuilder("ffprobe",
                 "-v", "error",
-                "-show_entries", "stream=width,height,r_frame_rate,codec_type,codec_name",
+                "-show_entries", "stream=width,height,avg_frame_rate,codec_type,codec_name",
                 "-of", "csv=p=0", inputFilePath);
         processBuilder.redirectErrorStream(true);
         Process process;
@@ -466,17 +461,23 @@ public class StreamingService {
                 while ((line = reader.readLine()) != null) {
                     logger.info("FFProbe line: {}", line);
                     String[] parts = line.split(",");
-                    if (parts.length >= 4 && "video".equals(parts[3])) {
+                    if (parts.length >= 5 && "video".equals(parts[3])) {
                         width = parts[0];
                         height = parts[1];
                         String[] frameRateParts = parts[2].split("/");
                         if (frameRateParts.length == 2) {
-                            fps = String.valueOf((int) Math
-                                    .round(Double.parseDouble(frameRateParts[0])
-                                            / Double.parseDouble(frameRateParts[1])));
+                            try {
+                                double num = Double.parseDouble(frameRateParts[0]);
+                                double den = Double.parseDouble(frameRateParts[1]);
+                                if (den != 0) {
+                                    fps = String.valueOf((int) Math.round(num / den));
+                                }
+                            } catch (NumberFormatException e) {
+                                logger.warn("Error parseando FPS: {}", parts[2]);
+                            }
                         }
                     } else if (parts.length >= 5 && "audio".equals(parts[3])) {
-                        audioCodec = parts[4]; // codec_name
+                        audioCodec = parts[4]; // codec_name es el 5º campo en el output csv
                     }
                 }
             }

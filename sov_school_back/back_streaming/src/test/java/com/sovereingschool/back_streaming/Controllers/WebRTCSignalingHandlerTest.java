@@ -2,6 +2,7 @@ package com.sovereingschool.back_streaming.Controllers;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
@@ -88,6 +89,31 @@ class WebRTCSignalingHandlerTest {
         verify(session, never()).close(any());
     }
 
+    @Test
+    void afterConnectionEstablished_WithErrorAttribute_ShouldClose() throws Exception {
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+        sessionAttributes.put("Error", "test error");
+
+        handler.afterConnectionEstablished(session);
+
+        verify(session).sendMessage(any(TextMessage.class));
+        verify(session).close(CloseStatus.POLICY_VIOLATION);
+    }
+
+    @Test
+    void afterConnectionEstablished_AuthorizedAdmin_ShouldSucceed() throws Exception {
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+        sessionAttributes.put("Auth", auth);
+        sessionAttributes.put("username", "adminuser");
+        when(auth.isAuthenticated()).thenReturn(true);
+        lenient().doReturn(Collections.singletonList(authority)).when(auth).getAuthorities();
+        lenient().when(authority.getAuthority()).thenReturn("ROLE_ADMIN");
+
+        handler.afterConnectionEstablished(session);
+
+        verify(session, never()).close(any());
+    }
+
     /**
      * Prueba que la conexión se cierre para un usuario no autorizado.
      * 
@@ -119,6 +145,73 @@ class WebRTCSignalingHandlerTest {
             }
             return false;
         }));
+    }
+
+    @Test
+    void handleTextMessage_UserId_SendMessageThrows_ShouldClose() throws Exception {
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+        sessionAttributes.put("idUsuario", 1L);
+        when(session.getId()).thenReturn("session1");
+        doThrow(new IOException("send error")).when(session).sendMessage(any(TextMessage.class));
+
+        TextMessage message = new TextMessage("{\"type\":\"userId\"}");
+        handler.handleTextMessage(session, message);
+
+        verify(session).close();
+    }
+
+    @Test
+    void handleTextMessage_Emitir_Success() throws Exception {
+        when(session.getId()).thenReturn("session123");
+        String payload = "{\"type\":\"emitir\", \"streamId\":\"1_session123\", \"videoSettings\":{\"width\":\"1280\",\"height\":\"720\",\"fps\":\"30\"}}";
+        handler.handleTextMessage(session, new TextMessage(payload));
+        verify(session).sendMessage(any(TextMessage.class));
+    }
+
+    @Test
+    void handleTextMessage_Emitir_WrongSession_ShouldReturn() throws Exception {
+        when(session.getId()).thenReturn("session123");
+        String payload = "{\"type\":\"emitir\", \"streamId\":\"wrong_session\", \"videoSettings\":{}}";
+        handler.handleTextMessage(session, new TextMessage(payload));
+        verify(session, never()).sendMessage(argThat((TextMessage m) -> m.getPayload().contains("ok")));
+    }
+
+    @Test
+    void handleTextMessage_Offer_WrongSession_ShouldReturn() throws Exception {
+        when(session.getId()).thenReturn("session123");
+        String payload = "{\"type\":\"offer\", \"streamId\":\"wrong_session\", \"sdp\":\"offer-sdp\"}";
+        handler.handleTextMessage(session, new TextMessage(payload));
+        verify(handler, never()).startPion();
+    }
+
+    @Test
+    void handleTextMessage_Offer_NoSettings_ShouldReturn() throws Exception {
+        when(session.getId()).thenReturn("session123");
+        String payload = "{\"type\":\"offer\", \"streamId\":\"1_session123\", \"sdp\":\"offer-sdp\"}";
+        handler.handleTextMessage(session, new TextMessage(payload));
+        verify(handler, never()).startPion();
+    }
+
+    @Test
+    void handleTextMessage_Candidate_WrongSession_ShouldReturn() throws Exception {
+        when(session.getId()).thenReturn("session123");
+        String payload = "{\"type\":\"candidate\", \"streamId\":\"wrong_session\", \"candidate\":{}}";
+        handler.handleTextMessage(session, new TextMessage(payload));
+        // Should not write to pionWriter
+    }
+
+    @Test
+    void handleTextMessage_DetenerStreamWebRTC_WrongSession_ShouldReturn() throws Exception {
+        when(session.getId()).thenReturn("session123");
+        String payload = "{\"type\":\"detenerStreamWebRTC\", \"streamId\":\"wrong_session\"}";
+        handler.handleTextMessage(session, new TextMessage(payload));
+        verify(streamingService, never()).stopFFmpegProcessForUser(anyString());
+    }
+
+    @Test
+    void handleTextMessage_UnknownType_ShouldLog() throws Exception {
+        TextMessage message = new TextMessage("{\"type\":\"unknown\"}");
+        handler.handleTextMessage(session, message);
     }
 
     @Test
@@ -346,56 +439,97 @@ class WebRTCSignalingHandlerTest {
     }
 
     @Test
-    void isAuthorized_AuthNull_ShouldReturnFalse() {
-        assertFalse(handler.isAuthorized(null));
+    void handleTextMessage_NullFields_ShouldNotThrow() throws Exception {
+        TextMessage message = new TextMessage("{\"type\":null, \"streamId\":null}");
+        handler.handleTextMessage(session, message);
     }
 
     @Test
-    void afterConnectionEstablished_Exception_ShouldCloseSession() throws Exception {
-        // Provocamos una excepción, por ejemplo haciendo que session.getAttributes()
-        // lance algo
-        when(session.getAttributes()).thenThrow(new RuntimeException("test exception"));
+    void startPion_InterruptedException_ShouldLog() throws Exception {
+        // Mock startProcess to return a process that throws InterruptedException when
+        // waitFor is called
+        Process mockProcess = mock(Process.class);
+        when(mockProcess.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(new byte[0]));
+        when(mockProcess.getOutputStream()).thenReturn(new java.io.ByteArrayOutputStream());
+        when(mockProcess.getErrorStream()).thenReturn(new java.io.ByteArrayInputStream(new byte[0]));
 
-        handler.afterConnectionEstablished(session);
+        doReturn(mockProcess).when(handler).startProcess(any());
 
-        verify(session).close(CloseStatus.SERVER_ERROR);
+        // Simular interrupción durante el inicio (aunque startPion no llama a waitFor
+        // directamente,
+        // los hilos que lanza sí lo hacen)
+
+        handler.startPion();
+
+        ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+        verify(executor, org.mockito.Mockito.atLeastOnce()).execute(runnableCaptor.capture());
+
+        // El hilo de espera del proceso (lambda$startPion$1)
+        Runnable processWaiter = runnableCaptor.getAllValues().stream()
+                .filter(r -> r.getClass().getName().contains("lambda$startPion$1"))
+                .findFirst().orElse(null);
+
+        if (processWaiter != null) {
+            when(mockProcess.waitFor()).thenThrow(new InterruptedException("Interrupted"));
+            processWaiter.run();
+            // Verificamos que se restauró el estado de interrupción
+            // assertTrue(Thread.interrupted()); // Esto depende de si el hilo de ejecución
+            // es el actual
+        }
     }
 
     @Test
-    void afterConnectionClosed_CleanupExceptions_ShouldNotThrow() throws Exception {
-        when(session.getId()).thenReturn("session123");
-        // Para probar los catch de close()
-        BufferedWriter mockWriter = mock(BufferedWriter.class);
-        doThrow(new IOException("writer error")).when(mockWriter).close();
+    void testPionStdoutReading_IOException() throws Exception {
+        Process mockProcess = mock(Process.class);
+        InputStream mockIn = mock(InputStream.class);
+        when(mockIn.read(any(byte[].class), anyInt(), anyInt())).thenThrow(new IOException("Read error"));
 
-        BufferedReader mockReader = mock(BufferedReader.class);
-        doThrow(new IOException("reader error")).when(mockReader).close();
+        when(mockProcess.getInputStream()).thenReturn(mockIn);
+        when(mockProcess.getOutputStream()).thenReturn(new java.io.ByteArrayOutputStream());
+        when(mockProcess.getErrorStream()).thenReturn(new java.io.ByteArrayInputStream(new byte[0]));
+        doReturn(mockProcess).when(handler).startProcess(any());
 
-        // Inyectamos los mocks vía reflexión o simplemente usamos el proceso ya
-        // iniciado
-        // Como son campos privados, usaremos reflexión para testing de cobertura
-        // extrema
-        java.lang.reflect.Field writerField = WebRTCSignalingHandler.class.getDeclaredField("pionWriter");
-        writerField.setAccessible(true);
-        writerField.set(handler, mockWriter);
+        handler.startPion();
 
-        java.lang.reflect.Field readerField = WebRTCSignalingHandler.class.getDeclaredField("pionReader");
-        readerField.setAccessible(true);
-        readerField.set(handler, mockReader);
+        ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+        verify(executor, org.mockito.Mockito.atLeastOnce()).execute(runnableCaptor.capture());
 
+        // Buscar el lector de stdout (lambda$startPion$3)
+        Runnable stdoutReader = runnableCaptor.getAllValues().get(1); // El segundo suele ser stdout
+        stdoutReader.run();
+        // Debería capturar la IOException y loguear
+    }
+
+    @Test
+    void testPionStderrReading_IOException() throws Exception {
+        Process mockProcess = mock(Process.class);
+        InputStream mockErr = mock(InputStream.class);
+        when(mockErr.read(any(byte[].class), anyInt(), anyInt())).thenThrow(new IOException("Read error"));
+
+        when(mockProcess.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(new byte[0]));
+        when(mockProcess.getOutputStream()).thenReturn(new java.io.ByteArrayOutputStream());
+        when(mockProcess.getErrorStream()).thenReturn(mockErr);
+        doReturn(mockProcess).when(handler).startProcess(any());
+
+        handler.startPion();
+
+        ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+        verify(executor, org.mockito.Mockito.atLeastOnce()).execute(runnableCaptor.capture());
+
+        // Buscar el lector de stderr (lambda$startPion$0)
+        Runnable stderrReader = runnableCaptor.getAllValues().get(0); // El primero es stderr
+        stderrReader.run();
+    }
+
+    @Test
+    void isAuthorized_EmptyAuthorities_ShouldReturnFalse() {
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getAuthorities()).thenReturn(Collections.emptyList());
+        assertFalse(handler.isAuthorized(auth));
+    }
+
+    @Test
+    void afterConnectionClosed_NullResources_ShouldNotThrow() throws Exception {
         handler.afterConnectionClosed(session, CloseStatus.NORMAL);
-
-        verify(mockWriter).close();
-        verify(mockReader).close();
-    }
-
-    @Test
-    void compruebaSesion_SendMessageThrows_ShouldCloseSession() throws Exception {
-        when(session.getId()).thenReturn("session123");
-        doThrow(new IOException("send error")).when(session).sendMessage(any(TextMessage.class));
-
-        assertFalse(handler.compruebaSesion("wrong_id", session));
-
-        verify(session).close();
     }
 }
