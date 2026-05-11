@@ -1,13 +1,14 @@
-import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, PLATFORM_ID, ViewChild } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { take } from 'rxjs/operators';
 import Player from 'video.js/dist/types/player';
 import { Clase } from '../../models/Clase';
 import { ClaseChat } from '../../models/ClaseChat';
 import { Curso } from '../../models/Curso';
 import { CursosService } from '../../services/cursos.service';
-import { StreamingService } from '../../services/streaming.service'; // Importar el servicio
+import { StreamingService } from '../../services/streaming.service';
 import { ChatComponent } from '../chat/chat/chat.component';
 
 @Component({
@@ -27,20 +28,53 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	public curso: Curso | null = null;
 	public clase: Clase | null = null;
 	@ViewChild(ChatComponent, { static: false }) chatComponent!: ChatComponent;
+	@ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
 	backStream: string = '';
 	player: Player | null = null;
+	vista: number = 0; // 0: Contenido, 1: Chat
 
+	// Estado para UI dinámica
+	contextMenu: { x: number; y: number; time: number } | null = null;
+	hoveredMarker: { message: string; x: number; y: number; idMensaje: string } | null = null;
+
+	/**
+	 * Constructor del componente.
+	 * @param {ActivatedRoute} route - Ruta activada.
+	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
+	 * @param {Object} platformId - ID de la plataforma.
+	 * @param {Document} document - Documento.
+	 * @param {CursosService} cursoService - Servicio de cursos.
+	 * @param {StreamingService} streamingService - Servicio de streaming.
+	 * @param {Router} router - Router de Angular.
+	 * @param {Renderer2} renderer - Renderer2 de Angular.
+	 */
 	constructor(
 		private readonly route: ActivatedRoute,
 		private readonly cdr: ChangeDetectorRef,
 		@Inject(PLATFORM_ID) private readonly platformId: object,
+		@Inject(DOCUMENT) private readonly document: Document,
 		public cursoService: CursosService,
 		public streamingService: StreamingService,
 		public router: Router,
+		private readonly renderer: Renderer2,
 	) {
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
 
+	/**
+	 * Manejador de clics en el documento para cerrar menús contextuales.
+	 * @param {MouseEvent} event - Evento de ratón.
+	 */
+	@HostListener('document:click', ['$event'])
+	onDocumentClick(event: MouseEvent) {
+		if (this.contextMenu) {
+			this.contextMenu = null;
+		}
+	}
+
+	/**
+	 * Inicialización del componente.
+	 */
 	ngOnInit(): void {
 		if (isPlatformBrowser(this.platformId)) {
 			this.backStream = (globalThis.window as any).__env?.BACK_STREAM ?? '';
@@ -52,19 +86,22 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				this.idClase = Number(params['idClase']);
 
 				if (this.idClase === 0) {
-					this.cursoService.getStatusCurso(this.idCurso).subscribe({
-						next: (resp) => {
-							if (resp === 0 || resp === null) {
-								alert('Este curso no está disponible');
-								this.router.navigate(['/']);
-							} else {
-								this.router.navigate(['/repro/' + this.idCurso + '/' + resp]);
-							}
-						},
-						error: (e) => {
-							console.error('Error en recibir el estado del curso: ' + e.message);
-						},
-					});
+					this.cursoService
+						.getStatusCurso(this.idCurso)
+						.pipe(take(1))
+						.subscribe({
+							next: (resp) => {
+								if (resp === 0 || resp === null) {
+									alert('Este curso no está disponible');
+									this.router.navigate(['/']);
+								} else {
+									this.router.navigate(['/repro/' + this.idCurso + '/' + resp]);
+								}
+							},
+							error: (e) => {
+								console.error('Error en recibir el estado del curso: ' + e.message);
+							},
+						});
 				} else {
 					this.loadData();
 				}
@@ -78,6 +115,9 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		);
 	}
 
+	/**
+	 * Carga los datos de la clase y el curso.
+	 */
 	loadData() {
 		this.cursoService.getCurso(this.idCurso).then((result) => {
 			this.curso = result;
@@ -102,7 +142,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		if (!this.isBrowser) return; // 🛡️ Protección SSR
 
 		try {
-			const video: HTMLVideoElement = document.getElementById('video') as HTMLVideoElement;
+			const video: HTMLVideoElement = this.videoElement?.nativeElement;
 			if (!video) {
 				console.warn('Elemento de video no encontrado');
 				return;
@@ -151,33 +191,33 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 
 				if (controlBar?.el().querySelector('#vjs-quality-selector')) return;
 
-				const wrapper = document.createElement('div');
-				wrapper.id = 'vjs-quality-selector';
-				wrapper.style.position = 'relative';
-				wrapper.style.marginLeft = '10px';
+				const wrapper = this.renderer.createElement('div');
+				this.renderer.setProperty(wrapper, 'id', 'vjs-quality-selector');
+				this.renderer.setStyle(wrapper, 'position', 'relative');
+				this.renderer.setStyle(wrapper, 'marginLeft', '10px');
 
-				const button = document.createElement('button');
-				button.textContent = 'Auto ▾';
-				button.style.padding = '4px';
-				button.style.margin = '4px';
-				button.style.background = '#222';
-				button.style.color = 'white';
-				button.style.border = '1px solid #444';
-				button.style.borderRadius = '4px';
-				button.style.cursor = 'pointer';
-				button.style.fontSize = '12px';
+				const button = this.renderer.createElement('button');
+				this.renderer.setProperty(button, 'textContent', 'Auto ▾');
+				this.renderer.setStyle(button, 'padding', '4px');
+				this.renderer.setStyle(button, 'margin', '4px');
+				this.renderer.setStyle(button, 'background', '#222');
+				this.renderer.setStyle(button, 'color', 'white');
+				this.renderer.setStyle(button, 'border', '1px solid #444');
+				this.renderer.setStyle(button, 'borderRadius', '4px');
+				this.renderer.setStyle(button, 'cursor', 'pointer');
+				this.renderer.setStyle(button, 'fontSize', '12px');
 
-				const menu = document.createElement('div');
-				menu.style.position = 'absolute';
-				menu.style.bottom = '120%';
-				menu.style.left = '0';
-				menu.style.background = '#222';
-				menu.style.border = '1px solid #444';
-				menu.style.borderRadius = '4px';
-				menu.style.padding = '4px 0';
-				menu.style.display = 'none';
-				menu.style.zIndex = '1000';
-				menu.style.minWidth = '80px';
+				const menu = this.renderer.createElement('div');
+				this.renderer.setStyle(menu, 'position', 'absolute');
+				this.renderer.setStyle(menu, 'bottom', '120%');
+				this.renderer.setStyle(menu, 'left', '0');
+				this.renderer.setStyle(menu, 'background', '#222');
+				this.renderer.setStyle(menu, 'border', '1px solid #444');
+				this.renderer.setStyle(menu, 'borderRadius', '4px');
+				this.renderer.setStyle(menu, 'padding', '4px 0');
+				this.renderer.setStyle(menu, 'display', 'none');
+				this.renderer.setStyle(menu, 'zIndex', '1000');
+				this.renderer.setStyle(menu, 'minWidth', '80px');
 
 				let currentSelection = 'auto';
 
@@ -186,22 +226,23 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 					items.forEach((item) => {
 						const isActive = item.dataset['quality'] === String(currentSelection);
 
-						item.style.padding = '6px 12px';
-						item.style.cursor = 'pointer';
-						item.style.background = isActive ? '#555' : 'transparent';
-						item.style.fontWeight = isActive ? 'bold' : 'normal';
-						item.style.color = 'white';
+						this.renderer.setStyle(item, 'padding', '6px 12px');
+						this.renderer.setStyle(item, 'cursor', 'pointer');
+						this.renderer.setStyle(item, 'background', isActive ? '#555' : 'transparent');
+						this.renderer.setStyle(item, 'fontWeight', isActive ? 'bold' : 'normal');
+						this.renderer.setStyle(item, 'color', 'white');
 					});
-					button.textContent = `${currentSelection === 'auto' ? 'Auto' : currentSelection + 'p'} ▾`;
+					this.renderer.setProperty(button, 'textContent', `${currentSelection === 'auto' ? 'Auto' : currentSelection + 'p'} ▾`);
 				};
 
-				button.onclick = (e) => {
+				this.renderer.listen(button, 'click', (e: MouseEvent) => {
 					e.stopPropagation();
-					menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-				};
+					const isHidden = menu.style.display === 'none';
+					this.renderer.setStyle(menu, 'display', isHidden ? 'block' : 'none');
+				});
 
-				document.addEventListener('click', () => {
-					menu.style.display = 'none';
+				this.renderer.listen(this.document, 'click', () => {
+					this.renderer.setStyle(menu, 'display', 'none');
 				});
 
 				const added = new Set();
@@ -215,13 +256,13 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 					}
 					if (!changes) return;
 
-					menu.innerHTML = '';
+					this.renderer.setProperty(menu, 'innerHTML', '');
 
 					// Auto
-					const autoItem = document.createElement('div');
-					autoItem.textContent = 'Auto';
-					autoItem.dataset['quality'] = 'auto';
-					autoItem.onclick = () => {
+					const autoItem = this.renderer.createElement('div');
+					this.renderer.setProperty(autoItem, 'textContent', 'Auto');
+					this.renderer.setAttribute(autoItem, 'data-quality', 'auto');
+					this.renderer.listen(autoItem, 'click', () => {
 						currentSelection = 'auto';
 						for (const ql of qualityLevels) {
 							ql.enabled = true;
@@ -235,17 +276,17 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 						}
 
 						updateMenuHighlight();
-						menu.style.display = 'none';
-					};
-					menu.appendChild(autoItem);
+						this.renderer.setStyle(menu, 'display', 'none');
+					});
+					this.renderer.appendChild(menu, autoItem);
 
 					Array.from(added)
 						.sort((a: any, b: any) => b - a)
 						.forEach((height) => {
-							const item = document.createElement('div');
-							item.textContent = `${height}p`;
-							item.dataset['quality'] = String(height);
-							item.onclick = () => {
+							const item = this.renderer.createElement('div');
+							this.renderer.setProperty(item, 'textContent', `${height}p`);
+							this.renderer.setAttribute(item, 'data-quality', String(height));
+							this.renderer.listen(item, 'click', () => {
 								currentSelection = `${height}`;
 								for (const level of qualityLevels) {
 									level.enabled = level.height === height;
@@ -293,17 +334,17 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 								}
 
 								updateMenuHighlight();
-								menu.style.display = 'none';
-							};
-							menu.appendChild(item);
+								this.renderer.setStyle(menu, 'display', 'none');
+							});
+							this.renderer.appendChild(menu, item);
 						});
 
 					updateMenuHighlight();
 				});
 
-				wrapper.appendChild(button);
-				wrapper.appendChild(menu);
-				controlBar?.el().appendChild(wrapper);
+				this.renderer.appendChild(wrapper, button);
+				this.renderer.appendChild(wrapper, menu);
+				this.renderer.appendChild(controlBar?.el(), wrapper);
 
 				if (seekBar) {
 					seekBar.on('contextmenu', (event: MouseEvent) => {
@@ -354,9 +395,12 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 					// Solo registrar si hemos cambiado de segmento
 					if (segmentIndex !== lastSegmentReported) {
 						lastSegmentReported = segmentIndex;
-						this.streamingService.registrarProgreso(this.idCurso, this.idClase, segmentIndex).subscribe({
-							error: (err) => console.error('Error al registrar progreso:', err),
-						});
+						this.streamingService
+							.registrarProgreso(this.idCurso, this.idClase, segmentIndex)
+							.pipe(take(1))
+							.subscribe({
+								error: (err) => console.error('Error al registrar progreso:', err),
+							});
 					}
 				}
 			});
@@ -373,59 +417,23 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	cambiaVista(vista: number) {
-		const vistaContenido: HTMLDivElement = document.getElementById('contenido') as HTMLDivElement;
-		const vistaChat: HTMLDivElement = document.getElementById('chat') as HTMLDivElement;
-		switch (vista) {
-			case 0: {
-				vistaContenido.hidden = false;
-				vistaChat.hidden = true;
-				break;
-			}
-			case 1: {
-				vistaContenido.hidden = true;
-				vistaChat.hidden = false;
-				break;
-			}
-		}
+		this.vista = vista;
+		this.cdr.detectChanges();
 	}
 
 	// Función para mostrar la cortina en la posición del clic
 	private muestraCortina(x: number, y: number, timeInSeconds: number) {
-		const curtain = document.createElement('div');
-		curtain.style.position = 'absolute';
-		curtain.style.top = `${y + window.scrollY}px`;
-		curtain.style.left = `${x}px`;
-		curtain.style.width = '200px';
-		curtain.style.height = 'auto';
-		curtain.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-		curtain.style.color = 'white';
-		curtain.style.padding = '10px';
-		curtain.style.borderRadius = '5px';
-		curtain.style.zIndex = '1000';
+		this.contextMenu = { x, y: y + (globalThis.window?.scrollY || 0), time: timeInSeconds };
+		this.cdr.detectChanges();
+	}
 
-		// Botón para hacer una pregunta
-		const pregunta: HTMLDivElement = document.createElement('div');
-		pregunta.innerText = 'Haz una pregunta';
-		pregunta.style.cursor = 'pointer';
-		pregunta.addEventListener('click', () => {
+	clickPregunta() {
+		if (this.contextMenu) {
 			this.cambiaVista(1);
-			this.chatComponent.creaPregunta(this.idClase, timeInSeconds);
-			curtain.remove();
-		});
-
-		curtain.appendChild(pregunta);
-		document.body.appendChild(curtain);
-
-		// Cierra la cortina al hacer clic fuera de ella
-		globalThis.window.addEventListener(
-			'click',
-			(event) => {
-				if (!curtain.contains(event.target as Node)) {
-					curtain.remove();
-				}
-			},
-			{ once: true },
-		);
+			this.chatComponent.creaPregunta(this.idClase, this.contextMenu.time);
+			this.contextMenu = null;
+			this.cdr.detectChanges();
+		}
 	}
 
 	async esperarChatComponent(player: Player) {
@@ -453,69 +461,33 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				const preguntaPosX = rect.width * clickRatio;
 
 				// Crear marcador
-				const marcador = document.createElement('div');
-				Object.assign(marcador.style, {
-					position: 'absolute',
-					left: `${preguntaPosX}px`,
-					top: '0',
-					width: '4px',
-					height: '100%',
-					zIndex: '10',
-					backgroundColor: '#eab308',
+				const marcador = this.renderer.createElement('div');
+				this.renderer.setStyle(marcador, 'position', 'absolute');
+				this.renderer.setStyle(marcador, 'left', `${preguntaPosX}px`);
+				this.renderer.setStyle(marcador, 'top', '0');
+				this.renderer.setStyle(marcador, 'width', '4px');
+				this.renderer.setStyle(marcador, 'height', '100%');
+				this.renderer.setStyle(marcador, 'zIndex', '10');
+				this.renderer.setStyle(marcador, 'backgroundColor', '#eab308');
+
+				this.renderer.listen(marcador, 'mouseover', (event: MouseEvent) => {
+					this.hoveredMarker = {
+						message: preg.mensaje ?? '',
+						x: event.clientX,
+						y: event.clientY + 20,
+						idMensaje: preg.idMensaje ?? '',
+					};
+					this.cdr.detectChanges();
 				});
 
-				let overCortina = false;
-
-				marcador.addEventListener('mouseover', (event: MouseEvent) => {
-					const cortina = document.createElement('div');
-					cortina.className = 'cortina-info';
-					cortina.innerText = preg.mensaje ?? '';
-					Object.assign(cortina.style, {
-						position: 'absolute',
-						left: `${event.clientX}px`,
-						top: `${event.clientY + 20}px`,
-						padding: '5px',
-						backgroundColor: 'rgba(0,0,0,0.8)',
-						color: 'white',
-						borderRadius: '3px',
-						zIndex: '1000',
-						cursor: 'pointer',
-					});
-
-					cortina.addEventListener('mouseout', () => {
-						cortina.remove();
-						overCortina = false;
-					});
-
-					cortina.addEventListener('mouseover', () => (overCortina = true));
-
-					cortina.addEventListener('click', () => {
-						this.cambiaVista(1);
-						this.chatComponent.abreChatClase(this.idClase);
-						cortina.remove();
-						const mensajeElement = document.getElementById('mex-' + preg.idMensaje);
-						if (mensajeElement) {
-							mensajeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-						} else {
-							console.error('No se encontró el mensaje');
-						}
-					});
-
-					document.body.appendChild(cortina);
-
-					marcador.addEventListener(
-						'mouseout',
-						() => {
-							setTimeout(() => {
-								if (!overCortina) cortina.remove();
-							}, 1000);
-						},
-						{ once: true },
-					);
+				this.renderer.listen(marcador, 'mouseout', () => {
+					setTimeout(() => {
+						this.hoveredMarker = null;
+						this.cdr.detectChanges();
+					}, 1000);
 				});
 
-				// Añadir marcador al SeekBar
-				seekBar.el().appendChild(marcador);
+				this.renderer.appendChild(seekBar.el(), marcador);
 			}
 		}
 		this.cdr.detectChanges();

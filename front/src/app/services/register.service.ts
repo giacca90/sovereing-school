@@ -8,6 +8,10 @@ import { NuevoUsuario } from '../models/NuevoUsuario';
 export class RegisterService {
 	constructor(private readonly http: HttpClient) {}
 
+	/**
+	 * Obtiene la URL base del API del backend.
+	 * @returns {string} URL base del API.
+	 */
 	get apiUrl(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			return (globalThis.window as any).__env.BACK_BASE ?? '';
@@ -15,6 +19,11 @@ export class RegisterService {
 		return '';
 	}
 
+	/**
+	 * Registra un nuevo usuario en el sistema.
+	 * @param {NuevoUsuario} nuevoUsuario - Objeto con los datos del nuevo usuario.
+	 * @returns {Promise<boolean>} Promesa que se resuelve a true si el registro fue exitoso, false en caso contrario.
+	 */
 	async registrarNuevoUsuario(nuevoUsuario: NuevoUsuario): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			const sub = this.http.post<string>(`${this.apiUrl}/usuario/nuevo`, nuevoUsuario, { observe: 'response', responseType: 'text' as 'json' }).subscribe({

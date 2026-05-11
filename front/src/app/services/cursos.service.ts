@@ -16,6 +16,10 @@ export class CursosService {
 		@Inject(PLATFORM_ID) private readonly platformId: object,
 	) {}
 
+	/**
+	 * Obtiene la URL base del backend desde las variables de entorno.
+	 * @returns {string} URL base del backend.
+	 */
 	get backURL(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			return (globalThis.window as any).__env.BACK_BASE ?? '';
@@ -23,6 +27,10 @@ export class CursosService {
 		return '';
 	}
 
+	/**
+	 * Obtiene la URL base del servicio de streaming desde las variables de entorno.
+	 * @returns {string} URL base del streaming.
+	 */
 	get backURLStreaming(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			return (globalThis.window as any).__env.BACK_STREAM ?? '';
@@ -30,6 +38,12 @@ export class CursosService {
 		return '';
 	}
 
+	/**
+	 * Obtiene un curso por su ID, con opción de forzar la carga desde el servidor.
+	 * @param {number} idCurso - ID del curso a obtener.
+	 * @param {boolean} fromServer - Si es true, fuerza la petición al servidor.
+	 * @returns {Promise<Curso | null>} Promesa con el curso encontrado o null.
+	 */
 	async getCurso(idCurso: number, fromServer = false): Promise<Curso | null> {
 		if (!idCurso) return null;
 
@@ -69,6 +83,11 @@ export class CursosService {
 		}
 	}
 
+	/**
+	 * Actualiza los datos de un curso en el servidor.
+	 * @param {Curso | null} curso - Objeto curso con los nuevos datos.
+	 * @returns {Observable<Curso>} Observable con el curso actualizado.
+	 */
 	updateCurso(curso: Curso | null): Observable<Curso> {
 		if (curso === null) {
 			console.error('El curso no existe!!!');
@@ -94,6 +113,11 @@ export class CursosService {
 		);
 	}
 
+	/**
+	 * Sube una imagen para un curso.
+	 * @param {FormData} target - Datos del formulario con la imagen.
+	 * @returns {Observable<string | null>} Observable con la URL de la imagen o null.
+	 */
 	addImagenCurso(target: FormData): Observable<string | null> {
 		return this.http.post<string[]>(this.backURL + '/usuario/subeFotos', target, { observe: 'response' }).pipe(
 			map((response: HttpResponse<string[]>) => {
@@ -109,6 +133,11 @@ export class CursosService {
 		);
 	}
 
+	/**
+	 * Filtra los cursos que pertenecen a un profesor específico.
+	 * @param {Usuario} profe - Objeto usuario del profesor.
+	 * @returns {Curso[]} Lista de cursos del profesor.
+	 */
 	getCursosProfe(profe: Usuario) {
 		const cursosProfe: Curso[] = [];
 		for (const curso of this.cursos) {
@@ -121,6 +150,11 @@ export class CursosService {
 		return cursosProfe;
 	}
 
+	/**
+	 * Elimina un curso del servidor.
+	 * @param {Curso} curso - Objeto curso a eliminar.
+	 * @returns {Observable<boolean>} Observable indicando si la operación fue exitosa.
+	 */
 	deleteCurso(curso: Curso): Observable<boolean> {
 		return this.http.delete<string>(this.backURL + '/cursos/delete/' + curso.idCurso, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
@@ -137,6 +171,11 @@ export class CursosService {
 		);
 	}
 
+	/**
+	 * Obtiene el estado actual de un curso en el servicio de streaming.
+	 * @param {number} idCurso - ID del curso.
+	 * @returns {Observable<number>} Observable con el estado del curso.
+	 */
 	getStatusCurso(idCurso: number): Observable<number> {
 		return this.http.get<number>(this.backURLStreaming + '/status/' + idCurso, { observe: 'response' }).pipe(
 			map((response: HttpResponse<number>) => {
@@ -152,6 +191,10 @@ export class CursosService {
 		);
 	}
 
+	/**
+	 * Obtiene todos los cursos disponibles en el servidor.
+	 * @returns {Observable<Curso[]>} Observable con la lista de todos los cursos.
+	 */
 	getAllCursos() {
 		return this.http.get<Curso[]>(this.backURL + '/cursos/getAll', { observe: 'response' }).pipe(
 			map((response: HttpResponse<Curso[]>) => {
@@ -171,6 +214,11 @@ export class CursosService {
 		);
 	}
 
+	/**
+	 * Obtiene los planes asociados a un curso específico.
+	 * @param {number} idCurso - ID del curso.
+	 * @returns {Observable<Plan[]>} Observable con la lista de planes del curso.
+	 */
 	getPlanesCurso(idCurso: number): Observable<Plan[]> {
 		return this.http.get<Plan[]>(this.backURL + '/cursos/getPlanesCurso/' + idCurso, { observe: 'response' }).pipe(
 			map((response: HttpResponse<Plan[]>) => {

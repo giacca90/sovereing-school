@@ -1,12 +1,31 @@
-<video id="OBS" muted src="" class="video-js vjs-default-skin w-full dark:border dark:border-gray-400"></video>
+<video #videoOBS muted src="" class="video-js vjs-default-skin w-full dark:border dark:border-gray-400"></video>
 <div id="audio-bar">
-	<div id="audio-level"></div>
+	<div #audioLevel id="audio-level"></div>
 </div>
 @if (emitiendo) {
 	<p>Tiempo de grabación: {{ tiempoGrabacion }}</p>
 }
 <p id="statusOBS">{{ status }}</p>
-<div id="enlaces"></div>
+
+<div id="enlaces">
+	@if (rtmpServer) {
+		<p>URL del servidor</p>
+		<p class="cursor-pointer rounded-lg border border-black p-2 text-blue-700 dark:border-gray-400" (click)="copyToClipboard(rtmpServer)" (mousemove)="onMouseMove($event)" (mouseover)="onMouseOver()" (mouseleave)="onMouseLeave()">
+			{{ rtmpServer }}
+		</p>
+		<p>Clave del stream</p>
+		<p class="cursor-pointer rounded-lg border border-black p-2 text-blue-700 dark:border-gray-400" (click)="copyToClipboard(rtmpKey)" (mousemove)="onMouseMove($event)" (mouseover)="onMouseOver()" (mouseleave)="onMouseLeave()">
+			{{ rtmpKey }}
+		</p>
+	}
+</div>
+
+@if (showTooltip) {
+	<div class="fixed z-50 rounded-sm bg-black p-1 text-xs text-white" [style.top.px]="tooltipPos.y" [style.left.px]="tooltipPos.x">
+		{{ tooltipText }}
+	</div>
+}
+
 @if (this.emitiendo) {
 	<button class="m-2 cursor-pointer rounded-lg border border-black p-2 text-center dark:border-gray-400" (click)="detenerEmision()">Detener Emisión</button>
 } @else {

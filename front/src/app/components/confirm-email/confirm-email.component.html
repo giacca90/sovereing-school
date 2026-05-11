@@ -1,5 +1,5 @@
 <div class="m-2 flex flex-col">
-	<p id="mensaje">Confirmando tu correo electrónico...</p>
+	<p [class.text-red-500]="isError">{{ mensajeText }}</p>
 	<br />
-	<p id="mensaje2">Espera un momento...</p>
+	<p [class.text-red-500]="isError">{{ mensaje2Text }}</p>
 </div>

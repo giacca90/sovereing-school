@@ -41,6 +41,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     @Query("SELECT u.cursosUsuario FROM Usuario u WHERE u.idUsuario = :id ")
     List<Curso> findCursosUsuarioForId(@Param("id") Long id);
 
+    @Query("SELECT DISTINCT u FROM Usuario u LEFT JOIN FETCH u.cursosUsuario")
+    List<Usuario> findAllWithCursos();
+
     @Modifying
     @Transactional
     @Query("UPDATE Usuario u SET u.nombreUsuario = :newNombreUsuario WHERE u.id = :id")

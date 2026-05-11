@@ -17,8 +17,6 @@ import { RegisterComponent } from './register/register.component';
 })
 // Ahora el padre captura los keydown y los pasa a los hijos
 export class LogModalComponent implements AfterViewInit, OnDestroy {
-	login: HTMLButtonElement | null = null;
-	register: HTMLButtonElement | null = null;
 	isLoginHidden: boolean = false;
 	backBase = '';
 
@@ -27,6 +25,13 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 
 	@ViewChild('modal') modalEl!: ElementRef<HTMLDivElement>;
 
+	/**
+	 * Constructor del componente.
+	 * @param {LoginModalService} modalService - Servicio para controlar la visibilidad del modal.
+	 * @param {LoginService} loginService - Servicio para manejar la autenticación.
+	 * @param {Router} router - Router de Angular.
+	 * @param {Object} platformId - ID de la plataforma (browser/server).
+	 */
 	constructor(
 		private readonly modalService: LoginModalService,
 		private readonly loginService: LoginService,
@@ -34,9 +39,10 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {}
 
+	/**
+	 * Inicialización de la vista.
+	 */
 	ngAfterViewInit(): void {
-		this.login = document.getElementById('login') as HTMLButtonElement;
-		this.register = document.getElementById('register') as HTMLButtonElement;
 		if (isPlatformBrowser(this.platformId)) {
 			this.backBase = (globalThis.window as any).__env?.BACK_BASE ?? '';
 			// ✅ Aseguramos que el modal recibe foco para captar teclas
@@ -44,44 +50,49 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 		}
 	}
 
+	/**
+	 * Limpieza de recursos al destruir el componente.
+	 */
 	ngOnDestroy(): void {
 		// ✅ cerramos el Subject para evitar fugas
 		this.keyEvents$.complete();
 	}
 
 	// ✅ método que captura las teclas y las reenvía a los hijos
+	/**
+	 * Maneja los eventos de teclado para propagarlos a los hijos.
+	 * @param {KeyboardEvent} event - Evento de teclado.
+	 */
 	onKeyDown(event: KeyboardEvent) {
 		this.keyEvents$.next(event);
 	}
 
+	/**
+	 * Cambia a la vista de inicio de sesión.
+	 */
 	clickLogin() {
 		this.isLoginHidden = false;
-		const isDarkMode = document.documentElement.classList.contains('dark');
-		if (this.register?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white')) {
-			this.register.classList.remove(isDarkMode ? 'dark:border-b-black' : 'bg-white');
-		}
-		if (this.login?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white') === false) {
-			this.login.classList.add(isDarkMode ? 'dark:border-b-black' : 'bg-white');
-		}
 	}
 
+	/**
+	 * Cambia a la vista de registro.
+	 */
 	clickRegister() {
 		this.isLoginHidden = true;
-		const isDarkMode = document.documentElement.classList.contains('dark');
-
-		if (this.login?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white')) {
-			this.login.classList.remove(isDarkMode ? 'dark:border-b-black' : 'bg-white');
-		}
-		if (this.register?.classList.contains(isDarkMode ? 'dark:border-b-black' : 'bg-white') === false) {
-			this.register.classList.add(isDarkMode ? 'dark:border-b-black' : 'bg-white');
-		}
 	}
 
+	/**
+	 * Cierra el modal.
+	 */
 	close() {
 		alert('close externo');
 		this.modalService.hide();
 	}
 
+	/**
+	 * Inicia sesión con un proveedor OAuth2.
+	 * @param {string} provider - Nombre del proveedor (google, github).
+	 */
 	oauth2LoginWith(provider: string) {
 		const width = 600;
 		const height = 700;

@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
+import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { ChangeDetectorRef, Component, HostListener, Inject, OnDestroy, PLATFORM_ID, Renderer2 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Curso } from '../../models/Curso';
@@ -11,7 +12,7 @@ import { CompraCursoComponent } from './compra-curso/compra-curso.component';
 @Component({
 	selector: 'app-curso',
 	standalone: true,
-	imports: [CompraCursoComponent],
+	imports: [CompraCursoComponent, CommonModule],
 	templateUrl: './curso.component.html',
 	styleUrl: './curso.component.css',
 })
@@ -21,16 +22,32 @@ export class CursoComponent implements OnDestroy {
 	public nombresProfesores: string | undefined = '';
 	private readonly subscription: Subscription = new Subscription();
 	public modalCourse: Curso | null = null;
-	private escKeyListener: any;
+	private readonly isBrowser: boolean;
 
+	/**
+	 * Constructor del componente.
+	 * @param {ActivatedRoute} route - Ruta activada.
+	 * @param {CursosService} cursoService - Servicio de cursos.
+	 * @param {UsuariosService} usuarioService - Servicio de usuarios.
+	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
+	 * @param {LoginService} loginService - Servicio de autenticación.
+	 * @param {Renderer2} renderer - Renderer2 de Angular.
+	 * @param {Router} router - Router de Angular.
+	 * @param {Object} platformId - ID de la plataforma.
+	 * @param {Document} document - Documento.
+	 */
 	constructor(
 		private readonly route: ActivatedRoute,
 		private readonly cursoService: CursosService,
 		private readonly usuarioService: UsuariosService,
 		private readonly cdr: ChangeDetectorRef,
 		public loginService: LoginService,
+		private readonly renderer: Renderer2,
 		public router: Router,
+		@Inject(PLATFORM_ID) private readonly platformId: Object,
+		@Inject(DOCUMENT) private readonly document: Document,
 	) {
+		this.isBrowser = isPlatformBrowser(this.platformId);
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
 				this.idCurso = Number(params['idCurso']);
@@ -39,6 +56,11 @@ export class CursoComponent implements OnDestroy {
 		);
 	}
 
+	/**
+	 * Comprueba si el usuario tiene acceso al plan del curso.
+	 * @param {Plan | undefined} planUsuario - Plan del usuario.
+	 * @returns {Plan | null} Plan si tiene acceso, null en caso contrario.
+	 */
 	compruebaPlan(planUsuario: Plan | undefined): Plan | null {
 		if (planUsuario !== undefined && planUsuario !== null && this.curso?.planesCurso) {
 			for (const idPlan of this.curso.planesCurso) {
@@ -50,24 +72,39 @@ export class CursoComponent implements OnDestroy {
 		return null;
 	}
 
+	/**
+	 * Limpieza de recursos al destruir el componente.
+	 */
 	ngOnDestroy(): void {
 		this.subscription.unsubscribe();
 	}
 
-	compraCurso(curso: Curso) {
-		this.modalCourse = curso;
-		document.body.classList.add('overflow-hidden');
-
-		this.escKeyListener = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				event.preventDefault();
-				this.closeModal();
-			}
-		};
-
-		document.addEventListener('keydown', this.escKeyListener);
+	/**
+	 * Manejador para cerrar el modal con la tecla escape.
+	 * @param {Event} event - Evento de teclado.
+	 */
+	@HostListener('window:keydown.escape', ['$event'])
+	onKeydownHandler(event: Event) {
+		if (this.modalCourse) {
+			this.closeModal();
+		}
 	}
 
+	/**
+	 * Inicia el proceso de compra del curso.
+	 * @param {Curso} curso - Curso a comprar.
+	 */
+	compraCurso(curso: Curso) {
+		this.modalCourse = curso;
+		if (this.isBrowser) {
+			this.renderer.addClass(this.document.body, 'overflow-hidden');
+		}
+	}
+
+	/**
+	 * Finaliza la compra del curso.
+	 * @param {Curso} curso - Curso comprado.
+	 */
 	cursoComprado(curso: Curso) {
 		this.usuarioService.cursoComprado(curso).subscribe({
 			next: (resp: boolean) => {
@@ -85,9 +122,13 @@ export class CursoComponent implements OnDestroy {
 		});
 	}
 
+	/**
+	 * Cierra el modal de compra.
+	 */
 	closeModal() {
-		document.body.classList.remove('overflow-hidden');
-		document.removeEventListener('keydown', this.escKeyListener);
+		if (this.isBrowser) {
+			this.renderer.removeClass(this.document.body, 'overflow-hidden');
+		}
 		this.modalCourse = null;
 	}
 

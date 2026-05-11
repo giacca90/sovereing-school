@@ -24,6 +24,18 @@ export class AdministracionComponent {
 	chats: CursoChat[] = [];
 	chatsSel: CursoChat[] = [];
 
+	usuarioVisible: number | null = null;
+	cursoVisible: number | null = null;
+	chatVisible: number | null = null;
+	claseChatVisible: number | null = null;
+
+	/**
+	 * Constructor del componente.
+	 * @param {UsuariosService} usuariosService - Servicio de usuarios.
+	 * @param {CursosService} cursosService - Servicio de cursos.
+	 * @param {ChatService} chatsService - Servicio de chat.
+	 * @param {InitService} initService - Servicio de inicialización.
+	 */
 	constructor(
 		private readonly usuariosService: UsuariosService,
 		public cursosService: CursosService,
@@ -31,11 +43,10 @@ export class AdministracionComponent {
 		private readonly initService: InitService,
 	) {}
 
+	/**
+	 * Carga todos los usuarios para la vista de administración.
+	 */
 	cargaUsuarios() {
-		for (const b of Array.from(document.querySelectorAll('button'))) {
-			b.classList.remove('text-green-700');
-		}
-		document.querySelector('#usuariosButton')?.classList.add('text-green-700');
 		if (this.usuarios.length === 0) {
 			this.usuariosService.getAllUsuarios().subscribe((data: Usuario[] | null) => {
 				if (data) {
@@ -47,11 +58,10 @@ export class AdministracionComponent {
 		this.tipo = 1;
 	}
 
+	/**
+	 * Carga todos los cursos para la vista de administración.
+	 */
 	cargaCursos() {
-		for (const b of Array.from(document.querySelectorAll('button'))) {
-			b.classList.remove('text-green-700');
-		}
-		document.querySelector('#cursosButton')?.classList.add('text-green-700');
 		if (this.cursos.length === 0) {
 			this.cursosService.getAllCursos().subscribe((data: Curso[] | null) => {
 				if (data) {
@@ -63,11 +73,10 @@ export class AdministracionComponent {
 		this.tipo = 2;
 	}
 
+	/**
+	 * Carga todos los chats para la vista de administración.
+	 */
 	cargaChats() {
-		for (const b of Array.from(document.querySelectorAll('button'))) {
-			b.classList.remove('text-green-700');
-		}
-		document.querySelector('#chatsButton')?.classList.add('text-green-700');
 		if (this.chats.length === 0) {
 			this.chatsService.getAllChats().subscribe((data: CursoChat[] | null) => {
 				if (data) {
@@ -79,6 +88,10 @@ export class AdministracionComponent {
 		this.tipo = 3;
 	}
 
+	/**
+	 * Filtra la lista de usuarios.
+	 * @param {Event} $event - Evento de entrada de búsqueda.
+	 */
 	buscaUsuarios($event: Event) {
 		const value: string = ($event.target as HTMLInputElement).value;
 		if (value.length === 0) {
@@ -88,6 +101,10 @@ export class AdministracionComponent {
 		}
 	}
 
+	/**
+	 * Filtra la lista de cursos.
+	 * @param {Event} $event - Evento de entrada de búsqueda.
+	 */
 	buscaCursos($event: Event) {
 		const value: string = ($event.target as HTMLInputElement).value;
 		if (value.length === 0) {
@@ -97,6 +114,10 @@ export class AdministracionComponent {
 		}
 	}
 
+	/**
+	 * Filtra la lista de chats.
+	 * @param {Event} $event - Evento de entrada de búsqueda.
+	 */
 	buscaChats($event: Event) {
 		const value: string = ($event.target as HTMLInputElement).value;
 		if (value.length === 0) {
@@ -106,6 +127,10 @@ export class AdministracionComponent {
 		}
 	}
 
+	/**
+	 * Elimina un usuario.
+	 * @param {Usuario} usuario - Usuario a eliminar.
+	 */
 	eliminaUsuario(usuario: Usuario) {
 		if (!confirm('¿Estás seguro que deseas eliminar este usuario?')) {
 			return;
@@ -122,6 +147,10 @@ export class AdministracionComponent {
 		});
 	}
 
+	/**
+	 * Elimina un curso.
+	 * @param {Curso} curso - Curso a eliminar.
+	 */
 	eliminaCurso(curso: Curso) {
 		if (!confirm('¿Estás seguro que deseas eliminar este curso?\n Esto eliminará también el chat de este curso')) {
 			return;
@@ -138,6 +167,10 @@ export class AdministracionComponent {
 		});
 	}
 
+	/**
+	 * Elimina un chat.
+	 * @param {CursoChat} chat - Chat a eliminar.
+	 */
 	eliminaChat(chat: CursoChat) {
 		if (!confirm('¿Estás seguro que deseas eliminar este chat?\n Esto no eliminará el curso de este chat')) {
 			return;
@@ -154,49 +187,51 @@ export class AdministracionComponent {
 		});
 	}
 
+	/**
+	 * Alterna la visibilidad de los detalles de un usuario.
+	 * @param {number} idUsuario - ID del usuario.
+	 */
 	mostrarUsuario(idUsuario: number) {
-		for (const d of Array.from(document.querySelectorAll('[id^="user-data-"]'))) {
-			if (d.id === `user-data-${idUsuario}`) {
-				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
-			} else {
-				(d as HTMLDivElement).style.display = 'none';
-			}
-		}
+		this.usuarioVisible = this.usuarioVisible === idUsuario ? null : idUsuario;
 	}
 
+	/**
+	 * Alterna la visibilidad de los detalles de un curso.
+	 * @param {number} idCurso - ID del curso.
+	 */
 	mostrarCurso(idCurso: number) {
-		for (const d of Array.from(document.querySelectorAll('[id^="curso-data-"]'))) {
-			if (d.id === `curso-data-${idCurso}`) {
-				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
-			} else {
-				(d as HTMLDivElement).style.display = 'none';
-			}
-		}
+		this.cursoVisible = this.cursoVisible === idCurso ? null : idCurso;
 	}
 
+	/**
+	 * Alterna la visibilidad de los detalles de un chat.
+	 * @param {number} idCurso - ID del curso del chat.
+	 */
 	mostrarChat(idCurso: number) {
-		for (const d of Array.from(document.querySelectorAll('[id^="chat-data-"]'))) {
-			if (d.id === `chat-data-${idCurso}`) {
-				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
-			} else {
-				(d as HTMLDivElement).style.display = 'none';
-			}
-		}
+		this.chatVisible = this.chatVisible === idCurso ? null : idCurso;
 	}
 
+	/**
+	 * Alterna la visibilidad de los detalles de una clase de chat.
+	 * @param {number} idClase - ID de la clase.
+	 */
 	mostrarClaseChat(idClase: number) {
-		for (const d of Array.from(document.querySelectorAll('[id^="clase-chat-"]'))) {
-			if (d.id === `clase-chat-${idClase}`) {
-				(d as HTMLDivElement).style.display = (d as HTMLDivElement).style.display === 'block' ? 'none' : 'block';
-			} else {
-				(d as HTMLDivElement).style.display = 'none';
-			}
-		}
+		this.claseChatVisible = this.claseChatVisible === idClase ? null : idClase;
 	}
 
+	/**
+	 * Obtiene la foto del profesor.
+	 * @param {number} idProfe - ID del profesor.
+	 * @returns {string | undefined} URL de la foto o undefined.
+	 */
 	getProfessorPhoto(idProfe: number) {
 		return this.usuariosService.profes.find((profe) => profe.idUsuario === idProfe)?.fotoUsuario[0];
 	}
+	/**
+	 * Obtiene el nombre del profesor.
+	 * @param {number} idProfe - ID del profesor.
+	 * @returns {string | undefined} Nombre del profesor o undefined.
+	 */
 	getProfessorName(idProfe: number) {
 		return this.usuariosService.profes.find((profe) => profe.idUsuario === idProfe)?.nombreUsuario;
 	}

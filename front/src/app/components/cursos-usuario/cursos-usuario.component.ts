@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { CursosService } from '../../services/cursos.service';
 import { LoginService } from '../../services/login.service';
@@ -10,15 +10,18 @@ import { LoginService } from '../../services/login.service';
 	templateUrl: './cursos-usuario.component.html',
 	styleUrl: './cursos-usuario.component.css',
 })
-export class CursosUsuarioComponent implements OnInit {
+export class CursosUsuarioComponent {
+	/**
+	 * Constructor del componente.
+	 * @param {LoginService} loginService - Servicio de autenticación.
+	 * @param {CursosService} cursoService - Servicio de gestión de cursos.
+	 * @param {ChangeDetectorRef} cdr - Referencia para la detección de cambios.
+	 * @param {Router} router - Router de Angular para navegación.
+	 */
 	constructor(
 		public loginService: LoginService,
 		public cursoService: CursosService,
 		private readonly cdr: ChangeDetectorRef,
 		public router: Router,
 	) {}
-
-	ngOnInit(): void {
-		this.cdr.detectChanges();
-	}
 }

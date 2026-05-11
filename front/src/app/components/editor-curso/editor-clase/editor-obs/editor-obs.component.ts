@@ -1,5 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, EventEmitter, Inject, Input, OnDestroy, Output, PLATFORM_ID } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, Renderer2, ViewChild } from '@angular/core';
 
 @Component({
 	selector: 'app-editor-obs',
@@ -13,29 +12,53 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	@Input() urlPreview?: string;
 	@Input() rtmpUrl?: string;
 	@Output() obsEvent: EventEmitter<{ type: string; message: string }> = new EventEmitter();
+
+	@ViewChild('videoOBS') videoOBSRef!: ElementRef<HTMLVideoElement>;
+	@ViewChild('audioLevel') audioLevelRef!: ElementRef<HTMLDivElement>;
+
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
 	player: any;
 	rutaOBS: string = '';
 	tiempoGrabacion: string = '00:00:00';
 
+	rtmpServer: string = '';
+	rtmpKey: string = '';
+	tooltipText: string = 'Haz click para copiar';
+	showTooltip: boolean = false;
+	tooltipPos = { x: 0, y: 0 };
+
+	/**
+	 * Constructor del componente.
+	 * @param {Renderer2} renderer - Renderer2 de Angular.
+	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
+	 */
 	constructor(
-		//		public streamingService: StreamingService,
-		@Inject(PLATFORM_ID) private readonly platformId: Object,
+		private readonly renderer: Renderer2,
+		private readonly cdr: ChangeDetectorRef,
 	) {
-		this.isBrowser = isPlatformBrowser(platformId);
+		this.isBrowser = globalThis.window !== undefined;
 	}
 
+	/**
+	 * Inicialización de la vista.
+	 */
 	ngAfterViewInit(): void {
 		if (this.isBrowser) {
 			this.startOBS();
 		}
 	}
 
+	/**
+	 * Limpieza de recursos al destruir el componente.
+	 */
 	ngOnDestroy(): void {
 		this.player.dispose();
 	}
 
+	/**
+	 * Inicia el servicio OBS.
+	 */
 	async startOBS() {
 		if (!this.isBrowser) return; // Evita ejecutar en SSR
 
@@ -43,16 +66,19 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 
 		// Esperar a que el DOM esté listo
 		setTimeout(async () => {
-			const videoOBS = document.getElementById('OBS') as HTMLVideoElement;
+			const videoOBS = this.videoOBSRef.nativeElement;
 			if (!videoOBS) return console.error('Elemento con ID "OBS" no encontrado');
 
 			await this.initVideoJS(videoOBS);
 			this.initMediaStream(videoOBS);
-			await this.renderRTMPLinks();
+			this.prepareRTMPData();
 		}, 300);
 	}
 
-	/** Inicializa el reproductor Video.js */
+	/**
+	 * Inicializa el reproductor Video.js.
+	 * @param {HTMLVideoElement} videoEl - Elemento de video.
+	 */
 	private async initVideoJS(videoEl: HTMLVideoElement): Promise<void> {
 		const videojsModule = await import('video.js');
 		const videojs = videojsModule.default;
@@ -76,10 +102,13 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 			withCredentials: true,
 		});
 
-		videoEl.style.height = 'auto';
+		this.renderer.setStyle(videoEl, 'height', 'auto');
 	}
 
-	/** Captura el stream y visualiza audio */
+	/**
+	 * Captura el stream y visualiza audio.
+	 * @param {HTMLVideoElement} videoEl - Elemento de video.
+	 */
 	private initMediaStream(videoEl: HTMLVideoElement): void {
 		this.player.on('loadeddata', () => {
 			this.m3u8Loaded = true;
@@ -88,58 +117,36 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 			const techEl = this.player.tech(true)?.el() as HTMLVideoElement & { captureStream(): MediaStream };
 			if (techEl?.captureStream) {
 				const mediaStream = techEl.captureStream();
-				const audioLevel = document.getElementById('audio-level') as HTMLDivElement;
+				const audioLevel = this.audioLevelRef?.nativeElement;
 				if (audioLevel) this.visualizeAudio(mediaStream, audioLevel);
 			}
 		});
 	}
 
-	/** Renderiza dinámicamente los enlaces RTMP y sus tooltips */
-	private async renderRTMPLinks(): Promise<void> {
-		const enlaces = document.getElementById('enlaces') as HTMLDivElement;
-		if (!enlaces || !this.rtmpUrl) return;
-
-		const server = this.createParagraph('URL del servidor');
-		const lServer = this.createLinkParagraph(this.rtmpUrl.substring(0, this.rtmpUrl.lastIndexOf('/')), enlaces);
-		const key = this.createParagraph('Clave del stream');
-		const lKey = this.createLinkParagraph(this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1), enlaces);
-
-		enlaces.append(server, lServer, key, lKey);
+	/** Prepara los datos RTMP para el template */
+	private prepareRTMPData(): void {
+		if (!this.rtmpUrl) return;
+		this.rtmpServer = this.rtmpUrl.substring(0, this.rtmpUrl.lastIndexOf('/'));
+		this.rtmpKey = this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1);
 	}
 
-	/** Crea un párrafo simple */
-	private createParagraph(text: string): HTMLParagraphElement {
-		const p = document.createElement('p');
-		p.textContent = text;
-		return p;
-	}
-
-	/** Crea un link de texto con tooltip y copia al portapapeles */
-	private createLinkParagraph(text: string, container: HTMLElement): HTMLParagraphElement {
-		const p = document.createElement('p');
-		p.classList.add('p-2', 'cursor-pointer', 'rounded-lg', 'border', 'border-black', 'text-blue-700');
-		p.textContent = text;
-
-		const tooltip = document.createElement('div');
-		tooltip.id = 'tooltip';
-		tooltip.textContent = 'Haz click para copiar';
-		tooltip.classList.add('absolute', 'bg-black', 'text-white', 'text-xs', 'p-1', 'rounded-sm', 'tooltip');
-
-		const moveTooltip = (event: MouseEvent) => {
-			tooltip.style.top = `${event.clientY - 30}px`;
-			tooltip.style.left = `${event.clientX}px`;
-		};
-
-		p.onclick = () => navigator.clipboard.writeText(p.textContent || '').then(() => (tooltip.textContent = 'Copiado al portapapeles'));
-		p.addEventListener('mouseover', (e: MouseEvent) => {
-			tooltip.style.position = 'fixed';
-			moveTooltip(e);
-			container.appendChild(tooltip);
+	copyToClipboard(text: string) {
+		navigator.clipboard.writeText(text).then(() => {
+			this.tooltipText = 'Copiado al portapapeles';
 		});
-		p.addEventListener('mousemove', moveTooltip);
-		p.addEventListener('mouseleave', () => tooltip.remove());
+	}
 
-		return p;
+	onMouseMove(event: MouseEvent) {
+		this.tooltipPos = { x: event.clientX, y: event.clientY - 30 };
+	}
+
+	onMouseOver() {
+		this.tooltipText = 'Haz click para copiar';
+		this.showTooltip = true;
+	}
+
+	onMouseLeave() {
+		this.showTooltip = false;
 	}
 
 	async emiteOBS() {
@@ -170,14 +177,14 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		analyser.fftSize = 256; // Ajusta la resolución de frecuencia
 		const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-		function updateAudioLevel() {
+		const updateAudioLevel = () => {
 			analyser.getByteFrequencyData(dataArray);
 			const volume = Math.max(...dataArray) / 255; // Escalar de 0 a 1
 			const percentage = Math.min(volume * 100, 100); // Limitar a 100%
-			audioLevel.style.width = `${percentage}%`; // Ajustar ancho de la barra
+			this.renderer.setStyle(audioLevel, 'width', `${percentage}%`); // Ajustar ancho de la barra
 
 			requestAnimationFrame(updateAudioLevel); // Continuar la animación
-		}
+		};
 
 		updateAudioLevel(); // Iniciar la visualización
 	}

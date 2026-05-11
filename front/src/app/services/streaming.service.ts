@@ -41,26 +41,46 @@ export class StreamingService {
 		private readonly loginService: LoginService,
 	) {}
 
+	/**
+	 * Obtiene la URL base del streaming desde las variables de entorno.
+	 * @returns {string} URL base del streaming.
+	 */
 	get URL(): string {
 		const win = globalThis?.window as any;
 		return win?.__env?.BACK_STREAM ?? '';
 	}
 
+	/**
+	 * Obtiene la URL base del backend desde las variables de entorno.
+	 * @returns {string} URL base del backend.
+	 */
 	get backURL(): string {
 		const win = globalThis?.window as any;
 		return win?.__env?.BACK_BASE ?? '';
 	}
 
+	/**
+	 * Obtiene la URL base del servicio de streaming desde las variables de entorno.
+	 * @returns {string} URL base del streaming.
+	 */
 	get backStreamURL(): string {
 		const win = globalThis?.window as any;
 		return win?.__env?.BACK_STREAM ?? '';
 	}
 
+	/**
+	 * Obtiene la URL del WebSocket para la webcam.
+	 * @returns {string} URL del WebSocket.
+	 */
 	get webSocketUrlWebcam(): string {
 		const win = globalThis?.window as any;
 		return win?.__env ? `${win.__env.BACK_STREAM_WSS ?? ''}/live-webcam` : '';
 	}
 
+	/**
+	 * Obtiene la URL del WebSocket para OBS.
+	 * @returns {string} URL del WebSocket.
+	 */
 	get webSocketUrlOBS(): string {
 		const win = globalThis?.window as any;
 		return win?.__env ? `${win.__env.BACK_STREAM_WSS ?? ''}/live-obs` : '';
@@ -105,6 +125,10 @@ export class StreamingService {
 	 * Función para iniciar la trasmisión con WebOBS
 	 * @returns Promise<string> streamId
 	 */
+	/**
+	 * Inicia la transmisión con WebOBS.
+	 * @returns {Promise<string>} Promesa con el ID del stream.
+	 */
 	startWebOBS(): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const win = globalThis?.window as any;
@@ -134,6 +158,10 @@ export class StreamingService {
 	/**
 	 * Función para emitir un video a través de WebOBS
 	 * @param stream MediaStream
+	 */
+	/**
+	 * Emite un video a través de WebOBS.
+	 * @param {MediaStream} stream - MediaStream a emitir.
 	 */
 	async emitirWebOBS(stream: MediaStream) {
 		try {
@@ -202,6 +230,9 @@ export class StreamingService {
 	/**
 	 * Función para detener la grabación de WebOBS
 	 */
+	/**
+	 * Detiene la grabación de WebOBS.
+	 */
 	detenerWebOBS() {
 		if (this.ws) {
 			this.ws.send(JSON.stringify({ 'type': 'detenerStreamWebRTC', 'streamId': this.streamId }));
@@ -215,6 +246,9 @@ export class StreamingService {
 
 	/**
 	 * Función para iniciar la previsualización de OBS
+	 */
+	/**
+	 * Inicia la previsualización de OBS.
 	 */
 	startOBS() {
 		const win = globalThis?.window as any;
@@ -270,6 +304,9 @@ export class StreamingService {
 	/**
 	 * Función para emitir una clase en OBS
 	 */
+	/**
+	 * Emite una clase en OBS.
+	 */
 	async emitirOBS() {
 		if (this.ws?.readyState !== WebSocket.OPEN) {
 			this.emitiendo = false;
@@ -289,6 +326,9 @@ export class StreamingService {
 	/**
 	 * Función para detener la grabación de OBS
 	 */
+	/**
+	 * Detiene la grabación de OBS.
+	 */
 	detenerOBS() {
 		if (this.ws) {
 			this.ws.send(JSON.stringify({ 'type': 'detenerStreamOBS', 'rtmpUrl': this.rtmpUrl }));
@@ -301,6 +341,9 @@ export class StreamingService {
 
 	/**
 	 * Método para detener la grabación y la conexión
+	 */
+	/**
+	 * Detiene toda la transmisión de medios.
 	 */
 	stopMediaStreaming() {
 		this.detenerWebOBS();

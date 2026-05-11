@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
 
+/**
+ * Componente para gestionar la compra de cursos.
+ */
 @Component({
 	selector: 'app-compra-curso',
 	imports: [],

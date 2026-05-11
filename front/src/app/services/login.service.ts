@@ -18,6 +18,10 @@ export class LoginService {
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {}
 
+	/**
+	 * Carga la información del usuario desde TransferState (para SSR).
+	 * @returns {Promise<void>} Promesa que se resuelve cuando el usuario ha sido cargado.
+	 */
 	async cargarUsuarioDesdeTransferState(): Promise<void> {
 		if (isPlatformBrowser(this.platformId)) {
 			const rawState = (globalThis.window as any)['TRANSFER_STATE'] || {};
@@ -34,6 +38,10 @@ export class LoginService {
 		}
 	}
 
+	/**
+	 * Obtiene la URL base del API de login.
+	 * @returns {string} URL base del API.
+	 */
 	get apiUrl(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_BASE ?? '';
@@ -42,6 +50,10 @@ export class LoginService {
 		return '';
 	}
 
+	/**
+	 * Obtiene la URL del endpoint de login para SSR.
+	 * @returns {string} URL del endpoint de login SSR.
+	 */
 	get loginSSRUrl(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.FRONTURL ?? '';
@@ -50,6 +62,10 @@ export class LoginService {
 		return '';
 	}
 
+	/**
+	 * Obtiene la URL del endpoint de logout para SSR.
+	 * @returns {string} URL del endpoint de logout SSR.
+	 */
 	get logoutSSRUrl(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.FRONTURL ?? '';
@@ -58,6 +74,11 @@ export class LoginService {
 		return '';
 	}
 
+	/**
+	 * Comprueba si un correo electrónico ya está registrado.
+	 * @param {string} correo - Correo electrónico a comprobar.
+	 * @returns {Promise<boolean>} Promesa que se resuelve a true si el correo está registrado, false en caso contrario.
+	 */
 	async compruebaCorreo(correo: string): Promise<boolean> {
 		return new Promise((resolve, reject) => {
 			const sub = this.http.get<number>(`${this.apiUrl}${correo}`, { observe: 'response' }).subscribe({
@@ -85,6 +106,11 @@ export class LoginService {
 		});
 	}
 
+	/**
+	 * Comprueba la contraseña de un usuario.
+	 * @param {string} password - Contraseña a comprobar.
+	 * @returns {Promise<boolean>} Promesa que se resuelve a true si la contraseña es correcta, false en caso contrario.
+	 */
 	async compruebaPassword(password: string): Promise<boolean> {
 		return new Promise((resolve) => {
 			const sub = this.http.get<Auth>(this.apiUrl + this.idUsuario + '/' + password, { observe: 'response', withCredentials: true }).subscribe({
@@ -116,6 +142,10 @@ export class LoginService {
 		});
 	}
 
+	/**
+	 * Refresca el token de acceso del usuario.
+	 * @returns {Observable<string | null>} Observable con el nuevo token o null si falla.
+	 */
 	refreshToken(): Observable<string | null> {
 		console.log('Refreshing token...');
 		return this.http.post<Auth>(this.apiUrl + 'refresh', null, { observe: 'response', withCredentials: true }).pipe(
@@ -132,6 +162,10 @@ export class LoginService {
 		);
 	}
 
+	/**
+	 * Inicia sesión con un token existente.
+	 * @param {string} token - Token de acceso.
+	 */
 	loginWithToken(token: string) {
 		this.http.post<Usuario>(this.apiUrl + 'loginWithToken', token, { observe: 'response', withCredentials: true }).subscribe({
 			next: (response: HttpResponse<Usuario>) => {
@@ -145,6 +179,9 @@ export class LoginService {
 		});
 	}
 
+	/**
+	 * Cierra la sesión del usuario.
+	 */
 	logout(): void {
 		this.usuario = null;
 		this.idUsuario = null;
@@ -175,6 +212,10 @@ export class LoginService {
 		});
 	}
 
+	/**
+	 * Notifica al servidor SSR que el usuario ha iniciado sesión.
+	 * @param {string} token - Token de acceso del usuario.
+	 */
 	public loginSSR(token: string) {
 		// Avisamos al SSR de que estamos logueados
 		this.http

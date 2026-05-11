@@ -1,9 +1,9 @@
 <div class="flex w-full cursor-default flex-col">
 	<h3 class="w-full text-center font-bold text-green-700">ADMINISTRACIÓN</h3>
 	<div class="flex">
-		<button id="usuariosButton" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaUsuarios()">Usuarios</button>
-		<button id="cursosButton" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaCursos()">Cursos</button>
-		<button id="chatsButton" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaChats()">Chats</button>
+		<button [class.text-green-700]="tipo === 1" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaUsuarios()">Usuarios</button>
+		<button [class.text-green-700]="tipo === 2" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaCursos()">Cursos</button>
+		<button [class.text-green-700]="tipo === 3" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaChats()">Chats</button>
 	</div>
 	<div class="flex flex-col">
 		@if (this.tipo === 1) {
@@ -26,40 +26,42 @@
 					</div>
 					<svg class="z-10 cursor-pointer" (click)="eliminaUsuario(usr)" (keydown.enter)="eliminaUsuario(usr)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 				</div>
-				<div id="user-data-{{ usr.idUsuario }}" class="m-2 flex flex-col rounded-lg border border-black p-2 dark:border-gray-400" style="display: none">
-					<div class="flex">
-						<div class="m-2 flex w-1/2 flex-col rounded border border-black p-2 dark:border-gray-400">
-							<p class="m-2">Nombre: {{ usr.nombreUsuario }}</p>
-							<p class="m-2">Rol: {{ usr.rollUsuario }}</p>
-							<div class="flex">
-								@for (foto of usr.fotoUsuario; track $index) {
-									<div class="h-auto w-1/2 border border-black dark:border-gray-400">
-										<img [src]="foto" class="h-full w-full" alt="" />
-									</div>
+				@if (usuarioVisible === usr.idUsuario) {
+					<div class="m-2 flex flex-col rounded-lg border border-black p-2 dark:border-gray-400">
+						<div class="flex">
+							<div class="m-2 flex w-1/2 flex-col rounded border border-black p-2 dark:border-gray-400">
+								<p class="m-2">Nombre: {{ usr.nombreUsuario }}</p>
+								<p class="m-2">Rol: {{ usr.rollUsuario }}</p>
+								<div class="flex">
+									@for (foto of usr.fotoUsuario; track $index) {
+										<div class="h-auto w-1/2 border border-black dark:border-gray-400">
+											<img [src]="foto" class="h-full w-full" alt="" />
+										</div>
+									}
+								</div>
+							</div>
+							<div class="m-2 flex w-1/2 flex-col rounded border border-black p-2 dark:border-gray-400">
+								@if (usr.rollUsuario === 'USER') {
+									<p>Cursos:</p>
+									@for (curso of usr.cursosUsuario; track $index) {
+										<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
+											<p class="m-2">{{ curso.idCurso }}</p>
+											<p class="m-2">{{ curso.nombreCurso }}</p>
+										</div>
+									}
+								} @else {
+									<p>Cursos creados:</p>
+									@for (curso of this.cursosService.getCursosProfe(usr); track $index) {
+										<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
+											<p class="m-2">{{ curso.idCurso }}</p>
+											<p class="m-2">{{ curso.nombreCurso }}</p>
+										</div>
+									}
 								}
 							</div>
 						</div>
-						<div class="m-2 flex w-1/2 flex-col rounded border border-black p-2 dark:border-gray-400">
-							@if (usr.rollUsuario === 'USER') {
-								<p>Cursos:</p>
-								@for (curso of usr.cursosUsuario; track $index) {
-									<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
-										<p class="m-2">{{ curso.idCurso }}</p>
-										<p class="m-2">{{ curso.nombreCurso }}</p>
-									</div>
-								}
-							} @else {
-								<p>Cursos creados:</p>
-								@for (curso of this.cursosService.getCursosProfe(usr); track $index) {
-									<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
-										<p class="m-2">{{ curso.idCurso }}</p>
-										<p class="m-2">{{ curso.nombreCurso }}</p>
-									</div>
-								}
-							}
-						</div>
 					</div>
-				</div>
+				}
 			}
 		}
 		@if (this.tipo === 2) {
@@ -80,19 +82,21 @@
 					</div>
 					<svg class="z-10 cursor-pointer" (click)="eliminaCurso(curs)" (keydown.enter)="eliminaCurso(curs)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 				</div>
-				<div id="curso-data-{{ curs.idCurso }}" class="m-2 rounded-lg border border-black p-2 dark:border-gray-400" style="display: none">
-					<p>Nombre: {{ curs.nombreCurso }}</p>
-					<p>Profesores:</p>
-					@for (prof of curs.profesoresCurso; track $index) {
-						<p class="m-2">{{ getProfessorName(prof) }}</p>
-					}
-					<p>Clases:</p>
-					@for (clas of curs.clasesCurso; track $index) {
-						<div class="m-2 rounded-lg border border-black p-2 dark:border-gray-400">
-							<p class="m-2">{{ clas.nombreClase }}</p>
-						</div>
-					}
-				</div>
+				@if (cursoVisible === curs.idCurso) {
+					<div class="m-2 rounded-lg border border-black p-2 dark:border-gray-400">
+						<p>Nombre: {{ curs.nombreCurso }}</p>
+						<p>Profesores:</p>
+						@for (prof of curs.profesoresCurso; track $index) {
+							<p class="m-2">{{ getProfessorName(prof) }}</p>
+						}
+						<p>Clases:</p>
+						@for (clas of curs.clasesCurso; track $index) {
+							<div class="m-2 rounded-lg border border-black p-2 dark:border-gray-400">
+								<p class="m-2">{{ clas.nombreClase }}</p>
+							</div>
+						}
+					</div>
+				}
 			}
 		}
 		@if (this.tipo === 3) {
@@ -110,40 +114,44 @@
 					</div>
 					<svg class="z-10 cursor-pointer" (click)="eliminaChat(chat)" (keydown.enter)="eliminaChat(chat)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 				</div>
-				<div id="chat-data-{{ chat.idCurso }}" class="m-2 rounded-lg border border-black p-2 dark:border-gray-400" style="display: none">
-					<div class="flex">
-						<div class="m-2 flex w-1/2 flex-col rounded-lg border border-black p-2 dark:border-gray-400">
-							@if (chat.mensajes.length === 0) {
-								<p>No hay mensajes en este curso</p>
-							}
-							@for (mex of chat.mensajes; track $index) {
-								<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
-									<p class="m-2">{{ mex.mensaje }}</p>
-									<p class="m-2">{{ mex.nombreUsuario }}</p>
-								</div>
-							}
-						</div>
-						<div class="m-2 flex w-1/2 flex-col rounded-lg border border-black dark:border-gray-400">
-							@for (clase of chat.clases; track $index) {
-								<div (click)="mostrarClaseChat(clase.idClase)" (keydown.enter)="mostrarClaseChat(clase.idClase)" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
-									<p class="m-2 grow">{{ clase.nombreClase }}</p>
-									<p>{{ clase.mensajes.length }} mensajes</p>
-								</div>
-								<div id="clase-chat-{{ clase.idClase }}" class="m-2 rounded-lg border border-black p-2 dark:border-gray-400" style="display: none">
-									@if (clase.mensajes.length === 0) {
-										<p>No hay mensajes en esta clase</p>
-									}
-									@for (mex of clase.mensajes; track $index) {
-										<div class="flex">
-											<p class="m-2">{{ mex.nombreUsuario }}</p>
-											<p class="m-2">{{ mex.mensaje }}</p>
+				@if (chatVisible === chat.idCurso) {
+					<div class="m-2 rounded-lg border border-black p-2 dark:border-gray-400">
+						<div class="flex">
+							<div class="m-2 flex w-1/2 flex-col rounded-lg border border-black p-2 dark:border-gray-400">
+								@if (chat.mensajes.length === 0) {
+									<p>No hay mensajes en este curso</p>
+								}
+								@for (mex of chat.mensajes; track $index) {
+									<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
+										<p class="m-2">{{ mex.mensaje }}</p>
+										<p class="m-2">{{ mex.nombreUsuario }}</p>
+									</div>
+								}
+							</div>
+							<div class="m-2 flex w-1/2 flex-col rounded-lg border border-black dark:border-gray-400">
+								@for (clase of chat.clases; track $index) {
+									<div (click)="mostrarClaseChat(clase.idClase)" (keydown.enter)="mostrarClaseChat(clase.idClase)" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
+										<p class="m-2 grow">{{ clase.nombreClase }}</p>
+										<p>{{ clase.mensajes.length }} mensajes</p>
+									</div>
+									@if (claseChatVisible === clase.idClase) {
+										<div class="m-2 rounded-lg border border-black p-2 dark:border-gray-400">
+											@if (clase.mensajes.length === 0) {
+												<p>No hay mensajes en esta clase</p>
+											}
+											@for (mex of clase.mensajes; track $index) {
+												<div class="flex">
+													<p class="m-2">{{ mex.nombreUsuario }}</p>
+													<p class="m-2">{{ mex.mensaje }}</p>
+												</div>
+											}
 										</div>
 									}
-								</div>
-							}
+								}
+							</div>
 						</div>
 					</div>
-				</div>
+				}
 			}
 		}
 	</div>

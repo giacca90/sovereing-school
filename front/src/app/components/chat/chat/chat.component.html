@@ -8,16 +8,16 @@
 			@for (clase of this.chat.clases; track $index) {
 				<button class="m-2 flex cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="abreChatClase(clase.idClase)">
 					<p class="grow">{{ clase.nombreClase }}</p>
-					<svg id="arrow-{{ clase.idClase }}" class="h-6 w-6 transition-transform duration-300 ease-in-out dark:text-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+					<svg [class.rotate-180]="claseAbiertaId === clase.idClase" class="arrow h-6 w-6 transition-transform duration-300 ease-in-out dark:text-white" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
 						<path d="M8 8.1716L3.4142 3.5858L0.5858 6.4142L8 13.8284L15.4142 6.4142L12.5858 3.5858L8 8.1716Z" fill="currentColor" />
 					</svg>
 				</button>
-				<div id="clase-{{ clase.idClase }}" class="clases hidden">
+				<div [class.hidden]="claseAbiertaId !== clase.idClase" class="mi-clase">
 					@if (clase.mensajes.length === 0) {
 						<p class="text-center text-gray-500">No hay mensajes en esta clase</p>
 					}
 					@for (mex of clase.mensajes; track $index) {
-						<div id="mex-{{ mex.idMensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
+						<div #mexElement id="mex-{{ mex.idMensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
 							<div class="grow flex-col">
 								<div class="flex">
 									<p class="text-gray-500">Mensaje de: {{ mex.nombreUsuario }}</p>
@@ -67,7 +67,7 @@
 						</div>
 					}
 					<div class="flex">
-						<input id="mexc-{{ clase.idClase }}" (keydown.enter)="enviarMensaje(clase.idClase)" type="text" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Escribe tu mensaje en la clase..." autocomplete="off" />
+						<input #mexcInput id="mexc-{{ clase.idClase }}" (keydown.enter)="enviarMensaje(clase.idClase)" type="text" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Escribe tu mensaje en la clase..." autocomplete="off" />
 						<button type="button" class="cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="this.enviarMensaje(clase.idClase)">Enviar</button>
 					</div>
 				</div>
@@ -75,7 +75,7 @@
 		</div>
 		<br />
 		@for (mensaje of this.chat.mensajes; track $index) {
-			<div id="mex-{{ mensaje.idMensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
+			<div #mexElement id="mex-{{ mensaje.idMensaje }}" class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
 				<div class="grow flex-col">
 					<div class="flex">
 						<p class="text-gray-500">Mensaje de: {{ mensaje.nombreUsuario }}</p>
@@ -109,7 +109,7 @@
 			</div>
 		}
 		<div class="mb-2 flex">
-			<input id="mex" (keydown.enter)="enviarMensaje()" type="text" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Escribe tu mensaje en el curso..." autocomplete="off" />
+			<input #mexInput id="mex" (keydown.enter)="enviarMensaje()" type="text" class="w-full rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" placeholder="Escribe tu mensaje en el curso..." autocomplete="off" />
 			<button type="button" class="cursor-pointer rounded-lg border border-black bg-transparent p-2 dark:border-gray-400" (click)="this.enviarMensaje()">Enviar</button>
 		</div>
 	}

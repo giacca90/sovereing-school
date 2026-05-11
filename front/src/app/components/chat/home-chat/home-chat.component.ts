@@ -19,6 +19,14 @@ export class HomeChatComponent {
 	cargando: boolean = true;
 	public Math = Math;
 
+	/**
+	 * Constructor del componente.
+	 * @param {Router} router - Router de Angular.
+	 * @param {LoginService} loginService - Servicio de autenticación.
+	 * @param {ChatService} chatService - Servicio de chat.
+	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
+	 * @param {NgZone} ngZone - Zona de Angular.
+	 */
 	constructor(
 		public router: Router,
 		public loginService: LoginService,
@@ -51,12 +59,20 @@ export class HomeChatComponent {
 		});
 	}
 
+	/**
+	 * Navega a la vista de un mensaje específico.
+	 * @param {MensajeChat} mensaje - Mensaje seleccionado.
+	 */
 	navegaMensaje(mensaje: MensajeChat) {
 		this.ngZone.run(() => {
 			this.router.navigate(['/chat/', mensaje.idCurso?.toString(), mensaje.idMensaje]);
 		});
 	}
 
+	/**
+	 * Navega a la vista de un curso específico.
+	 * @param {CursoChat} curso - Curso seleccionado.
+	 */
 	navegaCurso(curso: CursoChat) {
 		this.ngZone.run(() => {
 			this.router.navigate(['/chat/', curso.idCurso.toString()]);

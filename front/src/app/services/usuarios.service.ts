@@ -15,6 +15,10 @@ export class UsuariosService {
 		private readonly loginService: LoginService,
 	) {}
 
+	/**
+	 * Obtiene la URL base del API de usuarios.
+	 * @returns {string} URL base del API.
+	 */
 	get apiUrl(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_BASE ?? '';
@@ -23,6 +27,10 @@ export class UsuariosService {
 		return '';
 	}
 
+	/**
+	 * Obtiene un usuario por su ID.
+	 * @param {number} idUsuario - ID del usuario.
+	 */
 	getUsuario(idUsuario: number) {
 		const sub = this.http.get<Usuario>(this.apiUrl + idUsuario, { observe: 'response' }).subscribe({
 			next: (response: HttpResponse<Usuario>) => {
@@ -40,10 +48,20 @@ export class UsuariosService {
 		});
 	}
 
+	/**
+	 * Obtiene el nombre de un profesor por su ID.
+	 * @param {number} id - ID del profesor.
+	 * @returns {string | undefined} Nombre del profesor o undefined.
+	 */
 	getNombreProfe(id: number): string | undefined {
 		return this.profes.find((profe: Usuario) => profe.idUsuario === id)?.nombreUsuario.toString();
 	}
 
+	/**
+	 * Guarda fotos de usuario en el servidor.
+	 * @param {FormData} formData - Datos del formulario con las fotos.
+	 * @returns {Observable<string[] | null>} Observable con las URLs de las fotos o null.
+	 */
 	save(formData: FormData): Observable<string[] | null> {
 		return this.http.post<string[]>(this.apiUrl + 'subeFotos', formData, { observe: 'response' }).pipe(
 			map((response: HttpResponse<string[]>) => {
@@ -59,6 +77,11 @@ export class UsuariosService {
 		);
 	}
 
+	/**
+	 * Actualiza la información de un usuario.
+	 * @param {Usuario} temp - Objeto usuario con los nuevos datos.
+	 * @returns {Observable<boolean>} Observable indicando si la actualización fue exitosa.
+	 */
 	actualizaUsuario(temp: Usuario): Observable<boolean> {
 		return this.http.put<string>(this.apiUrl + 'edit', temp, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
@@ -74,6 +97,10 @@ export class UsuariosService {
 		);
 	}
 
+	/**
+	 * Obtiene todos los usuarios registrados.
+	 * @returns {Observable<Usuario[] | null>} Observable con la lista de usuarios.
+	 */
 	getAllUsuarios(): Observable<Usuario[] | null> {
 		return this.http.get<Usuario[]>(this.apiUrl + 'getAll', { observe: 'response' }).pipe(
 			map((response: HttpResponse<Usuario[]>) => {
@@ -89,6 +116,11 @@ export class UsuariosService {
 		);
 	}
 
+	/**
+	 * Elimina un usuario del servidor.
+	 * @param {Usuario} usuario - Objeto usuario a eliminar.
+	 * @returns {Observable<boolean>} Observable indicando si la eliminación fue exitosa.
+	 */
 	eliminaUsuario(usuario: Usuario): Observable<boolean> {
 		return this.http.delete<string>(this.apiUrl + 'delete/' + usuario.idUsuario, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {

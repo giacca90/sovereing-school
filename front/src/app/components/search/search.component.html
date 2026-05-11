@@ -1,8 +1,27 @@
 <div class="relative w-full">
 	<div class="flex flex-row">
-		<input type="text" id="buscador" class="w-full rounded-lg border border-black bg-gray-200 pr-2 pl-2 dark:bg-gray-800" placeholder="Busca aquí el curso que te interese!!!" />
+		<input type="text" (input)="busca($event)" class="w-full rounded-lg border border-black bg-gray-200 pr-2 pl-2 dark:bg-gray-800" placeholder="Busca aquí el curso que te interese!!!" />
 	</div>
 	@if (this.result) {
-		<div id="cortina" class="cortina absolute top-full z-10 mt-2 w-full rounded-lg border border-black bg-gray-200 p-2 dark:border-gray-400 dark:bg-gray-800"></div>
+		<div class="cortina absolute top-full z-10 mt-2 w-full rounded-lg border border-black bg-gray-200 p-2 dark:border-gray-400 dark:bg-gray-800">
+			@if (porNombre.length > 0) {
+				<p class="text-gray-400">Coincidencias por nombre:</p>
+				@for (curso of porNombre; track curso.idCurso) {
+					<p (click)="navega(curso.idCurso)" (keydown.enter)="navega(curso.idCurso)" tabindex="0" class="cursor-pointer rounded-lg pr-2 pl-2 whitespace-nowrap hover:bg-white dark:hover:bg-gray-700" [innerHTML]="curso.nombreCurso.substring(0, normalize(curso.nombreCurso).indexOf(normalize(busqueda))) + '<b>' + curso.nombreCurso.substring(normalize(curso.nombreCurso).indexOf(normalize(busqueda)), normalize(curso.nombreCurso).indexOf(normalize(busqueda)) + busqueda.length) + '</b>' + curso.nombreCurso.substring(normalize(curso.nombreCurso).indexOf(normalize(busqueda)) + busqueda.length) + ' - ' + curso.descripcionCorta"></p>
+				}
+				@if (porDescripcion.length > 0) {
+					<hr class="my-2" />
+				}
+			}
+			@if (porDescripcion.length > 0) {
+				<p class="text-gray-400">Coincidencias por descripción:</p>
+				@for (curso of porDescripcion; track curso.idCurso) {
+					<p (click)="navega(curso.idCurso)" (keydown.enter)="navega(curso.idCurso)" tabindex="0" class="cursor-pointer rounded-lg pr-2 pl-2 whitespace-nowrap hover:bg-white dark:hover:bg-gray-700" [innerHTML]="curso.nombreCurso + ' - ' + curso.descripcionCorta.substring(0, normalize(curso.descripcionCorta).indexOf(normalize(busqueda))) + '<b>' + curso.descripcionCorta.substring(normalize(curso.descripcionCorta).indexOf(normalize(busqueda)), normalize(curso.descripcionCorta).indexOf(normalize(busqueda)) + busqueda.length) + '</b>' + curso.descripcionCorta.substring(normalize(curso.descripcionCorta).indexOf(normalize(busqueda)) + busqueda.length)"></p>
+				}
+			}
+			@if (porNombre.length === 0 && porDescripcion.length === 0) {
+				<p class="text-gray-400">No se han encontrado coincidencias...</p>
+			}
+		</div>
 	}
 </div>

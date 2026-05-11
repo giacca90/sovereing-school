@@ -85,6 +85,10 @@ export class ChatService {
 		}
 	}
 
+	/**
+	 * Obtiene la URL del WebSocket para el chat.
+	 * @returns {string} URL del WebSocket.
+	 */
 	get urlWss(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_CHAT_WSS ?? '';
@@ -93,6 +97,10 @@ export class ChatService {
 		return '';
 	}
 
+	/**
+	 * Obtiene la URL base del chat.
+	 * @returns {string} URL base.
+	 */
 	get url(): string {
 		if (globalThis.window !== undefined && (globalThis.window as any).__env) {
 			const url = (globalThis.window as any).__env.BACK_CHAT ?? '';
@@ -101,6 +109,10 @@ export class ChatService {
 		return '';
 	}
 
+	/**
+	 * Inicializa la información del usuario en el chat.
+	 * @returns {Observable<InitChatUsuario | null>} Observable con la información inicial del chat.
+	 */
 	private initUsuario(): Observable<InitChatUsuario | null> {
 		// Suscríbete a las respuestas del backend
 		this.client.subscribe('/user/init_chat/result', (response) => {
@@ -149,6 +161,11 @@ export class ChatService {
 		return this.initSubject.asObservable();
 	}
 
+	/**
+	 * Obtiene la información del chat de un curso específico.
+	 * @param {number} idCurso - ID del curso.
+	 * @returns {Observable<CursoChat | null>} Observable con los datos del chat del curso.
+	 */
 	getChat(idCurso: number): Observable<CursoChat | null> {
 		// Si no está conectado, esperar 500ms antes de continuar
 		if (!this.client.connected) {
@@ -183,6 +200,14 @@ export class ChatService {
 		);
 	}
 
+	/**
+	 * Envía un mensaje al chat.
+	 * @param {number | null} idCurso - ID del curso.
+	 * @param {number} clase - ID de la clase.
+	 * @param {string} value - Contenido del mensaje.
+	 * @param {string | null} respuesta - ID del mensaje al que se responde.
+	 * @param {{ minute: number; second: number } | null} pregunta - Información sobre una posible pregunta.
+	 */
 	enviarMensaje(idCurso: number | null, clase: number, value: string, respuesta: string | null, pregunta: { minute: number; second: number } | null) {
 		let resp: MensajeChat | null = null;
 		let preg: number | null = null;

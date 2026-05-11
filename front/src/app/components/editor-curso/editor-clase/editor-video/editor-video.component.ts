@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, EventEmitter, Input, Output } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
 
@@ -10,20 +10,31 @@ import { Clase } from '../../../../models/Clase';
 })
 export class EditorVideoComponent implements AfterViewInit {
 	@Input() clase!: Clase;
+	@Input() isUploading: boolean = false;
 	@Output() videoSeleccionado = new EventEmitter<File>();
+
+	@ViewChild('videoPlayer') videoPlayerRef!: ElementRef<HTMLVideoElement>;
+	@ViewChild('videoUploadButton') videoUploadButtonRef!: ElementRef<HTMLSpanElement>;
+	@ViewChild('videoUploadInput') videoUploadInputRef!: ElementRef<HTMLInputElement>;
 
 	player: Player | null = null;
 	backStream: string = '';
 
+	/**
+	 * Constructor del componente.
+	 */
 	constructor() {}
 
+	/**
+	 * Inicializa el reproductor de video después de que la vista ha sido inicializada.
+	 */
 	ngAfterViewInit(): void {
 		if (!this.clase?.direccionClase) return;
 
 		console.log('📡 Cargando video desde:', this.clase.direccionClase);
 
 		this.backStream = (globalThis.window as any).__env?.BACK_STREAM ?? '';
-		const videoPlayer = document.getElementById('videoPlayer') as HTMLVideoElement;
+		const videoPlayer = this.videoPlayerRef.nativeElement;
 
 		if (!videoPlayer) {
 			console.error('No se pudo obtener el elemento videoPlayer');
@@ -77,19 +88,10 @@ export class EditorVideoComponent implements AfterViewInit {
 
 		const file = input.files[0];
 
-		// Cambiar estilos de botones
-		const button = document.getElementById('video-upload-button') as HTMLSpanElement;
-		const buttonGuardar = document.getElementById('button-guardar-clase') as HTMLButtonElement;
-		button.classList.remove('border-black');
-		button.classList.add('border-gray-500', 'text-gray-500');
-		buttonGuardar.classList.remove('border-black');
-		buttonGuardar.classList.add('border-gray-500', 'text-gray-500');
-		buttonGuardar.disabled = true;
-
 		// Mostrar previsualización
 		const reader = new FileReader();
 		reader.onload = (e: ProgressEvent<FileReader>) => {
-			const vid = document.getElementById('videoPlayer') as HTMLVideoElement;
+			const vid = this.videoPlayerRef.nativeElement;
 			if (e.target?.result) {
 				vid.src = e.target.result as string;
 			}
@@ -108,7 +110,7 @@ export class EditorVideoComponent implements AfterViewInit {
 
 	keyEvent(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
-			document.getElementById('video-upload')?.click();
+			this.videoUploadInputRef.nativeElement.click();
 		}
 	}
 }

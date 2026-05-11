@@ -529,7 +529,7 @@ public class UsuarioService implements IUsuarioService {
      */
     @Override
     public List<Usuario> getAllUsuarios() throws RepositoryException {
-        return this.usuarioRepo.findAll();
+        return this.usuarioRepo.findAllWithCursos();
     }
 
     /**

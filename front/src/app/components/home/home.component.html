@@ -1,5 +1,5 @@
 <div class="h-80 w-full overflow-hidden sm:h-64">
-	<div id="swiper" class="swiper">
+	<div #swiperContainer id="swiper" class="swiper">
 		<div class="swiper-wrapper flex h-80 w-full flex-row flex-nowrap sm:h-64">
 			@for (curso of this.cursoService.cursos; track curso.idCurso) {
 				<div #swiperSlide class="swiper-slide w-xs-1/2 w-full flex-shrink-0 sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 2xl:w-1/6">
@@ -42,7 +42,17 @@
 <div id="profesores" class="relative m-2 flex h-80 cursor-default flex-col border border-black p-4 sm:h-60 md:h-40 dark:border-gray-400">
 	<div class="absolute inset-0 bg-white bg-cover bg-center opacity-20 dark:hidden" style="background-image: url('../../../assets/oceano.webp')"></div>
 	<h2 class="font-bold text-blue-700">LOS PROFESORES:</h2>
-	<div id="profes" class="h-5/6 flex-1 p-2"></div>
+	<div id="profes" class="h-5/6 flex-1 p-2">
+		@if (currentProfe) {
+			<div class="flex h-full flex-1 items-center rounded-lg border border-black p-2 transition-opacity duration-1000 dark:border-gray-400" [class.flex-row-reverse]="isReverse" [style.opacity]="profeOpacity">
+				<img class="mr-4 h-1/2 w-auto object-contain sm:h-full" [src]="currentProfe.fotoUsuario[0]" alt="profe" />
+				<div class="flex flex-1 flex-col items-center justify-center">
+					<p class="text-center font-bold text-green-700">{{ currentProfe.nombreUsuario }}</p>
+					<p class="text-center">{{ currentProfe.presentacion }}</p>
+				</div>
+			</div>
+		}
+	</div>
 </div>
 <div class="h-20">
 	@if (this.initService.estadistica) {

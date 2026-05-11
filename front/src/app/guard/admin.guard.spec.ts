@@ -1,17 +1,25 @@
+import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { CanActivateFn } from '@angular/router';
+import { Router } from '@angular/router';
+import { LoginService } from '../services/login.service';
+import { AdminGuard } from './admin.guard';
 
-import { adminGuard } from './admin.guard';
+describe('AdminGuard', () => {
+	let guard: AdminGuard;
+	let loginServiceSpy: jasmine.SpyObj<LoginService>;
+	let routerSpy: jasmine.SpyObj<Router>;
 
-describe('adminGuard', () => {
-  const executeGuard: CanActivateFn = (...guardParameters) => 
-      TestBed.runInInjectionContext(() => adminGuard(...guardParameters));
+	beforeEach(() => {
+		loginServiceSpy = jasmine.createSpyObj('LoginService', ['usuario']);
+		routerSpy = jasmine.createSpyObj('Router', ['navigate']);
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-  });
+		TestBed.configureTestingModule({
+			providers: [AdminGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(AdminGuard);
+	});
 
-  it('should be created', () => {
-    expect(executeGuard).toBeTruthy();
-  });
+	it('should be created', () => {
+		expect(guard).toBeTruthy();
+	});
 });

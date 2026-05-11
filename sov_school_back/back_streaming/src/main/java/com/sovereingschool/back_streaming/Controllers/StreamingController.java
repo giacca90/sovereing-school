@@ -58,6 +58,19 @@ public class StreamingController {
         }
 
         @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+            int toRead = (int) Math.min(len, remaining);
+            int read = file.read(b, off, toRead);
+            if (read != -1) {
+                remaining -= read;
+            }
+            return read;
+        }
+
+        @Override
         public void close() throws IOException {
             file.close();
             super.close();
@@ -224,17 +237,18 @@ public class StreamingController {
         }
         long rangeLength = end - start + 1;
 
-        RandomAccessFile file = new RandomAccessFile(videoPath.toFile(), "r");
-        file.seek(start);
+        try (RandomAccessFile file = new RandomAccessFile(videoPath.toFile(), "r")) {
+            file.seek(start);
 
-        InputStreamResource resource = new InputStreamResource(new LimitedInputStream(file, rangeLength));
+            InputStreamResource resource = new InputStreamResource(new LimitedInputStream(file, rangeLength));
 
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(rangeLength))
-                .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileLength)
-                .headers(responseHeaders)
-                .body(resource);
+            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                    .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(rangeLength))
+                    .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileLength)
+                    .headers(responseHeaders)
+                    .body(resource);
+        }
     }
 
     /**
@@ -272,6 +286,13 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para obtener el progreso de una clase
+     * 
+     * @param idCurso ID del curso
+     * @param idClase ID de la clase
+     * @return ResponseEntity<?> con el progreso de la clase
+     */
     @GetMapping("/progreso/{idCurso}/{idClase}")
     public ResponseEntity<?> getProgresoClase(@PathVariable Long idCurso, @PathVariable Long idClase) {
         try {
@@ -488,6 +509,14 @@ public class StreamingController {
         }
     }
 
+    /**
+     * Función para registrar un fragmento de video
+     * 
+     * @param idCurso ID del curso
+     * @param idClase ID de la clase
+     * @param segment Segmento de video
+     * @return ResponseEntity<?> con el resultado de la operación
+     */
     @PostMapping("/registrar-fragmento")
     public ResponseEntity<?> pingFragmento(
             @RequestParam Long idCurso,

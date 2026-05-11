@@ -31,6 +31,10 @@ export class InitService {
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 	) {}
 
+	/**
+	 * Obtiene la URL del endpoint de inicialización.
+	 * @returns {string} URL del endpoint.
+	 */
 	get apiUrl(): string {
 		// Ruta al contenedor
 		if (isPlatformServer(this.platformId)) {
@@ -111,6 +115,11 @@ export class InitService {
 	/**
 	 * Carga los datos de inicio en los servicios que los necesitan
 	 * @param data Datos de inicio :Init
+	 */
+	/**
+	 * Distribuye los datos de inicialización a los servicios correspondientes.
+	 * @param {Init} data - Objeto con los datos de inicialización.
+	 * @private
 	 */
 	private cargarEnServicios(data: Init) {
 		this.usuarioService.profes = data.profesInit.map((profe) => new Usuario(profe.idUsuario, profe.nombreUsuario, profe.fotoUsuario, profe.presentacion));

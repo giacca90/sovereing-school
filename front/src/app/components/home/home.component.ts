@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectorRef, Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import Swiper from 'swiper';
 import { Usuario } from '../../models/Usuario';
@@ -16,9 +16,22 @@ import { UsuariosService } from '../../services/usuarios.service';
 })
 export class HomeComponent {
 	swiperInstance?: Swiper;
+	@ViewChild('swiperContainer') swiperContainer!: ElementRef<HTMLElement>;
+
+	currentProfe: Usuario | null = null;
+	isReverse: boolean = false;
+	profeOpacity: number = 0;
 
 	isBrowser = globalThis.window !== undefined;
 
+	/**
+	 * Constructor del componente.
+	 * @param {CursosService} cursoService - Servicio de cursos.
+	 * @param {UsuariosService} usuarioService - Servicio de usuarios.
+	 * @param {InitService} initService - Servicio de inicialización.
+	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
+	 * @param {Router} router - Router de Angular.
+	 */
 	constructor(
 		public cursoService: CursosService,
 		public usuarioService: UsuariosService,
@@ -34,12 +47,15 @@ export class HomeComponent {
 		}
 	}
 
+	/**
+	 * Inicializa el swiper.
+	 */
 	async initSwiper() {
 		// 0) sólo en cliente
 		if (!this.isBrowser) return;
 
 		// 1) obtener el contenedor
-		const container = document.getElementById('swiper');
+		const container = this.swiperContainer?.nativeElement;
 		if (!container) {
 			console.warn('Swiper: contenedor #swiper no encontrado');
 			return;
@@ -123,68 +139,34 @@ export class HomeComponent {
 	}
 
 	async carouselProfes() {
-		setTimeout(async () => {
-			const carouselProfes: HTMLDivElement[] = [];
+		if (!this.isBrowser) return;
 
-			this.usuarioService.profes.forEach((profe: Usuario) => {
-				const div = document.createElement('div');
-				const isDarkMode = globalThis.window.matchMedia && globalThis.window.matchMedia('(prefers-color-scheme: dark)').matches;
+		let index = 0;
+		// eslint-disable-next-line no-constant-condition
+		while (true) {
+			if (this.usuarioService.profes.length > 0) {
+				const profe = this.usuarioService.profes[index];
+				this.currentProfe = profe;
+				this.isReverse = index % 2 !== 0;
+				this.cdr.detectChanges();
 
-				div.classList.add('border', isDarkMode ? 'border-gray-400' : 'border-black', 'rounded-lg', 'flex', 'h-full', 'p-2', 'flex-1', 'opacity-0', 'transition-opacity', 'duration-1000', 'items-center');
+				// Fade in
+				await this.delay(100);
+				this.profeOpacity = 1;
+				this.cdr.detectChanges();
 
-				const img = document.createElement('img');
-				img.classList.add('h-1/2', 'sm:h-full', 'w-auto', 'object-contain', 'mr-4');
-				img.src = profe.fotoUsuario[0];
-				img.alt = 'profe';
-				div.appendChild(img);
+				await this.delay(5000);
 
-				const desc = document.createElement('div');
-				desc.classList.add('flex', 'flex-col', 'flex-1', 'items-center', 'justify-center');
+				// Fade out
+				this.profeOpacity = 0;
+				this.cdr.detectChanges();
+				await this.delay(1000);
 
-				const nombre = document.createElement('p');
-				nombre.classList.add('text-blond', 'text-green-700', 'text-center');
-				nombre.textContent = profe.nombreUsuario.toString();
-
-				const pres = document.createElement('p');
-				pres.classList.add('text-center');
-				pres.textContent = profe.presentacion.toString();
-
-				desc.appendChild(nombre);
-				desc.appendChild(pres);
-				div.appendChild(desc);
-
-				carouselProfes.push(div);
-			});
-
-			const profes = document.getElementById('profes');
-			if (!profes) {
-				console.warn('Elemento #profes no encontrado en el DOM');
-				return;
+				index = (index + 1) % this.usuarioService.profes.length;
+			} else {
+				await this.delay(1000);
 			}
-
-			let reverse = false;
-			while (carouselProfes.length > 0) {
-				const profe = carouselProfes.shift();
-				if (profe) {
-					profes.innerHTML = '';
-					carouselProfes.push(profe);
-					if (reverse) {
-						profe.classList.add('flex-row-reverse');
-					} else {
-						profe.classList.remove('flex-row-reverse');
-					}
-					profes.appendChild(profe);
-					this.cdr.detectChanges();
-					profe.classList.remove('opacity-0');
-
-					reverse = !reverse;
-					await this.delay(5000);
-
-					profe.classList.add('opacity-0');
-					await this.delay(1000);
-				}
-			}
-		}, 200);
+		}
 	}
 
 	delay(ms: number): Promise<void> {

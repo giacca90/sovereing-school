@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, QueryList, Renderer2, ViewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -28,7 +28,20 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	editado: boolean = false;
 	claseEditar: Clase | null = null;
 	isBrowser: boolean;
+	@ViewChildren('claseElement') claseElements!: QueryList<ElementRef<HTMLDivElement>>;
 
+	/**
+	 * Constructor del componente.
+	 * @param {ActivatedRoute} route - Ruta activada.
+	 * @param {Router} router - Router de Angular.
+	 * @param {CursosService} cursoService - Servicio de cursos.
+	 * @param {LoginService} loginService - Servicio de autenticación.
+	 * @param {StreamingService} streamingService - Servicio de streaming.
+	 * @param {InitService} initService - Servicio de inicialización.
+	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
+	 * @param {Object} platformId - ID de la plataforma.
+	 * @param {Renderer2} renderer - Renderer2 de Angular.
+	 */
 	constructor(
 		private readonly route: ActivatedRoute,
 		private readonly router: Router,
@@ -38,6 +51,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		private readonly initService: InitService,
 		private readonly cdr: ChangeDetectorRef,
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
+		private readonly renderer: Renderer2,
 	) {
 		this.subscription.add(
 			this.route.params.subscribe((params) => {
@@ -46,6 +60,10 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		);
 		this.isBrowser = isPlatformBrowser(platformId);
 	}
+	/**
+	 * Verifica si el componente puede desactivarse.
+	 * @returns {boolean} True si puede desactivarse, false en caso contrario.
+	 */
 	canDeactivate(): boolean {
 		if (this.streamingService.emitiendo) {
 			return confirm('Estás emitiendo. ¿Seguro que quieres salir?');
@@ -56,6 +74,10 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		return true;
 	}
 
+	/**
+	 * Notificación al descargar la ventana.
+	 * @param {BeforeUnloadEvent} $event - Evento de descarga.
+	 */
 	@HostListener('window:beforeunload', ['$event'])
 	unloadNotification($event: BeforeUnloadEvent) {
 		if (this.streamingService.emitiendo || this.editado) {
@@ -63,6 +85,9 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		}
 	}
 
+	/**
+	 * Inicialización del componente.
+	 */
 	ngOnInit(): void {
 		if (this.idCurso === 0) {
 			if (this.loginService.usuario) {
@@ -101,6 +126,9 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		}
 	}
 
+	/**
+	 * Limpieza de recursos al destruir el componente.
+	 */
 	ngOnDestroy(): void {
 		this.subscription.unsubscribe();
 	}
@@ -114,17 +142,17 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		const event2: DragEvent = event as DragEvent;
 		const div = event2.target as HTMLDivElement;
 		const img = div.cloneNode(true) as HTMLDivElement;
-		img.className = div.className;
-		img.style.position = 'absolute';
-		img.style.top = '-9999px';
-		document.body.appendChild(img);
+		this.renderer.setProperty(img, 'className', div.className);
+		this.renderer.setStyle(img, 'position', 'absolute');
+		this.renderer.setStyle(img, 'top', '-9999px');
+		this.renderer.appendChild(document.body, img);
 		this.draggedElementId = id;
 		event2.dataTransfer?.setData('text/plain', id.toString());
 		event2.dataTransfer?.setDragImage(img, 0, 0);
 		setTimeout(() => {
-			img.remove();
+			this.renderer.removeChild(document.body, img);
 		}, 0);
-		div.classList.add('opacity-0');
+		this.renderer.addClass(div, 'opacity-0');
 	}
 
 	/**
@@ -164,7 +192,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	}
 
 	getClosestElementId(event: DragEvent): number | null {
-		const elements = Array.from(document.querySelectorAll('[id^="clase-"]'));
+		const elements = this.claseElements.map((el) => el.nativeElement);
 		const y = event.clientY;
 		const closestElement = elements.reduce(
 			(closest, element) => {
@@ -176,7 +204,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 					return closest;
 				}
 			},
-			{ offset: Number.NEGATIVE_INFINITY, element: null } as { offset: number; element: Element | null },
+			{ offset: Number.NEGATIVE_INFINITY, element: null } as { offset: number; element: HTMLElement | null },
 		).element;
 		return closestElement ? Number.parseInt(closestElement.id.split('-')[1], 10) : null;
 	}
@@ -251,15 +279,17 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 				const formData = new FormData();
 				formData.append('files', input.files[0], input.files[0].name);
 
-				this.cursoService.addImagenCurso(formData).subscribe({
-					next: (response) => {
-						if (this.curso && response) this.curso.imagenCurso = response;
-						this.compruebaCambios();
-					},
-					error: (e: Error) => {
-						console.error('Error en añadir la imagen al curso: ' + e.message);
-					},
-				});
+				this.subscription.add(
+					this.cursoService.addImagenCurso(formData).subscribe({
+						next: (response) => {
+							if (this.curso && response) this.curso.imagenCurso = response;
+							this.compruebaCambios();
+						},
+						error: (e: Error) => {
+							console.error('Error en añadir la imagen al curso: ' + e.message);
+						},
+					}),
+				);
 			}
 		};
 		reader.readAsDataURL(input.files[0]);
@@ -270,16 +300,18 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		if (confirm) {
 			const confirm2 = globalThis.window.confirm('ESTÁS ABSOLUTAMENTE SEGURO DE LO QUE HACES??');
 			if (confirm2 && this.curso) {
-				this.cursoService.deleteCurso(this.curso).subscribe({
-					next: (result: boolean) => {
-						if (result) {
-							this.router.navigate(['/cursosUsuario']);
-						}
-					},
-					error: (e: Error) => {
-						console.error('Error en eliminar el curso: ' + e.message);
-					},
-				});
+				this.subscription.add(
+					this.cursoService.deleteCurso(this.curso).subscribe({
+						next: (result: boolean) => {
+							if (result) {
+								this.router.navigate(['/cursosUsuario']);
+							}
+						},
+						error: (e: Error) => {
+							console.error('Error en eliminar el curso: ' + e.message);
+						},
+					}),
+				);
 			}
 		}
 	}
@@ -288,17 +320,19 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	eliminaClase(clase: Clase) {
 		if (confirm('Esto eliminará definitivamente la clase. Estás seguro??')) {
 			this.curso.clasesCurso = this.curso.clasesCurso?.filter((c) => c.idClase !== clase.idClase);
-			this.cursoService.updateCurso(this.curso).subscribe({
-				next: (success: Curso) => {
-					if (!success) {
-						console.error('Falló la actualización del curso en editor-clase');
-					}
-					this.initService.carga();
-				},
-				error: (error) => {
-					console.error('Error al actualizar el curso: ' + error);
-				},
-			});
+			this.subscription.add(
+				this.cursoService.updateCurso(this.curso).subscribe({
+					next: (success: Curso) => {
+						if (!success) {
+							console.error('Falló la actualización del curso en editor-clase');
+						}
+						this.initService.carga();
+					},
+					error: (error) => {
+						console.error('Error al actualizar el curso:', error);
+					},
+				}),
+			);
 		}
 	}
 

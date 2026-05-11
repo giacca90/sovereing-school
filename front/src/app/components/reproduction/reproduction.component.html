@@ -5,8 +5,23 @@
 				<p class="animate-pulse text-2xl font-bold text-white">Cargando Video</p>
 			</div>
 		}
-		<video id="video" controls crossorigin="use-credentials" class="video-js vjs-default-skin vjs-big-play-centered vjs-fill dark:border dark:border-gray-400"></video>
+		<video #videoElement controls crossorigin="use-credentials" class="video-js vjs-default-skin vjs-big-play-centered vjs-fill dark:border dark:border-gray-400"></video>
 	</div>
+
+	<!-- Menú contextual de preguntas -->
+	@if (contextMenu) {
+		<div class="absolute z-[1000] w-[200px] rounded-lg border border-gray-600 bg-black/90 p-2 text-white shadow-xl" [style.top.px]="contextMenu.y" [style.left.px]="contextMenu.x" (click)="$event.stopPropagation()">
+			<div class="cursor-pointer rounded p-2 transition-colors hover:bg-gray-800" (click)="clickPregunta()">Haz una pregunta</div>
+		</div>
+	}
+
+	<!-- Tooltip de marcadores -->
+	@if (hoveredMarker) {
+		<div class="pointer-events-none absolute z-[1000] max-w-[250px] rounded bg-black/80 p-2 text-sm text-white shadow-lg" [style.top.px]="hoveredMarker.y" [style.left.px]="hoveredMarker.x">
+			{{ hoveredMarker.message }}
+		</div>
+	}
+
 	<div class="relative m-2 flex w-11/12 grow overflow-auto rounded-lg border border-black dark:border-gray-400">
 		<img class="absolute -z-10 h-full w-full object-cover object-center opacity-20" [src]="this.curso?.imagenCurso" alt="curso" />
 		<div class="absolute -z-30 h-full w-full bg-white object-cover object-center"></div>
@@ -16,17 +31,20 @@
 				<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cambiaVista(0)">Contenido del curso</button>
 				<button class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cambiaVista(1)">Chat</button>
 			</div>
-			<div id="contenido">
-				@if (this.clase) {
-					<h3 class="text-center font-bold text-green-700">{{ this.clase.nombreClase }}</h3>
-					<p>{{ this.clase.contenidoClase }}</p>
-				} @else {
-					<h3 class="m-2">NO HAY CLASE CARGADA</h3>
-				}
-			</div>
-			<div id="chat" hidden>
-				<app-chat [idCurso]="this.idCurso" #chatComponent></app-chat>
-			</div>
+			@if (vista === 0) {
+				<div id="contenido">
+					@if (this.clase) {
+						<h3 class="text-center font-bold text-green-700">{{ this.clase.nombreClase }}</h3>
+						<p>{{ this.clase.contenidoClase }}</p>
+					} @else {
+						<h3 class="m-2">NO HAY CLASE CARGADA</h3>
+					}
+				</div>
+			} @else if (vista === 1) {
+				<div id="chat">
+					<app-chat [idCurso]="this.idCurso" #chatComponent></app-chat>
+				</div>
+			}
 		</div>
 		<div class="m-2 flex w-1/4 flex-col rounded-lg border border-black p-2 dark:border-gray-400">
 			@if (this.curso && this.curso.clasesCurso) {
