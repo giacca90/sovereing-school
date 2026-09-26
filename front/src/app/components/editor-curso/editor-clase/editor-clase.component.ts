@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output, Renderer2 } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, Input, OnDestroy, OnInit, Output, Renderer2 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationStart, Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -50,6 +50,7 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 		private readonly initService: InitService,
 		private readonly router: Router,
 		private readonly renderer: Renderer2,
+		private readonly cdr: ChangeDetectorRef,
 	) {}
 
 	/**
@@ -266,12 +267,18 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 									this.savedPresets = new Map();
 								}
 
-								if (this.clase) this.clase.tipoClase = 2;
+								if (this.clase) {
+									this.clase.tipoClase = 2;
+									this.cdr.detectChanges();
+								}
 							},
 							error: (error) => {
 								console.error('Error al obtener presets:', error);
 								this.savedPresets = new Map();
-								if (this.clase) this.clase.tipoClase = 2;
+								if (this.clase) {
+									this.clase.tipoClase = 2;
+									this.cdr.detectChanges();
+								}
 							},
 						}),
 					);
@@ -366,19 +373,30 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	 */
 	emiteWebOBS(mediaStream: MediaStream | null) {
 		// Puede ser la señal de que se acaba de emitir, o que no se ha seleccionado ninguna cámara
+		console.log('📸 Emitiendo WebOBS');
 		if (mediaStream === null) {
+			console.log('📸 mediastream no null');
 			if (this.streamingService.emitiendo) {
+				console.log('emitiendo true');
+				console.log('📸 Stream de la webcam terminado');
 				this.streamingService.detenerWebOBS();
 				this.readyComponent = false;
 				return;
 			}
+			console.log('📸 MediaStream nulo');
 			alert('Debes conectarte primero con la webcam');
 			this.readyComponent = false;
 			return;
 		}
 
 		if (!this.confirmacion()) {
+			console.log('📸 No se confirmaron los datos');
 			this.readyComponent = false;
+			return;
+		}
+
+		if (!this.streamingService.streamId) {
+			console.log('📸 No hay streamId para emitir');
 			return;
 		}
 
@@ -387,35 +405,34 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 				this.readyComponent = false;
 				return;
 			}
-			if (!this.streamingService.streamId) return;
-			this.clase.direccionClase = this.streamingService.streamId;
-			const clasesCurso = this.curso.clasesCurso;
-			if (!clasesCurso) {
-				this.curso.clasesCurso = new Array<Clase>();
-			}
-			if (this.curso.clasesCurso) {
-				this.clase.posicionClase = this.curso.clasesCurso.length + 1;
-			}
-			clasesCurso?.push(this.clase);
-			this.cursoService.updateCurso(this.curso).subscribe({
-				next: (success: Curso | null) => {
-					if (!success) {
-						console.error('Falló la actualización del curso en emitirOBS');
-						return;
-					}
-					Object.assign(this.curso, success);
-
-					this.readyComponent = true;
-
-					this.streamingService.emitirWebOBS(mediaStream).catch((error) => {
-						console.error('Error al emitir webcam:', error);
-					});
-				},
-				error: (error) => {
-					console.error('Falló la actualización del curso en emitirOBS:', error);
-				},
-			});
 		}
+		this.clase.direccionClase = this.streamingService.streamId;
+		const clasesCurso = this.curso.clasesCurso;
+		if (!clasesCurso) {
+			this.curso.clasesCurso = new Array<Clase>();
+		}
+		if (this.curso.clasesCurso) {
+			this.clase.posicionClase = this.curso.clasesCurso.length + 1;
+		}
+		clasesCurso?.push(this.clase);
+		this.cursoService.updateCurso(this.curso).subscribe({
+			next: (success: Curso | null) => {
+				if (!success) {
+					console.error('Falló la actualización del curso en emitirOBS');
+					return;
+				}
+				Object.assign(this.curso, success);
+
+				this.readyComponent = true;
+
+				this.streamingService.emitirWebOBS(mediaStream).catch((error) => {
+					console.error('Error al emitir webcam:', error);
+				});
+			},
+			error: (error) => {
+				console.error('Falló la actualización del curso en emitirOBS:', error);
+			},
+		});
 	}
 
 	obsEvent($event: { type: string; message: string }) {

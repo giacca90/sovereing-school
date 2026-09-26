@@ -1,10 +1,13 @@
-// Inicializa el replica set
+// Inicializa el replica set de nodo único
 try {
 	rs.initiate({ _id: "rs0", version: 1, members: [{ _id: 0, host: "sovschool-mongo:27017" }] });
 	print("Replica set iniciado");
 } catch (e) {
 	print("Replica set ya iniciado o error: " + e.message);
 }
+
+// Esperamos unos segundos a que el nodo asuma el rol de Primary para las inserciones
+sleep(2000);
 
 // Base de datos SovSchoolChat
 db = db.getSiblingDB("SovSchoolChat");
@@ -16,3 +19,5 @@ db.users_chat.insertOne({ createdAt: new Date() });
 db = db.getSiblingDB("SovSchoolStream");
 db.presets.insertOne({ createdAt: new Date() });
 db.user_courses.insertOne({ createdAt: new Date() });
+
+print("¡Bases de datos inicializadas y sembradas con éxito!");

@@ -2,6 +2,8 @@ FROM mongo:7.0.31
 
 # RUN apt update && apt upgrade -y && rm -rf /var/lib/apt/lists/*
 
+RUN sed -i 's/127.0.0.1/0.0.0.0/g' /usr/local/bin/docker-entrypoint.sh
+
 COPY init-mongo.js /docker-entrypoint-initdb.d/
 
 # Puerto por defecto

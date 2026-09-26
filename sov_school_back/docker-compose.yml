@@ -46,17 +46,14 @@ services:
             context: .
             dockerfile: Dockerfile.mongo
         container_name: sovschool-mongo
+        hostname: sovschool-mongo
         ports:
             - "${MONGO_PORT}:27017"
-
-        command: ["mongod", "--replSet", "rs0", "--quiet", "--setParameter", "logLevel=0"]
-
-        #command: ["mongod"]
+        command: ["mongod", "--bind_ip", "0.0.0.0", "--replSet", "rs0"]
         networks:
             - sovschool-network
         volumes:
             - sovschool-mongo-data:/data/db
-            - sovschool-mongo-config:/data/configdb
 
     sovschool-rtmp:
         image: sovschool-rtmp

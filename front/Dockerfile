@@ -1,5 +1,5 @@
 # Imagen base de Node.js 22.14 slim
-FROM node:24.5-slim AS build
+FROM node:26.0-slim AS build
 
 WORKDIR /app
 

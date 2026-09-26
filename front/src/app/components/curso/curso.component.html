@@ -1,6 +1,6 @@
 <div id="contenedor" class="relative m-2 flex w-full cursor-default flex-col items-center rounded-lg border border-black p-2 dark:border-gray-400">
 	@if (this.curso?.imagenCurso) {
-		<img class="absolute -z-10 h-full content-center opacity-20" [src]="this.curso?.imagenCurso" alt="curso" />
+		<img class="absolute -z-10 h-full content-center opacity-20" [src]="this.curso.imagenCurso" alt="curso" />
 	}
 	<h3 class="flex-1 items-center text-center font-bold text-green-700">{{ curso?.nombreCurso }}</h3>
 	<br />
