@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { Curso } from '../../models/Curso';
 import { CursoChat } from '../../models/CursoChat';
 import { Usuario } from '../../models/Usuario';
@@ -41,6 +41,7 @@ export class AdministracionComponent {
 		public cursosService: CursosService,
 		private readonly chatsService: ChatService,
 		private readonly initService: InitService,
+		private cdr: ChangeDetectorRef,
 	) {}
 
 	/**
@@ -52,6 +53,7 @@ export class AdministracionComponent {
 				if (data) {
 					this.usuarios = data;
 					this.usuariosSel = data;
+					this.cdr.detectChanges();
 				}
 			});
 		}
@@ -67,6 +69,7 @@ export class AdministracionComponent {
 				if (data) {
 					this.cursos = data;
 					this.cursosSel = data;
+					this.cdr.detectChanges();
 				}
 			});
 		}
@@ -82,6 +85,7 @@ export class AdministracionComponent {
 				if (data) {
 					this.chats = data;
 					this.chatsSel = data;
+					this.cdr.detectChanges();
 				}
 			});
 		}
@@ -99,6 +103,7 @@ export class AdministracionComponent {
 		} else {
 			this.usuariosSel = this.usuarios.filter((u) => u.nombreUsuario.toLowerCase().includes(value.toLowerCase()) || u.rollUsuario?.toLowerCase().includes(value.toLowerCase()) || u.idUsuario.toString().includes(value));
 		}
+		this.cdr.detectChanges();
 	}
 
 	/**
@@ -112,6 +117,7 @@ export class AdministracionComponent {
 		} else {
 			this.cursosSel = this.cursos.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.profesoresCurso.toString().toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value));
 		}
+		this.cdr.detectChanges();
 	}
 
 	/**
@@ -125,6 +131,7 @@ export class AdministracionComponent {
 		} else {
 			this.chatsSel = this.chats.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value));
 		}
+		this.cdr.detectChanges();
 	}
 
 	/**
@@ -144,6 +151,7 @@ export class AdministracionComponent {
 					}
 				});
 			}
+			this.cdr.detectChanges();
 		});
 	}
 
@@ -164,6 +172,7 @@ export class AdministracionComponent {
 					}
 				});
 			}
+			this.cdr.detectChanges();
 		});
 	}
 
@@ -184,6 +193,7 @@ export class AdministracionComponent {
 					}
 				});
 			}
+			this.cdr.detectChanges();
 		});
 	}
 

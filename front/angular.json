@@ -81,6 +81,9 @@
 							"buildTarget": "front:build:development"
 						}
 					},
+					"options": {
+						"allowedHosts": ["localhost", "127.0.0.1"]
+					},
 					"defaultConfiguration": "development"
 				},
 				"extract-i18n": {

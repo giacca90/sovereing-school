@@ -7,6 +7,8 @@ import java.util.List;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.mongodb.core.ChangeStreamOptions;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -29,7 +31,6 @@ import com.sovereingschool.back_common.Repositories.ClaseRepository;
 import com.sovereingschool.back_common.Repositories.CursoRepository;
 import com.sovereingschool.back_common.Repositories.UsuarioRepository;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import reactor.core.publisher.Flux;
@@ -187,7 +188,7 @@ public class InitChatService {
     /**
      * Función para observar los cambios en las colecciones de MongoDB
      */
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     protected void observeMultipleCollections() {
         ChangeStreamOptions options = ChangeStreamOptions.builder().build();
 
@@ -201,7 +202,7 @@ public class InitChatService {
                     }
                     return doc;
                 })
-                .doOnError(err -> logger.error("[users_chat] Error en el stream: {}", err.getMessage()))
+                .doOnError(err -> logger.error("[users_chat] Error en el flux: {}", err.getMessage()))
                 .retryWhen(Retry.backoff(10, Duration.ofSeconds(5))
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()));
 
@@ -223,7 +224,7 @@ public class InitChatService {
                     }
                     return doc;
                 })
-                .doOnError(err -> logger.error("[courses_chat] Error en el stream: {}", err.getMessage()))
+                .doOnError(err -> logger.error("[courses_chat] Error en el flux: {}", err.getMessage()))
                 .retryWhen(Retry.backoff(10, Duration.ofSeconds(5))
                         .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure()));
 

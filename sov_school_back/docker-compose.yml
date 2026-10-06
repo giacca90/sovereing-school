@@ -54,6 +54,7 @@ services:
             - sovschool-network
         volumes:
             - sovschool-mongo-data:/data/db
+            - sovschool-mongo-config:/data/configdb
 
     sovschool-rtmp:
         image: sovschool-rtmp

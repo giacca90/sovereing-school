@@ -454,6 +454,10 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 					this.readyComponent = false;
 					break;
 
+				case 'status':
+					this.streamingService.status = message;
+					break;
+
 				default:
 					console.warn('Acción desconocida desde Editor-OBS:', $event);
 			}

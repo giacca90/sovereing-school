@@ -8,14 +8,12 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import com.sovereingschool.back_common.Models.Clase;
 import com.sovereingschool.back_common.Models.Curso;
 import com.sovereingschool.back_common.Models.Plan;
 import com.sovereingschool.back_common.Models.Usuario;
 
-@Repository
 public interface CursoRepository extends JpaRepository<Curso, Long> {
 
     @Query("SELECT c FROM Curso c")

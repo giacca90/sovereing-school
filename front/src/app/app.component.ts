@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, Renderer2 } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit, Renderer2 } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { LogModalComponent } from './components/log-modal/log-modal.component';
@@ -10,6 +10,7 @@ import { LoginService } from './services/login.service';
 @Component({
 	selector: 'app-root',
 	standalone: true,
+	changeDetection: ChangeDetectionStrategy.Eager,
 	templateUrl: './app.component.html',
 	styleUrl: './app.component.css',
 	imports: [RouterOutlet, SearchComponent, LogModalComponent, CommonModule],
@@ -43,6 +44,7 @@ export class AppComponent implements OnInit, OnDestroy {
 	ngOnInit() {
 		// Detecta si está en el navegador
 		if (globalThis.window !== undefined) {
+			console.log('¿App root está en la zona?:', NgZone.isInAngularZone());
 			globalThis.window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
 				if (!('theme' in localStorage)) {
 					if (e.matches) {
@@ -56,6 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
 		this.subscription.add(
 			this.modalService.isVisible$.subscribe((isVisible) => {
+				console.log('isVisible:', isVisible);
 				this.isModalVisible = isVisible;
 				this.cdr.detectChanges();
 			}),

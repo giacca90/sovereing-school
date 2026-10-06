@@ -49,7 +49,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		public loginService: LoginService,
 		public streamingService: StreamingService,
 		private readonly initService: InitService,
-		private readonly cdr: ChangeDetectorRef,
+		//private readonly cdr: ChangeDetectorRef,
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 		private readonly renderer: Renderer2,
 	) {
@@ -113,7 +113,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 							clase.cursoClase = this.curso.idCurso;
 						}
 					}
-					this.cdr.detectChanges();
+					//this.cdr.detectChanges();
 				})
 				.catch((err) => {
 					console.error('Error al obtener el curso:', err);
@@ -342,6 +342,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 				this.compruebaCambios();
 				this.claseEditar = null;
 				document.body.style.overflow = 'auto';
+				//this.cdr.detectChanges();
 				return;
 			}
 			this.cursoService
@@ -353,6 +354,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 						this.claseEditar = null;
 
 						document.body.style.overflow = 'auto';
+						//this.cdr.detectChanges();
 					} else {
 						console.error('No se pudo obtener el curso');
 					}

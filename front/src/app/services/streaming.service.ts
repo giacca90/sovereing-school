@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 import { Preset } from 'web-obs';
 import { LoginService } from './login.service';
@@ -367,7 +367,7 @@ export class StreamingService {
 		this.ws.onmessage = (event) => {
 			const data = JSON.parse(event.data);
 			console.log('📩 Mensaje recibido (OBS):', data);
-
+			console.log('¿streamingService está en la zona?:', NgZone.isInAngularZone());
 			try {
 				switch (data.type) {
 					// 🔹 Error de autenticación
@@ -390,6 +390,7 @@ export class StreamingService {
 					// 🔹 Backend envía RTMP URL
 					case 'rtmp_url':
 						console.log('✅ URL RTMP recibida:', data.message);
+						console.log('¿El switch está en la zona?:', NgZone.isInAngularZone());
 						this.rtmpUrl = data.message;
 						this.status = 'Esperando conexión con OBS...';
 
@@ -428,6 +429,7 @@ export class StreamingService {
 				this.ws?.close();
 				this.emitiendo = false;
 			}
+			//this.cdr.detectChanges();
 		};
 
 		this.ws.onerror = (event: Event) => {
@@ -453,7 +455,6 @@ export class StreamingService {
 		this.ws.onmessage = async (event) => {
 			const data = JSON.parse(event.data);
 			console.log('📩 Mensaje recibido:', data);
-
 			try {
 				switch (data.type) {
 					// 🔹 Autenticación fallida
@@ -478,6 +479,7 @@ export class StreamingService {
 					// 🔹 Stream ID confirmado
 					case 'streamId':
 						console.log('✅ StreamId recibido:', data.streamId);
+						console.log('¿App root está en la zona?:', NgZone.isInAngularZone());
 						this.streamId = data.streamId;
 						this.status = 'Todo listo!!';
 						resolve(data.streamId as string);

@@ -1,5 +1,5 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { ApplicationConfig, inject, provideAppInitializer } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 
@@ -12,6 +12,7 @@ import { LoginService } from './services/login.service';
 export const appConfig: ApplicationConfig = {
 	providers: [
 		provideRouter(routes),
+		provideZoneChangeDetection({ eventCoalescing: true }), // ✅ Debe ser provideZoneChangeDetection
 
 		provideClientHydration(
 			withHttpTransferCacheOptions({

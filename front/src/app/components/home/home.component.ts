@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectorRef, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, ViewChild } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, ChangeDetectorRef, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import Swiper from 'swiper';
 import { Usuario } from '../../models/Usuario';
@@ -11,6 +11,7 @@ import { UsuariosService } from '../../services/usuarios.service';
 	standalone: true,
 	imports: [],
 	schemas: [CUSTOM_ELEMENTS_SCHEMA],
+	changeDetection: ChangeDetectionStrategy.Eager,
 	templateUrl: './home.component.html',
 	styleUrls: ['./home.component.css'], // corregido de styleUrl
 })

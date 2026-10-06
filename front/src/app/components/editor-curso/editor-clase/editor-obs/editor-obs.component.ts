@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, Renderer2, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, NgZone, OnDestroy, Output, Renderer2, SimpleChanges, ViewChild } from '@angular/core';
 
 @Component({
 	selector: 'app-editor-obs',
@@ -38,7 +38,28 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		private readonly cdr: ChangeDetectorRef,
 	) {
 		this.isBrowser = globalThis.window !== undefined;
+		console.log('¿EditorObsComponent está en la zona?:', NgZone.isInAngularZone());
 	}
+
+	/**
+	 * Detecta cambios en las propiedades de entrada (@Input).
+	 * @param {SimpleChanges} changes - Cambios detectados.
+	 */
+	/* ngOnChanges(changes: SimpleChanges): void {
+		if (changes['rtmpUrl']) {
+			this.prepareRTMPData();
+		}
+		if (changes['urlPreview'] && !changes['urlPreview'].firstChange && this.player) {
+			this.player.src({
+				src: this.urlPreview,
+				type: 'application/x-mpegURL',
+				withCredentials: true,
+			});
+		}
+		if (changes['status'] || changes['emitiendo'] || changes['urlPreview'] || changes['rtmpUrl']) {
+			this.cdr.markForCheck();
+		}
+	} */
 
 	/**
 	 * Inicialización de la vista.
@@ -80,8 +101,16 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	 * @param {HTMLVideoElement} videoEl - Elemento de video.
 	 */
 	private async initVideoJS(videoEl: HTMLVideoElement): Promise<void> {
+		if (!this.urlPreview) {
+			console.log('usrPreview vacío');
+			setTimeout(() => {
+				this.initVideoJS(videoEl);
+			}, 100);
+		}
 		const videojsModule = await import('video.js');
 		const videojs = videojsModule.default;
+		console.log('¿initVideoJS está en la zona?:', NgZone.isInAngularZone());
+		console.log('urlPreview:', this.urlPreview);
 
 		this.player = videojs(videoEl, {
 			aspectRatio: '16:9',
@@ -112,7 +141,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	private initMediaStream(videoEl: HTMLVideoElement): void {
 		this.player.on('loadeddata', () => {
 			this.m3u8Loaded = true;
-			this.status = 'Todo listo!!';
+			this.obsEvent.emit({ type: 'status', message: 'Todo listo!!' });
 
 			const techEl = this.player.tech(true)?.el() as HTMLVideoElement & { captureStream(): MediaStream };
 			if (techEl?.captureStream) {

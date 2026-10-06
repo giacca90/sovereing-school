@@ -461,10 +461,10 @@ public class StreamingService {
                 while ((line = reader.readLine()) != null) {
                     logger.info("FFProbe line: {}", line);
                     String[] parts = line.split(",");
-                    if (parts.length >= 5 && "video".equals(parts[3])) {
-                        width = parts[0];
-                        height = parts[1];
-                        String[] frameRateParts = parts[2].split("/");
+                    if (parts.length >= 5 && "video".equals(parts[1])) {
+                        width = parts[2];
+                        height = parts[3];
+                        String[] frameRateParts = parts[4].split("/");
                         if (frameRateParts.length == 2) {
                             try {
                                 double num = Double.parseDouble(frameRateParts[0]);
@@ -476,8 +476,8 @@ public class StreamingService {
                                 logger.warn("Error parseando FPS: {}", parts[2]);
                             }
                         }
-                    } else if (parts.length >= 5 && "audio".equals(parts[3])) {
-                        audioCodec = parts[4]; // codec_name es el 5º campo en el output csv
+                    } else if (parts.length >= 3 && "audio".equals(parts[1])) {
+                        audioCodec = parts[0];
                     }
                 }
             }

@@ -315,6 +315,7 @@ public class ChatController {
      * Función para rellenar la base de datos
      */
     @GetMapping("/init")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> init() {
         try {
             this.cursoChatService.init();
