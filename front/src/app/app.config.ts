@@ -1,6 +1,6 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
-import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions } from '@angular/platform-browser';
+import { provideClientHydration, withEventReplay, withHttpTransferCacheOptions, withNoIncrementalHydration } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
@@ -19,6 +19,7 @@ export const appConfig: ApplicationConfig = {
 				includePostRequests: true,
 			}),
 			withEventReplay(),
+			withNoIncrementalHydration(),
 		),
 
 		provideHttpClient(withFetch(), withInterceptors([jwtInterceptor, jwtRefreshInterceptor])),

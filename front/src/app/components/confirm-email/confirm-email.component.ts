@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Auth } from '../../models/Auth';
@@ -9,6 +9,7 @@ import { LoginService } from '../../services/login.service';
 	selector: 'app-confirm-email',
 	imports: [],
 	templateUrl: './confirm-email.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './confirm-email.component.css',
 })
 export class ConfirmEmailComponent implements OnInit, OnDestroy {

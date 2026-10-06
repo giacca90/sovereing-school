@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, QueryList, Renderer2, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, QueryList, Renderer2, ViewChildren, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -17,6 +17,7 @@ import { EditorClaseComponent } from './editor-clase/editor-clase.component';
 	standalone: true,
 	imports: [FormsModule, EditorClaseComponent],
 	templateUrl: './editor-curso.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './editor-curso.component.css',
 })
 export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeactivate {

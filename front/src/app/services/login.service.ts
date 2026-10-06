@@ -122,6 +122,7 @@ export class LoginService {
 							return;
 						}
 						this.usuario = response.body.usuario;
+
 						// Comprueba si está en el navegador
 						localStorage.setItem('Token', response.body.accessToken);
 						// Avisamos al SSR de que estamos logueados

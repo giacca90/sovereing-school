@@ -23,7 +23,7 @@
 	}
 
 	<div class="relative m-2 flex w-11/12 grow overflow-auto rounded-lg border border-black dark:border-gray-400">
-		<img class="absolute -z-10 h-full w-full object-cover object-center opacity-20" [src]="this.curso?.imagenCurso" alt="curso" />
+		<img class="absolute -z-10 h-full w-full object-cover object-center opacity-20" [src]="$safeNavigationMigration(this.curso?.imagenCurso)" alt="curso" />
 		<div class="absolute -z-30 h-full w-full bg-white object-cover object-center"></div>
 
 		<div class="flex w-3/4 flex-col">

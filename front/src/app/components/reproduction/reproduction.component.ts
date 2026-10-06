@@ -1,5 +1,5 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
@@ -16,6 +16,7 @@ import { ChatComponent } from '../chat/chat/chat.component';
 	standalone: true,
 	imports: [ChatComponent],
 	templateUrl: './reproduction.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './reproduction.component.css',
 })
 export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {

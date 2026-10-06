@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { LoginModalService } from '../../../services/login-modal.service';
@@ -9,6 +9,7 @@ import { LoginService } from '../../../services/login.service';
 	standalone: true,
 	imports: [FormsModule],
 	templateUrl: './login.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './login.component.css',
 })
 export class LoginComponent implements OnInit, OnDestroy {
@@ -108,7 +109,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 		const success = await this.loginService.compruebaPassword(this.password);
 		if (success) {
 			this.close();
-			globalThis.window.location.reload();
+			//globalThis.window.location.reload();
 		} else {
 			this.mensajeError = 'La contraseña es incorrecta!!!';
 		}

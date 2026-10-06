@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectorRef, Component, ElementRef, Input, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, ElementRef, Input, OnDestroy, OnInit, QueryList, ViewChild, ViewChildren, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CursoChat } from '../../../models/CursoChat';
@@ -11,6 +11,7 @@ import { LoginService } from '../../../services/login.service';
 	standalone: true,
 	imports: [RouterModule],
 	templateUrl: './chat.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './chat.component.css',
 })
 export class ChatComponent implements OnInit, OnDestroy {

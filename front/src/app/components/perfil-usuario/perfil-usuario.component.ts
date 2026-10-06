@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { lastValueFrom, Subscription } from 'rxjs';
 import { Usuario } from '../../models/Usuario';
@@ -12,6 +12,7 @@ import { UsuariosService } from '../../services/usuarios.service';
 	standalone: true,
 	imports: [FormsModule, CommonModule],
 	templateUrl: './perfil-usuario.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './perfil-usuario.component.css',
 })
 export class PerfilUsuarioComponent implements OnDestroy {

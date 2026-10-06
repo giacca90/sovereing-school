@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectorRef, Component, NgZone } from '@angular/core';
+import { afterNextRender, ChangeDetectorRef, Component, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CursoChat } from '../../../models/CursoChat';
 import { InitChatUsuario } from '../../../models/InitChatUsuario';
@@ -11,6 +11,7 @@ import { LoginService } from '../../../services/login.service';
 	standalone: true,
 	imports: [],
 	templateUrl: './home-chat.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './home-chat.component.css',
 })
 export class HomeChatComponent {

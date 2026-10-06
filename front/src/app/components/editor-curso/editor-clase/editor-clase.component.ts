@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, EventEmitter, Input, OnDestroy, OnInit, Output, Renderer2 } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, OnDestroy, OnInit, Output, Renderer2 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NavigationStart, Router } from '@angular/router';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -16,6 +16,7 @@ import { EditorVideoComponent } from './editor-video/editor-video.component';
 	selector: 'app-editor-clase',
 	imports: [FormsModule, EditorObsComponent, EditorVideoComponent, WebOBS],
 	templateUrl: './editor-clase.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './editor-clase.component.css',
 })
 export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -436,7 +437,6 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	obsEvent($event: { type: string; message: string }) {
-		console.log('obsEvent: ', $event);
 		const { type, message } = $event;
 
 		try {

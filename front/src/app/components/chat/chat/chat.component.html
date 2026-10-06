@@ -1,5 +1,5 @@
 <div class="flex grow flex-col overflow-auto dark:text-gray-500">
-	<img class="absolute -z-50 h-full w-full object-cover object-center opacity-20" [src]="this.chat?.fotoCurso" alt="curso" />
+	<img class="absolute -z-50 h-full w-full object-cover object-center opacity-20" [src]="$safeNavigationMigration(this.chat?.fotoCurso)" alt="curso" />
 	@if (this.chat === null) {
 		<h3>CARGANDO...</h3>
 	} @else {
@@ -33,7 +33,7 @@
 								@if (mex.pregunta && mex.idCurso && mex.idClase) {
 									<p class="text-gray-500">
 										Pregunta en el momento
-										<a [routerLink]="['/repro', loginService.usuario?.idUsuario, mex.idCurso, mex.idClase]" [queryParams]="{ momento: mex.pregunta }" class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700"> {{ Math.floor(mex.pregunta / 60) }}:{{ (mex.pregunta % 60).toString().padStart(2, '0') }} </a>
+										<a [routerLink]="['/repro', $safeNavigationMigration(loginService.usuario?.idUsuario), mex.idCurso, mex.idClase]" [queryParams]="{ momento: mex.pregunta }" class="text-blue-500 underline visited:text-purple-600 hover:text-blue-700"> {{ Math.floor(mex.pregunta / 60) }}:{{ (mex.pregunta % 60).toString().padStart(2, '0') }} </a>
 									</p>
 								}
 								<p>{{ mex.mensaje }}</p>

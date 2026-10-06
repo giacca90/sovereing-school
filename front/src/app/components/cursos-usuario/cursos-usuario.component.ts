@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CursosService } from '../../services/cursos.service';
 import { LoginService } from '../../services/login.service';
@@ -8,6 +8,7 @@ import { LoginService } from '../../services/login.service';
 	standalone: true,
 	imports: [],
 	templateUrl: './cursos-usuario.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './cursos-usuario.component.css',
 })
 export class CursosUsuarioComponent {

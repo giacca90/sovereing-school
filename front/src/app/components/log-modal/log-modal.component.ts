@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, PLATFORM_ID, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, PLATFORM_ID, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { Auth } from '../../models/Auth';
@@ -13,6 +13,7 @@ import { RegisterComponent } from './register/register.component';
 	standalone: true,
 	templateUrl: './log-modal.component.html',
 	styleUrl: './log-modal.component.css',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	imports: [LoginComponent, RegisterComponent],
 })
 // Ahora el padre captura los keydown y los pasa a los hijos

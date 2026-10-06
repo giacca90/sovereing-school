@@ -28,8 +28,8 @@
 				<button id="boton" class="ml-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="compraCurso(curso)">Compra este curso</button>
 			}
 		}
-		@if (compruebaPlan(this.loginService.usuario?.planUsuario)) {
-			<p class="ml-4 font-bold">Este curso es parte de tu plan {{ compruebaPlan(this.loginService.usuario?.planUsuario)?.nombrePlan }}</p>
+		@if (compruebaPlan($safeNavigationMigration(this.loginService.usuario?.planUsuario))) {
+			<p class="ml-4 font-bold">Este curso es parte de tu plan {{ compruebaPlan($safeNavigationMigration(this.loginService.usuario?.planUsuario))?.nombrePlan }}</p>
 		}
 		@if (!this.loginService.usuario) {
 			<p class="ml-4 font-bold">Para comprar este curso debes estar registrado!!</p>

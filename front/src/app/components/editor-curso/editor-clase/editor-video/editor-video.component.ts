@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
 
@@ -6,6 +6,7 @@ import { Clase } from '../../../../models/Clase';
 	selector: 'app-editor-video',
 	imports: [],
 	templateUrl: './editor-video.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './editor-video.component.css',
 })
 export class EditorVideoComponent implements AfterViewInit {

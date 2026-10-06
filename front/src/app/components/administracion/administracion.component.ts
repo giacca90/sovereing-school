@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, ChangeDetectionStrategy } from '@angular/core';
 import { Curso } from '../../models/Curso';
 import { CursoChat } from '../../models/CursoChat';
 import { Usuario } from '../../models/Usuario';
@@ -11,6 +11,7 @@ import { UsuariosService } from '../../services/usuarios.service';
 	selector: 'app-administracion',
 	imports: [],
 	templateUrl: './administracion.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './administracion.component.css',
 })
 export class AdministracionComponent {

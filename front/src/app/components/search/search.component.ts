@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, NgZone } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Curso } from '../../models/Curso';
 import { CursosService } from '../../services/cursos.service';
@@ -8,6 +8,7 @@ import { CursosService } from '../../services/cursos.service';
 	standalone: true,
 	imports: [],
 	templateUrl: './search.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './search.component.css',
 })
 

@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, HostListener, Inject, OnDestroy, PLATFORM_ID, Renderer2 } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, Inject, OnDestroy, PLATFORM_ID, Renderer2, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Curso } from '../../models/Curso';
@@ -14,6 +14,7 @@ import { CompraCursoComponent } from './compra-curso/compra-curso.component';
 	standalone: true,
 	imports: [CompraCursoComponent, CommonModule],
 	templateUrl: './curso.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './curso.component.css',
 })
 export class CursoComponent implements OnDestroy {

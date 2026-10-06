@@ -1,9 +1,10 @@
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, NgZone, OnDestroy, Output, Renderer2, SimpleChanges, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, Renderer2, SimpleChanges, ViewChild } from '@angular/core';
 
 @Component({
 	selector: 'app-editor-obs',
 	imports: [],
 	templateUrl: './editor-obs.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './editor-obs.component.css',
 })
 export class EditorObsComponent implements AfterViewInit, OnDestroy {
@@ -38,7 +39,6 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		private readonly cdr: ChangeDetectorRef,
 	) {
 		this.isBrowser = globalThis.window !== undefined;
-		console.log('¿EditorObsComponent está en la zona?:', NgZone.isInAngularZone());
 	}
 
 	/**
@@ -109,8 +109,6 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		}
 		const videojsModule = await import('video.js');
 		const videojs = videojsModule.default;
-		console.log('¿initVideoJS está en la zona?:', NgZone.isInAngularZone());
-		console.log('urlPreview:', this.urlPreview);
 
 		this.player = videojs(videoEl, {
 			aspectRatio: '16:9',
@@ -224,7 +222,6 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	async calculaTiempoGrabacion() {
 		let tiempo = -1;
 		const updateTimer = () => {
-			console.log('tiempo: ' + tiempo);
 			if (this.emitiendo) {
 				tiempo += 1;
 				this.tiempoGrabacion = this.formatTime(tiempo);

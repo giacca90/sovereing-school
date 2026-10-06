@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { NuevoUsuario } from '../../../models/NuevoUsuario';
@@ -11,6 +11,7 @@ import { RegisterService } from '../../../services/register.service';
 	standalone: true,
 	imports: [FormsModule],
 	templateUrl: './register.component.html',
+	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './register.component.css',
 })
 export class RegisterComponent implements OnInit, OnDestroy {
