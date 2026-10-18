@@ -1,14 +1,32 @@
 import { TestBed } from '@angular/core/testing';
-import { CanActivateFn } from '@angular/router';
+import { CanComponentDeactivate } from '../interfaces/can-component-deactivate';
+import { PendingChangesGuard } from './pending-changes.guard';
 
-describe('pendingChangesGuard', () => {
-	const executeGuard: CanActivateFn = (...guardParameters) => TestBed.runInInjectionContext(() => pendingChangesGuard(...guardParameters));
+describe('PendingChangesGuard', () => {
+	let guard: PendingChangesGuard;
 
 	beforeEach(() => {
-		TestBed.configureTestingModule({});
+		TestBed.configureTestingModule({
+			providers: [PendingChangesGuard],
+		});
+		guard = TestBed.inject(PendingChangesGuard);
 	});
 
 	it('should be created', () => {
-		expect(executeGuard).toBeTruthy();
+		expect(guard).toBeTruthy();
+	});
+
+	describe('canDeactivate', () => {
+		it('should return true if component.canDeactivate is not defined', () => {
+			const component = {} as CanComponentDeactivate;
+			expect(guard.canDeactivate(component)).toBeTrue();
+		});
+
+		it('should return the result of component.canDeactivate() if defined', () => {
+			const component: CanComponentDeactivate = {
+				canDeactivate: () => false,
+			};
+			expect(guard.canDeactivate(component)).toBeFalse();
+		});
 	});
 });

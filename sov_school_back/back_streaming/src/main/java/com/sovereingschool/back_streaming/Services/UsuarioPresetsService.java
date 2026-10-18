@@ -54,6 +54,15 @@ public class UsuarioPresetsService {
     }
 
     /**
+     * Función para eliminar los presets del usuario
+     * 
+     * @param idUsuario ID del usuario
+     */
+    public void deletePresetsForUser(Long idUsuario) {
+        this.presetRepository.deleteByIdUsuario(idUsuario);
+    }
+
+    /**
      * Función para obtener los presets del usuario
      * 
      * @param idUsuario ID del usuario
@@ -72,15 +81,6 @@ public class UsuarioPresetsService {
     public void savePresetsForUser(Long idUsuario, Map<String, Preset.PresetValue> presets) {
         this.deletePresetsForUser(idUsuario);
         this.presetRepository.save(new Preset(idUsuario, presets));
-    }
-
-    /**
-     * Función para eliminar los presets del usuario
-     * 
-     * @param idUsuario ID del usuario
-     */
-    public void deletePresetsForUser(Long idUsuario) {
-        this.presetRepository.deleteByIdUsuario(idUsuario);
     }
 
 }

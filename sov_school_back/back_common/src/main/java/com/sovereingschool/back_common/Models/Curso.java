@@ -20,13 +20,11 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-@AllArgsConstructor
 @NoArgsConstructor
 @Data
 @Builder
@@ -68,4 +66,19 @@ public class Curso implements Serializable {
 	private String imagenCurso;
 
 	private BigDecimal precioCurso;
+
+	public Curso(Long idCurso, String nombreCurso, List<Usuario> profesoresCurso, Date fechaPublicacionCurso,
+			List<Clase> clasesCurso, List<Plan> planesCurso, String descripcionCorta, String descripcionLarga,
+			String imagenCurso, BigDecimal precioCurso) {
+		this.idCurso = idCurso;
+		this.nombreCurso = nombreCurso;
+		this.profesoresCurso = profesoresCurso;
+		this.fechaPublicacionCurso = fechaPublicacionCurso;
+		this.clasesCurso = clasesCurso;
+		this.planesCurso = planesCurso;
+		this.descripcionCorta = descripcionCorta;
+		this.descripcionLarga = descripcionLarga;
+		this.imagenCurso = imagenCurso;
+		this.precioCurso = precioCurso;
+	}
 }

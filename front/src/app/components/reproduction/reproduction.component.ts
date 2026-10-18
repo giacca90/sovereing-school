@@ -1,9 +1,9 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
-import Player from 'video.js/dist/types/player';
+import type Player from 'video.js/dist/types/player';
 import { Clase } from '../../models/Clase';
 import { ClaseChat } from '../../models/ClaseChat';
 import { Curso } from '../../models/Curso';
@@ -120,17 +120,22 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	 * Carga los datos de la clase y el curso.
 	 */
 	loadData() {
-		this.cursoService.getCurso(this.idCurso).then((result) => {
-			this.curso = result;
-			if (this.curso?.clasesCurso) {
-				const result = this.curso.clasesCurso.find((clase) => clase.idClase == this.idClase);
-				if (result) {
-					this.clase = result;
-					this.getVideo();
+		return this.cursoService
+			.getCurso(this.idCurso)
+			.then((result) => {
+				this.curso = result;
+				if (this.curso?.clasesCurso) {
+					const result = this.curso.clasesCurso.find((clase) => clase.idClase == this.idClase);
+					if (result) {
+						this.clase = result;
+						this.getVideo();
+					}
 				}
-			}
-			this.cdr.detectChanges();
-		});
+				this.cdr.detectChanges();
+			})
+			.catch((error) => {
+				console.error('Error loading curso:', error);
+			});
 	}
 
 	ngAfterViewInit(): void {
@@ -438,10 +443,12 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	async esperarChatComponent(player: Player) {
-		// Si `chat` no está cargado, espera un segundo antes de continuar
-		while (!this.chatComponent.chat) {
-			await new Promise((resolve) => setTimeout(resolve, 300)); // Espera 0.3 segundos
+		let retries = 0;
+		while ((!this.chatComponent || !this.chatComponent.chat) && retries < 30) {
+			await new Promise((resolve) => setTimeout(resolve, 100)); // Espera 0.1 segundos
+			retries++;
 		}
+		if (!this.chatComponent?.chat) return;
 
 		// Ejecutar el código después de verificar que `chat` está definido
 		const claseChat: ClaseChat | undefined = this.chatComponent.chat?.clases.find((clase) => clase.idClase == this.idClase);

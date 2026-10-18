@@ -1,25 +1,138 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import { ActivatedRouteSnapshot, Router, RouterStateSnapshot } from '@angular/router';
+import { CursosService } from '../services/cursos.service';
 import { LoginService } from '../services/login.service';
 import { UserGuard } from './user.guard';
 
-describe('guestGuard', () => {
+describe('UserGuard', () => {
 	let guard: UserGuard;
 	let loginServiceSpy: jasmine.SpyObj<LoginService>;
+	let cursosServiceSpy: jasmine.SpyObj<CursosService>;
 	let routerSpy: jasmine.SpyObj<Router>;
 
 	beforeEach(() => {
 		loginServiceSpy = jasmine.createSpyObj('LoginService', ['usuario']);
+		cursosServiceSpy = jasmine.createSpyObj('CursosService', ['getCurso']);
 		routerSpy = jasmine.createSpyObj('Router', ['navigate']);
-
-		TestBed.configureTestingModule({
-			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
-		});
-		guard = TestBed.inject(UserGuard);
 	});
 
 	it('should be created', () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
 		expect(guard).toBeTruthy();
+	});
+
+	it('should return false when platform is server', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'server' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		const route = { params: { idCurso: '1' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(result).toBeFalse();
+	});
+
+	it('should navigate to root and return false when no user is logged in', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		(loginServiceSpy as any).usuario = null;
+
+		const route = { params: { idCurso: '1' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
+		expect(result).toBeFalse();
+	});
+
+	it('should return true when user is ADMIN or PROF', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		(loginServiceSpy as any).usuario = { rollUsuario: 'ADMIN' };
+
+		const route = { params: { idCurso: '1' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(result).toBeTrue();
+	});
+
+	it('should navigate to root and return false when curso is not found', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		(loginServiceSpy as any).usuario = { rollUsuario: 'USER', idUsuario: 1 };
+		cursosServiceSpy.getCurso.and.returnValue(Promise.resolve(null as any));
+
+		const route = { params: { idCurso: '123' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
+		expect(result).toBeFalse();
+	});
+
+	it('should return true when user has access to curso', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		(loginServiceSpy as any).usuario = { rollUsuario: 'USER', idUsuario: 1, cursosUsuario: [{ idCurso: 123 }] };
+		cursosServiceSpy.getCurso.and.returnValue(Promise.resolve({ idCurso: 123 } as any));
+
+		const route = { params: { idCurso: '123' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(result).toBeTrue();
+	});
+
+	it('should navigate to root and return false when user does not have access to curso', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		(loginServiceSpy as any).usuario = { rollUsuario: 'USER', idUsuario: 99 };
+		cursosServiceSpy.getCurso.and.returnValue(Promise.resolve({ usuariosCurso: [1, 2], profesoresCurso: [3] } as any));
+
+		const route = { params: { idCurso: '123' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
+		expect(result).toBeFalse();
+	});
+
+	it('should handle error when getCurso throws', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		(loginServiceSpy as any).usuario = { rollUsuario: 'USER', idUsuario: 1 };
+		cursosServiceSpy.getCurso.and.returnValue(Promise.reject('Error'));
+
+		const route = { params: { idCurso: '123' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(routerSpy.navigate).toHaveBeenCalledWith(['/']);
+		expect(result).toBeFalse();
+	});
+
+	it('should return true when user plan matches curso planes', async () => {
+		TestBed.configureTestingModule({
+			providers: [UserGuard, { provide: LoginService, useValue: loginServiceSpy }, { provide: CursosService, useValue: cursosServiceSpy }, { provide: Router, useValue: routerSpy }, { provide: PLATFORM_ID, useValue: 'browser' }],
+		});
+		guard = TestBed.inject(UserGuard);
+		(loginServiceSpy as any).usuario = { rollUsuario: 'USER', idUsuario: 1, planUsuario: { idPlan: 10 } };
+		cursosServiceSpy.getCurso.and.returnValue(Promise.resolve({ idCurso: 123, planesCurso: [10, 20] } as any));
+
+		const route = { params: { idCurso: '123' } } as unknown as ActivatedRouteSnapshot;
+		const state = {} as RouterStateSnapshot;
+		const result = await guard.canActivate(route, state);
+		expect(result).toBeTrue();
 	});
 });

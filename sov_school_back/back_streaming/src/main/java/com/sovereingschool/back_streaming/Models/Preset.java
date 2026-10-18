@@ -6,17 +6,24 @@ import java.util.Map;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.sovereingschool.back_streaming.Models.VideoElement.Filters;
+
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 @Document(collection = "presets")
 public class Preset {
+    @Data
+    public static class Position {
+        private int x;
+        private int y;
+    }
+
     @Data
     public static class PresetValue {
         private List<VideoElement> elements;
@@ -24,18 +31,16 @@ public class Preset {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class VideoElement {
         private String id;
         private Object element;
         private boolean painted;
         private double scale;
         private Position position;
-    }
-
-    @Data
-    public static class Position {
-        private int x;
-        private int y;
+        private int width;
+        private int height;
+        private Filters filters;
     }
 
     @Id
@@ -48,6 +53,12 @@ public class Preset {
     }
 
     public Preset(Long idUsuario, Map<String, PresetValue> presets) {
+        this.idUsuario = idUsuario;
+        this.presets = presets;
+    }
+
+    public Preset(String id, Long idUsuario, Map<String, PresetValue> presets) {
+        this.id = id;
         this.idUsuario = idUsuario;
         this.presets = presets;
     }

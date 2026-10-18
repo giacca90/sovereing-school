@@ -1,23 +1,252 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { ElementRef } from '@angular/core';
+import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
+import { Subject } from 'rxjs';
+import { LoginModalService } from '../../../services/login-modal.service';
+import { LoginService } from '../../../services/login.service';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent', () => {
-  let component: LoginComponent;
-  let fixture: ComponentFixture<LoginComponent>;
+	let component: LoginComponent;
+	let fixture: ComponentFixture<LoginComponent>;
+	let mockModalService: { hide: jasmine.Spy };
+	let mockLoginService: {
+		compruebaCorreo: jasmine.Spy;
+		compruebaPassword: jasmine.Spy;
+	};
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [LoginComponent]
-    })
-    .compileComponents();
-    
-    fixture = TestBed.createComponent(LoginComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
+	beforeEach(async () => {
+		mockModalService = {
+			hide: jasmine.createSpy('hide'),
+		};
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
+		mockLoginService = {
+			compruebaCorreo: jasmine.createSpy('compruebaCorreo').and.returnValue(Promise.resolve(true)),
+			compruebaPassword: jasmine.createSpy('compruebaPassword').and.returnValue(Promise.resolve(true)),
+		};
+
+		await TestBed.configureTestingModule({
+			imports: [LoginComponent],
+			providers: [
+				{ provide: LoginModalService, useValue: mockModalService },
+				{ provide: LoginService, useValue: mockLoginService },
+			],
+		}).compileComponents();
+
+		fixture = TestBed.createComponent(LoginComponent);
+		component = fixture.componentInstance;
+	});
+
+	it('should create the component', () => {
+		// Arrange & Act
+		fixture.detectChanges();
+
+		// Assert
+		expect(component).toBeTruthy();
+		expect(component.fase).toBe(0);
+		expect(component.correo).toBe('');
+		expect(component.password).toBe('');
+		expect(component.mensajeError).toBe('');
+	});
+
+	describe('ngOnInit y manejo de teclado', () => {
+		it('should subscribe to keyEvents and handle Enter key in fase 0', fakeAsync(() => {
+			// Arrange
+			const keyEventsSubject = new Subject<KeyboardEvent>();
+			component.keyEvents = keyEventsSubject;
+			spyOn(component, 'compruebaCorreo');
+			fixture.detectChanges();
+
+			// Act
+			keyEventsSubject.next(new KeyboardEvent('keydown', { key: 'Enter' }));
+			tick();
+
+			// Assert
+			expect(component.compruebaCorreo).toHaveBeenCalled();
+		}));
+
+		it('should handle Enter key in fase 1', fakeAsync(() => {
+			// Arrange
+			const keyEventsSubject = new Subject<KeyboardEvent>();
+			component.keyEvents = keyEventsSubject;
+			component.fase = 1;
+			spyOn(component, 'compruebaPassword');
+			fixture.detectChanges();
+
+			// Act
+			keyEventsSubject.next(new KeyboardEvent('keydown', { key: 'Enter' }));
+			tick();
+
+			// Assert
+			expect(component.compruebaPassword).toHaveBeenCalled();
+		}));
+
+		it('should close modal on Escape, Esc or Delete keys', fakeAsync(() => {
+			// Arrange
+			const keyEventsSubject = new Subject<KeyboardEvent>();
+			component.keyEvents = keyEventsSubject;
+			spyOn(component, 'close');
+			fixture.detectChanges();
+
+			// Act & Assert
+			keyEventsSubject.next(new KeyboardEvent('keydown', { key: 'Escape' }));
+			expect(component.close).toHaveBeenCalledTimes(1);
+
+			keyEventsSubject.next(new KeyboardEvent('keydown', { key: 'Esc' }));
+			expect(component.close).toHaveBeenCalledTimes(2);
+
+			keyEventsSubject.next(new KeyboardEvent('keydown', { key: 'Delete' }));
+			expect(component.close).toHaveBeenCalledTimes(3);
+		}));
+
+		it('should focus correoInput on initialization', fakeAsync(() => {
+			// Arrange
+			const inputEl = document.createElement('input');
+			spyOn(inputEl, 'focus');
+			component.correoInput = new ElementRef(inputEl);
+
+			// Act
+			component.ngOnInit();
+			tick();
+
+			// Assert
+			expect(inputEl.focus).toHaveBeenCalled();
+		}));
+	});
+
+	describe('close and ngOnDestroy', () => {
+		it('should unsubscribe and call modalService.hide', () => {
+			// Arrange
+			const keyEventsSubject = new Subject<KeyboardEvent>();
+			component.keyEvents = keyEventsSubject;
+			fixture.detectChanges();
+
+			// Act
+			component.close();
+
+			// Assert
+			expect(mockModalService.hide).toHaveBeenCalled();
+		});
+
+		it('should safely unsubscribe on ngOnDestroy', () => {
+			// Arrange
+			const keyEventsSubject = new Subject<KeyboardEvent>();
+			component.keyEvents = keyEventsSubject;
+			fixture.detectChanges();
+
+			// Act & Assert
+			expect(() => component.ngOnDestroy()).not.toThrow();
+		});
+	});
+
+	describe('compruebaEmail', () => {
+		it('should return true for valid emails', () => {
+			// Arrange & Act & Assert
+			expect(component.compruebaEmail('user@example.com')).toBeTrue();
+			expect(component.compruebaEmail('name.surname@domain.co.uk')).toBeTrue();
+		});
+
+		it('should return false for invalid emails', () => {
+			// Arrange & Act & Assert
+			expect(component.compruebaEmail('plainaddress')).toBeFalse();
+			expect(component.compruebaEmail('user@domain')).toBeFalse();
+			expect(component.compruebaEmail('@domain.com')).toBeFalse();
+			expect(component.compruebaEmail('')).toBeFalse();
+		});
+	});
+
+	describe('compruebaCorreo', () => {
+		it('should set error message if email is empty', async () => {
+			// Arrange
+			component.correo = '';
+
+			// Act
+			await component.compruebaCorreo();
+
+			// Assert
+			expect(component.mensajeError).toBe('El correo electrónico no puede estar vació!!!');
+			expect(mockLoginService.compruebaCorreo).not.toHaveBeenCalled();
+		});
+
+		it('should set error message if email format is invalid', async () => {
+			// Arrange
+			component.correo = 'invalid-email-address';
+
+			// Act
+			await component.compruebaCorreo();
+
+			// Assert
+			expect(component.mensajeError).toBe('El correo electrónico no tiene un formato valido!!!');
+			expect(mockLoginService.compruebaCorreo).not.toHaveBeenCalled();
+		});
+
+		it('should transition to fase 1 and focus password input if email is verified', fakeAsync(() => {
+			// Arrange
+			component.correo = 'valid@example.com';
+			mockLoginService.compruebaCorreo.and.returnValue(Promise.resolve(true));
+			fixture.detectChanges();
+			const focusSpy = spyOn(HTMLInputElement.prototype, 'focus');
+
+			// Act
+			component.compruebaCorreo();
+			flush();
+
+			// Assert
+			expect(component.fase).toBe(1);
+			expect(component.mensajeError).toBe('');
+			expect(focusSpy).toHaveBeenCalled();
+		}));
+
+		it('should set error message if email is not registered', async () => {
+			// Arrange
+			component.correo = 'unregistered@example.com';
+			mockLoginService.compruebaCorreo.and.returnValue(Promise.resolve(false));
+
+			// Act
+			await component.compruebaCorreo();
+
+			// Assert
+			expect(component.fase).toBe(0);
+			expect(component.mensajeError).toBe('Este correo no está registrado!!!');
+		});
+	});
+
+	describe('compruebaPassword', () => {
+		it('should set error message if password is empty', async () => {
+			// Arrange
+			component.password = '';
+
+			// Act
+			await component.compruebaPassword();
+
+			// Assert
+			expect(component.mensajeError).toBe('La contraseña no puede estar vacía!!!');
+			expect(mockLoginService.compruebaPassword).not.toHaveBeenCalled();
+		});
+
+		it('should close modal when password is correct', async () => {
+			// Arrange
+			component.password = 'correct-password';
+			mockLoginService.compruebaPassword.and.returnValue(Promise.resolve(true));
+			spyOn(component, 'close');
+
+			// Act
+			await component.compruebaPassword();
+
+			// Assert
+			expect(component.close).toHaveBeenCalled();
+			expect(component.mensajeError).toBe('');
+		});
+
+		it('should set error message when password is incorrect', async () => {
+			// Arrange
+			component.password = 'wrong-password';
+			mockLoginService.compruebaPassword.and.returnValue(Promise.resolve(false));
+
+			// Act
+			await component.compruebaPassword();
+
+			// Assert
+			expect(component.mensajeError).toBe('La contraseña es incorrecta!!!');
+		});
+	});
 });

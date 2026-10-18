@@ -10,14 +10,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import com.sovereingschool.back_common.Models.RoleEnum;
 
 import jakarta.persistence.Id;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 @Document(collection = "user_courses")
 @CompoundIndex(name = "user_courses_idx", def = "{'idUsuario': 1}", unique = true)
@@ -34,4 +32,11 @@ public class UsuarioCursos implements Serializable {
 
     /** Lista de StatusCurso */
     private List<StatusCurso> cursos;
+
+    public UsuarioCursos(String id, Long idUsuario, RoleEnum rolUsuario, List<StatusCurso> cursos) {
+        this.id = id;
+        this.idUsuario = idUsuario;
+        this.rolUsuario = rolUsuario;
+        this.cursos = cursos;
+    }
 }

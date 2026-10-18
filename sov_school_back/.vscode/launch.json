@@ -8,6 +8,7 @@
 			"mainClass": "com.sovereingschool.back_base.BackApplication",
 			"projectName": "back_base",
 			"args": "",
+			"vmArgs": "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC",
 			"envFile": "${workspaceFolder}/.env"
 		},
 		{
@@ -18,6 +19,7 @@
 			"mainClass": "com.sovereingschool.back_chat.BackChatApplication",
 			"projectName": "back_chat",
 			"args": "",
+			"vmArgs": "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC",
 			"envFile": "${workspaceFolder}/.env"
 		},
 		{
@@ -28,6 +30,7 @@
 			"mainClass": "com.sovereingschool.back_streaming.BackStreamingApplication",
 			"projectName": "back_streaming",
 			"args": "",
+			"vmArgs": "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC",
 			"envFile": "${workspaceFolder}/.env"
 		}
 	]

@@ -9,13 +9,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "login")
 public class Login implements Serializable {
@@ -34,4 +32,11 @@ public class Login implements Serializable {
 
     @Column(name = "password", nullable = false)
     private String password;
+
+    public Login(Long idUsuario, Usuario usuario, String correoElectronico, String password) {
+        this.idUsuario = idUsuario;
+        this.usuario = usuario;
+        this.correoElectronico = correoElectronico;
+        this.password = password;
+    }
 }

@@ -365,7 +365,13 @@ export class StreamingService {
 		if (!this.ws) return;
 
 		this.ws.onmessage = (event) => {
-			const data = JSON.parse(event.data);
+			let data: any;
+			try {
+				data = JSON.parse(event.data);
+			} catch (e) {
+				console.error('Error parseando JSON (OBS):', e);
+				return;
+			}
 			console.log('📩 Mensaje recibido (OBS):', data);
 			console.log('¿streamingService está en la zona?:', NgZone.isInAngularZone());
 			try {
@@ -453,7 +459,13 @@ export class StreamingService {
 	private setupWebSocketHandlersWebOBS(resolve: (v: string) => void, reject: (e: Error) => void) {
 		if (!this.ws) return;
 		this.ws.onmessage = async (event) => {
-			const data = JSON.parse(event.data);
+			let data: any;
+			try {
+				data = JSON.parse(event.data);
+			} catch (e) {
+				console.error('Error parseando JSON (WebOBS):', e);
+				return;
+			}
 			console.log('📩 Mensaje recibido:', data);
 			try {
 				switch (data.type) {
@@ -478,8 +490,6 @@ export class StreamingService {
 
 					// 🔹 Stream ID confirmado
 					case 'streamId':
-						console.log('✅ StreamId recibido:', data.streamId);
-						console.log('¿App root está en la zona?:', NgZone.isInAngularZone());
 						this.streamId = data.streamId;
 						this.status = 'Todo listo!!';
 						resolve(data.streamId as string);

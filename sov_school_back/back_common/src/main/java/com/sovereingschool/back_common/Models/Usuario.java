@@ -19,7 +19,6 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -29,7 +28,6 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 @Entity
 @Table(name = "usuario")
@@ -76,4 +74,21 @@ public class Usuario implements Serializable {
 
     @Column(name = "credentials_no_expired")
     private Boolean credentialsNoExpired;
+
+    public Usuario(Long idUsuario, String nombreUsuario, List<String> fotoUsuario, String presentacion,
+            RoleEnum rollUsuario, Plan planUsuario, List<Curso> cursosUsuario, Date fechaRegistroUsuario,
+            Boolean isEnabled, Boolean accountNoExpired, Boolean accountNoLocked, Boolean credentialsNoExpired) {
+        this.idUsuario = idUsuario;
+        this.nombreUsuario = nombreUsuario;
+        this.fotoUsuario = fotoUsuario;
+        this.presentacion = presentacion;
+        this.rollUsuario = rollUsuario;
+        this.planUsuario = planUsuario;
+        this.cursosUsuario = cursosUsuario;
+        this.fechaRegistroUsuario = fechaRegistroUsuario;
+        this.isEnabled = isEnabled;
+        this.accountNoExpired = accountNoExpired;
+        this.accountNoLocked = accountNoLocked;
+        this.credentialsNoExpired = credentialsNoExpired;
+    }
 }

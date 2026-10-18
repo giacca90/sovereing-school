@@ -262,7 +262,9 @@ export class EditorClaseComponent implements OnInit, AfterViewInit, OnDestroy {
 						this.streamingService.getPresets().subscribe({
 							next: (res) => {
 								try {
-									this.savedPresets = new Map(Object.entries(res));
+									if (res) {
+										this.savedPresets = new Map(Object.entries(res));
+									}
 								} catch (error) {
 									console.error('Error al procesar presets:', error);
 									this.savedPresets = new Map();

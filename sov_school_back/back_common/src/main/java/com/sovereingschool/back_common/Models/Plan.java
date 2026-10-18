@@ -14,14 +14,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Builder
 @Entity
 @Table(name = "plan")
@@ -41,4 +39,11 @@ public class Plan implements Serializable {
     @ManyToMany(mappedBy = "planesCurso", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Curso> cursosPlan;
+
+    public Plan(Long idPlan, String nombrePlan, BigDecimal precioPlan, List<Curso> cursosPlan) {
+        this.idPlan = idPlan;
+        this.nombrePlan = nombrePlan;
+        this.precioPlan = precioPlan;
+        this.cursosPlan = cursosPlan;
+    }
 }

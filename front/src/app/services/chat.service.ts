@@ -144,11 +144,12 @@ export class ChatService {
 						this.loginService.logout();
 					},
 				});
-			}
-			const init: InitChatUsuario = JSON.parse(response.body) as InitChatUsuario;
+			} else {
+				const init: InitChatUsuario = JSON.parse(response.body) as InitChatUsuario;
 
-			// Emitir el valor recibido a través del subject
-			this.initSubject.next(init);
+				// Emitir el valor recibido a través del subject
+				this.initSubject.next(init);
+			}
 		});
 
 		// Publicar el mensaje al backend

@@ -3,14 +3,10 @@ package com.sovereingschool.back_streaming.Models;
 import java.util.HashSet;
 import java.util.Set;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class StatusClase {
 
@@ -31,6 +27,19 @@ public class StatusClase {
      */
     @Builder.Default
     private Set<Integer> progress = new HashSet<>();
+
+    public StatusClase() {
+        this.completed = false;
+        this.totalSegments = 0;
+        this.progress = new HashSet<>();
+    }
+
+    public StatusClase(Long idClase, boolean completed, int totalSegments, Set<Integer> progress) {
+        this.idClase = idClase;
+        this.completed = completed;
+        this.totalSegments = totalSegments;
+        this.progress = progress;
+    }
 
     /**
      * Método de conveniencia para obtener el progreso real en porcentaje.

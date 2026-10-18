@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { Curso } from '../../models/Curso';
 import { CursoChat } from '../../models/CursoChat';
 import { Usuario } from '../../models/Usuario';
@@ -15,20 +15,20 @@ import { UsuariosService } from '../../services/usuarios.service';
 	styleUrl: './administracion.component.css',
 })
 export class AdministracionComponent {
-	tipo: number = 0; // 0: Vacío  1: Usuarios  2: Cursos  3: Chats
+	tipo = signal(0);
 	usuarios: Usuario[] = [];
-	usuariosSel: Usuario[] = [];
+	usuariosSel = signal<Usuario[]>([]);
 
 	cursos: Curso[] = [];
-	cursosSel: Curso[] = [];
+	cursosSel = signal<Curso[]>([]);
 
 	chats: CursoChat[] = [];
-	chatsSel: CursoChat[] = [];
+	chatsSel = signal<CursoChat[]>([]);
 
-	usuarioVisible: number | null = null;
-	cursoVisible: number | null = null;
-	chatVisible: number | null = null;
-	claseChatVisible: number | null = null;
+	usuarioVisible = signal<number | null>(null);
+	cursoVisible = signal<number | null>(null);
+	chatVisible = signal<number | null>(null);
+	claseChatVisible = signal<number | null>(null);
 
 	/**
 	 * Constructor del componente.
@@ -41,8 +41,6 @@ export class AdministracionComponent {
 		private readonly usuariosService: UsuariosService,
 		public cursosService: CursosService,
 		private readonly chatsService: ChatService,
-		private readonly initService: InitService,
-		private cdr: ChangeDetectorRef,
 	) {}
 
 	/**
@@ -53,12 +51,11 @@ export class AdministracionComponent {
 			this.usuariosService.getAllUsuarios().subscribe((data: Usuario[] | null) => {
 				if (data) {
 					this.usuarios = data;
-					this.usuariosSel = data;
-					this.cdr.detectChanges();
+					this.usuariosSel.set(data);
 				}
 			});
 		}
-		this.tipo = 1;
+		this.tipo.set(1);
 	}
 
 	/**
@@ -69,12 +66,11 @@ export class AdministracionComponent {
 			this.cursosService.getAllCursos().subscribe((data: Curso[] | null) => {
 				if (data) {
 					this.cursos = data;
-					this.cursosSel = data;
-					this.cdr.detectChanges();
+					this.cursosSel.set(data);
 				}
 			});
 		}
-		this.tipo = 2;
+		this.tipo.set(2);
 	}
 
 	/**
@@ -85,12 +81,11 @@ export class AdministracionComponent {
 			this.chatsService.getAllChats().subscribe((data: CursoChat[] | null) => {
 				if (data) {
 					this.chats = data;
-					this.chatsSel = data;
-					this.cdr.detectChanges();
+					this.chatsSel.set(data);
 				}
 			});
 		}
-		this.tipo = 3;
+		this.tipo.set(3);
 	}
 
 	/**
@@ -100,11 +95,10 @@ export class AdministracionComponent {
 	buscaUsuarios($event: Event) {
 		const value: string = ($event.target as HTMLInputElement).value;
 		if (value.length === 0) {
-			this.usuariosSel = this.usuarios;
+			this.usuariosSel.set(this.usuarios);
 		} else {
-			this.usuariosSel = this.usuarios.filter((u) => u.nombreUsuario.toLowerCase().includes(value.toLowerCase()) || u.rollUsuario?.toLowerCase().includes(value.toLowerCase()) || u.idUsuario.toString().includes(value));
+			this.usuariosSel.set(this.usuarios.filter((u) => u.nombreUsuario.toLowerCase().includes(value.toLowerCase()) || u.rollUsuario?.toLowerCase().includes(value.toLowerCase()) || u.idUsuario.toString().includes(value)));
 		}
-		this.cdr.detectChanges();
 	}
 
 	/**
@@ -114,11 +108,10 @@ export class AdministracionComponent {
 	buscaCursos($event: Event) {
 		const value: string = ($event.target as HTMLInputElement).value;
 		if (value.length === 0) {
-			this.cursosSel = this.cursos;
+			this.cursosSel.set(this.cursos);
 		} else {
-			this.cursosSel = this.cursos.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.profesoresCurso.toString().toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value));
+			this.cursosSel.set(this.cursos.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.profesoresCurso.toString().toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value)));
 		}
-		this.cdr.detectChanges();
 	}
 
 	/**
@@ -128,11 +121,10 @@ export class AdministracionComponent {
 	buscaChats($event: Event) {
 		const value: string = ($event.target as HTMLInputElement).value;
 		if (value.length === 0) {
-			this.chatsSel = this.chats;
+			this.chatsSel.set(this.chats);
 		} else {
-			this.chatsSel = this.chats.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value));
+			this.chatsSel.set(this.chats.filter((c) => c.nombreCurso.toLowerCase().includes(value.toLowerCase()) || c.idCurso.toString().includes(value)));
 		}
-		this.cdr.detectChanges();
 	}
 
 	/**
@@ -148,11 +140,10 @@ export class AdministracionComponent {
 				this.usuariosService.getAllUsuarios().subscribe((data: Usuario[] | null) => {
 					if (data) {
 						this.usuarios = data;
-						this.usuariosSel = data;
+						this.usuariosSel.set(data);
 					}
 				});
 			}
-			this.cdr.detectChanges();
 		});
 	}
 
@@ -169,11 +160,10 @@ export class AdministracionComponent {
 				this.cursosService.getAllCursos().subscribe((data: Curso[] | null) => {
 					if (data) {
 						this.cursos = data;
-						this.cursosSel = data;
+						this.cursosSel.set(data);
 					}
 				});
 			}
-			this.cdr.detectChanges();
 		});
 	}
 
@@ -190,11 +180,10 @@ export class AdministracionComponent {
 				this.chatsService.getAllChats().subscribe((data: CursoChat[] | null) => {
 					if (data) {
 						this.chats = data;
-						this.chatsSel = data;
+						this.chatsSel.set(data);
 					}
 				});
 			}
-			this.cdr.detectChanges();
 		});
 	}
 
@@ -203,7 +192,7 @@ export class AdministracionComponent {
 	 * @param {number} idUsuario - ID del usuario.
 	 */
 	mostrarUsuario(idUsuario: number) {
-		this.usuarioVisible = this.usuarioVisible === idUsuario ? null : idUsuario;
+		this.usuarioVisible.update((v) => (v === idUsuario ? null : idUsuario));
 	}
 
 	/**
@@ -211,7 +200,7 @@ export class AdministracionComponent {
 	 * @param {number} idCurso - ID del curso.
 	 */
 	mostrarCurso(idCurso: number) {
-		this.cursoVisible = this.cursoVisible === idCurso ? null : idCurso;
+		this.cursoVisible.update((v) => (v === idCurso ? null : idCurso));
 	}
 
 	/**
@@ -219,7 +208,7 @@ export class AdministracionComponent {
 	 * @param {number} idCurso - ID del curso del chat.
 	 */
 	mostrarChat(idCurso: number) {
-		this.chatVisible = this.chatVisible === idCurso ? null : idCurso;
+		this.chatVisible.update((v) => (v === idCurso ? null : idCurso));
 	}
 
 	/**
@@ -227,7 +216,7 @@ export class AdministracionComponent {
 	 * @param {number} idClase - ID de la clase.
 	 */
 	mostrarClaseChat(idClase: number) {
-		this.claseChatVisible = this.claseChatVisible === idClase ? null : idClase;
+		this.claseChatVisible.update((v) => (v === idClase ? null : idClase));
 	}
 
 	/**

@@ -5,6 +5,13 @@ import lombok.Data;
 @Data
 public class VideoElement {
     @Data
+    public static class Filters {
+        private double contrast;
+        private double saturation;
+        private double brightness;
+    }
+
+    @Data
     public static class Position {
         private double x;
         private double y;
@@ -15,4 +22,5 @@ public class VideoElement {
     private boolean painted;
     private double scale;
     private Position position;
+    private Filters filters;
 }

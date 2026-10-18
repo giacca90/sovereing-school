@@ -75,6 +75,12 @@ services:
         container_name: sovschool-back-base
         env_file:
             - .env.back_base
+        environment:
+            - JAVA_OPTS=-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC
+        deploy:
+            resources:
+                limits:
+                    memory: 350M # Tope estricto de RAM para el contenedor (JVM + Sistema operativo del contenedor)
         ports:
             - "${BACK_BASE_PORT}:8080"
         expose:
@@ -97,6 +103,13 @@ services:
         container_name: sovschool-back-chat
         env_file:
             - .env.back_chat
+        environment:
+            - JAVA_OPTS=-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC
+        deploy:
+            resources:
+                limits:
+                    memory: 350M # Tope estricto de RAM para el contenedor (JVM + Sistema operativo del contenedor)
+
         ports:
             - "${BACK_CHAT_PORT}:8070"
         expose:
@@ -117,6 +130,11 @@ services:
         container_name: sovschool-back-stream
         env_file:
             - .env.back_stream
+        deploy:
+            resources:
+                limits:
+                    memory: 350M # Tope estricto de RAM para el contenedor (JVM + Sistema operativo del contenedor)
+
         ports:
             - "${BACK_STREAM_PORT}:8090"
         expose:
@@ -129,6 +147,7 @@ services:
             - /dev/dri:/dev/dri
             - /tmp/.X11-unix:/tmp/.X11-unix # Monta el socket de X11 del host
         environment:
+            - JAVA_OPTS=-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC
             - DISPLAY=${DISPLAY} # Pasa el display del host al contenedor
         privileged: true # Asegura acceso completo a la GPU
         depends_on:

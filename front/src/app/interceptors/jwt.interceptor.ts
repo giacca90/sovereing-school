@@ -25,7 +25,7 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
 	if (isPlatformServer(platformId)) {
 		// 🖥️ En SSR → usar siempre las credenciales fijas codificadas
-		const credentials = Buffer.from('Visitante:visitante').toString('base64');
+		const credentials = typeof Buffer !== 'undefined' ? Buffer.from('Visitante:visitante').toString('base64') : btoa('Visitante:visitante');
 		req = req.clone({
 			setHeaders: {
 				Authorization: `Basic ${credentials}`,
