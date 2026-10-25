@@ -1,5 +1,5 @@
-import { ElementRef, QueryList } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ElementRef, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { CursoChat } from '../../../models/CursoChat';
@@ -75,6 +75,7 @@ describe('ChatComponent', () => {
 		}).compileComponents();
 
 		const f2 = TestBed.createComponent(ChatComponent);
+		f2.componentRef.setInput('idCurso', 5);
 		f2.detectChanges();
 
 		expect(console.error).toHaveBeenCalledWith('Error en recibir el chat: Chat error');
@@ -102,34 +103,33 @@ describe('ChatComponent', () => {
 		const f3 = TestBed.createComponent(ChatComponent);
 		f3.detectChanges();
 
-		expect(console.error).toHaveBeenCalledWith('El curso es nulo');
+		expect(console.error).toHaveBeenCalledWith('El curso es nulo o inválido');
 	});
 
 	it('should call ngOnDestroy and clean up', () => {
 		component.ngOnDestroy();
-		expect(component.idCurso).toBeNull();
-		expect(component.chat).toBeNull();
-		expect(component.respuesta).toBeNull();
+		expect(component.idCurso()).toBeNull();
+		expect(component.chat()).toBeNull();
+		expect(component.respuesta()).toBeNull();
 	});
 
 	it('should toggle abreChatClase', () => {
-		expect(component.claseAbiertaId).toBeNull();
+		expect(component.claseAbiertaId()).toBeNull();
 		component.abreChatClase(10);
-		expect(component.claseAbiertaId).toBe(10);
+		expect(component.claseAbiertaId()).toBe(10);
 		component.abreChatClase(10);
-		expect(component.claseAbiertaId).toBeNull();
+		expect(component.claseAbiertaId()).toBeNull();
 	});
 
 	it('should create pregunta and set placeholder', () => {
 		const mockInput = document.createElement('input');
 		mockInput.id = 'mexc-10';
-		component.mexcInputs = new QueryList<ElementRef<HTMLInputElement>>();
-		component.mexcInputs.reset([new ElementRef(mockInput)]);
+		(component as any).mexcInputs = signal([new ElementRef(mockInput)]);
 
 		component.creaPregunta(10, 95);
 
-		expect(component.pregunta).toEqual({ minute: 1, second: 35 });
-		expect(component.claseAbiertaId).toBe(10);
+		expect(component.pregunta()).toEqual({ minute: 1, second: 35 });
+		expect(component.claseAbiertaId()).toBe(10);
 		expect(mockInput.placeholder).toBe('Haz una pregunta en 1:35');
 	});
 
@@ -137,12 +137,11 @@ describe('ChatComponent', () => {
 		const mockInput = document.createElement('input');
 		mockInput.id = 'mexc-10';
 		mockInput.placeholder = 'Algo';
-		component.mexcInputs = new QueryList<ElementRef<HTMLInputElement>>();
-		component.mexcInputs.reset([new ElementRef(mockInput)]);
+		(component as any).mexcInputs = signal([new ElementRef(mockInput)]);
 
 		component.cierraPregunta(10);
 
-		expect(component.pregunta).toBeNull();
+		expect(component.pregunta()).toBeNull();
 		expect(mockInput.placeholder).toBe('Escribe tu mensaje en la clase...');
 	});
 
@@ -155,40 +154,39 @@ describe('ChatComponent', () => {
 	});
 
 	it('should send message for top level chat', () => {
-		component.idCurso = 5;
+		fixture.componentRef.setInput('idCurso', 5);
 		const mockInput = document.createElement('input');
 		mockInput.value = 'Hola mundo';
-		component.mexInput = new ElementRef(mockInput);
-		component.respuesta = { idMensaje: 'r1' } as MensajeChat;
+		(component as any).mexInput = signal(new ElementRef(mockInput));
+		component.respuesta.set({ idMensaje: 'r1' } as MensajeChat);
 
 		component.enviarMensaje();
 
 		expect(chatServiceSpy.enviarMensaje).toHaveBeenCalledWith(5, 0, 'Hola mundo', 'r1', null);
 		expect(mockInput.value).toBe('');
-		expect(component.respuesta).toBeNull();
+		expect(component.respuesta()).toBeNull();
 	});
 
 	it('should send message for class chat', () => {
-		component.idCurso = 5;
+		fixture.componentRef.setInput('idCurso', 5);
 		const mockInput = document.createElement('input');
 		mockInput.id = 'mexc-10';
 		mockInput.value = 'Hola clase';
-		component.mexcInputs = new QueryList<ElementRef<HTMLInputElement>>();
-		component.mexcInputs.reset([new ElementRef(mockInput)]);
-		component.respuestaClase = { idMensaje: 'rc1' } as MensajeChat;
+		(component as any).mexcInputs = signal([new ElementRef(mockInput)]);
+		component.respuestaClase.set({ idMensaje: 'rc1' } as MensajeChat);
 
 		component.enviarMensaje(10);
 
 		expect(chatServiceSpy.enviarMensaje).toHaveBeenCalledWith(5, 10, 'Hola clase', 'rc1', null);
 		expect(mockInput.value).toBe('');
-		expect(component.respuestaClase).toBeNull();
+		expect(component.respuestaClase()).toBeNull();
 	});
 
 	it('should log error if sending message with null idCurso', () => {
-		component.idCurso = null;
+		fixture.componentRef.setInput('idCurso', null);
 		spyOn(console, 'error');
 		component.enviarMensaje();
-		expect(console.error).toHaveBeenCalledWith('El curso es null');
+		expect(console.error).toHaveBeenCalledWith('El curso es null o inválido');
 	});
 
 	it('should scrollToMessage in top level messages', () => {
@@ -196,47 +194,45 @@ describe('ChatComponent', () => {
 		mockEl.id = 'mex-m1';
 		spyOn(mockEl, 'scrollIntoView');
 		spyOn(mockEl, 'focus');
-		component.mexElements = new QueryList<ElementRef>();
-		component.mexElements.reset([new ElementRef(mockEl)]);
+		(component as any).mexElements = signal([new ElementRef(mockEl)]);
 
 		component.scrollToMessage('m1');
 		expect(mockEl.scrollIntoView).toHaveBeenCalled();
 		expect(mockEl.focus).toHaveBeenCalled();
 	});
 
-	it('should scrollToMessage in class messages by opening class chat', fakeAsync(() => {
+	it('should scrollToMessage in class messages by opening class chat', async () => {
 		const mockEl = document.createElement('div');
 		mockEl.id = 'mex-m2';
 		spyOn(mockEl, 'scrollIntoView');
 		spyOn(mockEl, 'focus');
-		component.mexElements = new QueryList<ElementRef>();
-		component.mexElements.reset([]);
+		(component as any).mexElements = signal([]);
 
-		component.chat = {
+		component.chat.set({
 			idCurso: 5,
 			clases: [{ idClase: 10, mensajes: [{ idMensaje: 'm2' }] }],
 			mensajes: [],
-		} as any;
+		} as any);
 
 		component.scrollToMessage('m2');
-		component.mexElements.reset([new ElementRef(mockEl)]);
-		tick(150);
+		(component as any).mexElements = signal([new ElementRef(mockEl)]);
+		await new Promise((resolve) => setTimeout(resolve, 150));
 
-		expect(component.claseAbiertaId).toBe(10);
+		expect(component.claseAbiertaId()).toBe(10);
 		expect(mockEl.scrollIntoView).toHaveBeenCalled();
 		expect(mockEl.focus).toHaveBeenCalled();
-	}));
+	});
 
 	it('should send message with reply (respuesta) for top level chat', () => {
-		component.idCurso = 5;
+		fixture.componentRef.setInput('idCurso', 5);
 		const mockInput = document.createElement('input');
 		mockInput.value = 'Respuesta hilo';
-		component.mexInput = new ElementRef(mockInput);
-		component.respuesta = { idMensaje: 'parent1' } as MensajeChat;
+		(component as any).mexInput = signal(new ElementRef(mockInput));
+		component.respuesta.set({ idMensaje: 'parent1' } as MensajeChat);
 
 		component.enviarMensaje();
 
 		expect(chatServiceSpy.enviarMensaje).toHaveBeenCalledWith(5, 0, 'Respuesta hilo', 'parent1', null);
-		expect(component.respuesta).toBeNull();
+		expect(component.respuesta()).toBeNull();
 	});
 });

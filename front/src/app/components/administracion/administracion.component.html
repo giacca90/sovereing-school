@@ -1,14 +1,14 @@
 <div class="flex w-full cursor-default flex-col">
 	<h3 class="w-full text-center font-bold text-green-700">ADMINISTRACIÓN</h3>
 	<div class="flex">
-		<button [class.text-green-700]="tipo.set(1)" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaUsuarios()">Usuarios</button>
-		<button [class.text-green-700]="tipo.set(2)" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaCursos()">Cursos</button>
-		<button [class.text-green-700]="tipo.set(3)" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="cargaChats()">Chats</button>
+		<button [class.text-green-700]="tipo() === 1" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="tipo.set(1); cargaUsuarios()">Usuarios</button>
+		<button [class.text-green-700]="tipo() === 2" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="tipo.set(2); cargaCursos()">Cursos</button>
+		<button [class.text-green-700]="tipo() === 3" class="m-2 cursor-pointer rounded-lg border border-black p-2 dark:border-gray-400" (click)="tipo.set(3); cargaChats()">Chats</button>
 	</div>
 	<div class="flex flex-col">
 		@if (this.tipo() === 1) {
 			<input id="buscadorUsuarios" placeholder="Busca usuario" class="m-2 w-[99%] rounded-lg border border-black p-2 dark:border-gray-400" (input)="buscaUsuarios($event)" type="text" />
-			@for (usr of this.usuariosSel(); track $index) {
+			@for (usr of this.usuariosSel(); track usr.idUsuario) {
 				<div (click)="mostrarUsuario(usr.idUsuario)" (keydown.enter)="mostrarUsuario(usr.idUsuario)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
 					<p>{{ usr.idUsuario }}</p>
 					<div class="ml-4 h-8 w-8">
@@ -33,7 +33,7 @@
 								<p class="m-2">Nombre: {{ usr.nombreUsuario }}</p>
 								<p class="m-2">Rol: {{ usr.rollUsuario }}</p>
 								<div class="flex">
-									@for (foto of usr.fotoUsuario; track $index) {
+									@for (foto of usr.fotoUsuario; track foto) {
 										<div class="h-auto w-1/2 border border-black dark:border-gray-400">
 											<img [src]="foto" class="h-full w-full" alt="" />
 										</div>
@@ -43,7 +43,7 @@
 							<div class="m-2 flex w-1/2 flex-col rounded border border-black p-2 dark:border-gray-400">
 								@if (usr.rollUsuario === 'USER') {
 									<p>Cursos:</p>
-									@for (curso of usr.cursosUsuario; track $index) {
+									@for (curso of usr.cursosUsuario; track curso.idCurso) {
 										<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
 											<p class="m-2">{{ curso.idCurso }}</p>
 											<p class="m-2">{{ curso.nombreCurso }}</p>
@@ -51,7 +51,7 @@
 									}
 								} @else {
 									<p>Cursos creados:</p>
-									@for (curso of this.cursosService.getCursosProfe(usr); track $index) {
+									@for (curso of this.cursosService.getCursosProfe(usr); track curso.idCurso) {
 										<div class="m-2 flex rounded-lg border border-black p-2 dark:border-gray-400">
 											<p class="m-2">{{ curso.idCurso }}</p>
 											<p class="m-2">{{ curso.nombreCurso }}</p>
@@ -66,7 +66,7 @@
 		}
 		@if (this.tipo() === 2) {
 			<input id="buscadorCursos" placeholder="Busca curso" class="m-2 w-[99%] rounded-lg border border-black p-2 dark:border-gray-400" (input)="buscaCursos($event)" type="text" />
-			@for (curs of this.cursosSel(); track $index) {
+			@for (curs of this.cursosSel(); track curs.idCurso) {
 				<div (click)="mostrarCurso(curs.idCurso)" (keydown.enter)="mostrarCurso(curs.idCurso)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
 					<p>{{ curs.idCurso }}</p>
 					<div class="ml-4 h-8 w-8">
@@ -75,7 +75,7 @@
 					<div class="flex grow items-center text-center">
 						<p class="m-2">{{ curs.nombreCurso }}</p>
 						<p class="m-2">Profes:</p>
-						@for (prof of curs.profesoresCurso; track $index) {
+						@for (prof of curs.profesoresCurso; track prof) {
 							<p class="m-2">{{ getProfessorName(prof) }}</p>
 						}
 						<p class="m-2">Clases: {{ curs.clasesCurso?.length }}</p>
@@ -86,13 +86,14 @@
 					<div class="m-2 rounded-lg border border-black p-2 dark:border-gray-400">
 						<p>Nombre: {{ curs.nombreCurso }}</p>
 						<p>Profesores:</p>
-						@for (prof of curs.profesoresCurso; track $index) {
+						@for (prof of curs.profesoresCurso; track prof) {
 							<p class="m-2">{{ getProfessorName(prof) }}</p>
 						}
 						<p>Clases:</p>
-						@for (clas of curs.clasesCurso; track $index) {
-							<div class="m-2 rounded-lg border border-black p-2 dark:border-gray-400">
-								<p class="m-2">{{ clas.nombreClase }}</p>
+						@for (clas of curs.clasesCurso; track clas.idClase) {
+							<div class="m-2 flex items-center rounded-lg border border-black p-2 dark:border-gray-400">
+								<p class="m-2 grow">{{ clas.nombreClase }}</p>
+								<svg class="z-10 cursor-pointer" (click)="eliminaClase(clas)" (keydown.enter)="eliminaClase(clas)" xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 8 8"><path fill="currentColor" d="M3 0c-.55 0-1 .45-1 1H1c-.55 0-1 .45-1 1h7c0-.55-.45-1-1-1H5c0-.55-.45-1-1-1zM1 3v4.81c0 .11.08.19.19.19h4.63c.11 0 .19-.08.19-.19V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1v3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5V3h-1z" /></svg>
 							</div>
 						}
 					</div>
@@ -101,7 +102,7 @@
 		}
 		@if (this.tipo() === 3) {
 			<input id="buscadorChats" placeholder="Busca chat" class="m-2 w-[99%] rounded-lg border border-black p-2 dark:border-gray-400" (input)="buscaChats($event)" type="text" />
-			@for (chat of this.chatsSel(); track $index) {
+			@for (chat of this.chatsSel(); track chat.mensajes) {
 				<div (click)="mostrarChat(chat.idCurso)" (keydown.enter)="mostrarChat(chat.idCurso)" class="m-2 flex cursor-pointer items-center rounded-lg border border-black p-2 dark:border-gray-400">
 					<p>{{ chat.idCurso }}</p>
 					<div class="ml-4 h-8 w-8">

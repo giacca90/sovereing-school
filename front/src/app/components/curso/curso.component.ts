@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, HostListener, Inject, OnDestroy, PLATFORM_ID, Renderer2, ChangeDetectionStrategy } from '@angular/core';
+import { Component, HostListener, Inject, OnDestroy, PLATFORM_ID, Renderer2, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Curso } from '../../models/Curso';
@@ -11,18 +11,16 @@ import { CompraCursoComponent } from './compra-curso/compra-curso.component';
 
 @Component({
 	selector: 'app-curso',
-	standalone: true,
 	imports: [CompraCursoComponent, CommonModule],
 	templateUrl: './curso.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './curso.component.css',
 })
 export class CursoComponent implements OnDestroy {
 	private idCurso: number = 0;
-	public curso: Curso | null = null;
+	public curso = signal<Curso | null>(null);
 	public nombresProfesores: string | undefined = '';
 	private readonly subscription: Subscription = new Subscription();
-	public modalCourse: Curso | null = null;
+	public modalCourse = signal<Curso | null>(null);
 	private readonly isBrowser: boolean;
 
 	/**
@@ -30,7 +28,6 @@ export class CursoComponent implements OnDestroy {
 	 * @param {ActivatedRoute} route - Ruta activada.
 	 * @param {CursosService} cursoService - Servicio de cursos.
 	 * @param {UsuariosService} usuarioService - Servicio de usuarios.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
 	 * @param {LoginService} loginService - Servicio de autenticación.
 	 * @param {Renderer2} renderer - Renderer2 de Angular.
 	 * @param {Router} router - Router de Angular.
@@ -41,7 +38,6 @@ export class CursoComponent implements OnDestroy {
 		private readonly route: ActivatedRoute,
 		private readonly cursoService: CursosService,
 		private readonly usuarioService: UsuariosService,
-		private readonly cdr: ChangeDetectorRef,
 		public loginService: LoginService,
 		private readonly renderer: Renderer2,
 		public router: Router,
@@ -63,13 +59,19 @@ export class CursoComponent implements OnDestroy {
 	 * @returns {Plan | null} Plan si tiene acceso, null en caso contrario.
 	 */
 	compruebaPlan(planUsuario: Plan | undefined): Plan | null {
-		if (planUsuario !== undefined && planUsuario !== null && this.curso?.planesCurso) {
-			for (const idPlan of this.curso.planesCurso) {
+		if (!planUsuario) {
+			return null;
+		}
+
+		const cursoActual = this.curso();
+		if (cursoActual?.planesCurso) {
+			for (const idPlan of cursoActual.planesCurso) {
 				if (idPlan == planUsuario.idPlan) {
 					return this.loginService.usuario?.planUsuario ?? null;
 				}
 			}
 		}
+
 		return null;
 	}
 
@@ -86,7 +88,7 @@ export class CursoComponent implements OnDestroy {
 	 */
 	@HostListener('window:keydown.escape', ['$event'])
 	onKeydownHandler(event: Event) {
-		if (this.modalCourse) {
+		if (this.modalCourse()) {
 			this.closeModal();
 		}
 	}
@@ -96,7 +98,7 @@ export class CursoComponent implements OnDestroy {
 	 * @param {Curso} curso - Curso a comprar.
 	 */
 	compraCurso(curso: Curso) {
-		this.modalCourse = curso;
+		this.modalCourse.set(curso);
 		if (this.isBrowser) {
 			this.renderer.addClass(this.document.body, 'overflow-hidden');
 		}
@@ -130,7 +132,7 @@ export class CursoComponent implements OnDestroy {
 		if (this.isBrowser) {
 			this.renderer.removeClass(this.document.body, 'overflow-hidden');
 		}
-		this.modalCourse = null;
+		this.modalCourse.set(null);
 	}
 
 	/**
@@ -148,18 +150,17 @@ export class CursoComponent implements OnDestroy {
 
 	getCurso() {
 		this.cursoService.getCurso(this.idCurso).then((curso) => {
-			this.curso = curso;
-			if (this.curso) {
-				if (this.curso.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0]);
+			this.curso.set(curso);
+			if (this.curso()) {
+				if (this.curso()!.profesoresCurso.length == 1) this.nombresProfesores = this.usuarioService.getNombreProfe(this.curso()!.profesoresCurso[0]);
 				else {
-					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso.profesoresCurso[0])?.toString();
-					for (let i = 1; i < this.curso.profesoresCurso.length; i++) {
-						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso.profesoresCurso[i]);
+					let nombres: string | undefined = this.usuarioService.getNombreProfe(this.curso()!.profesoresCurso[0])?.toString();
+					for (let i = 1; i < this.curso()!.profesoresCurso.length; i++) {
+						nombres = nombres + ' y ' + this.usuarioService.getNombreProfe(this.curso()!.profesoresCurso[i]);
 					}
 					this.nombresProfesores = nombres;
 				}
 			}
-			this.cdr.detectChanges();
 		});
 	}
 

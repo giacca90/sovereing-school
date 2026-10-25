@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
+import { Clase } from '../../models/Clase';
 import { Curso } from '../../models/Curso';
 import { CursoChat } from '../../models/CursoChat';
 import { Usuario } from '../../models/Usuario';
@@ -11,7 +12,6 @@ import { UsuariosService } from '../../services/usuarios.service';
 	selector: 'app-administracion',
 	imports: [],
 	templateUrl: './administracion.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './administracion.component.css',
 })
 export class AdministracionComponent {
@@ -41,6 +41,7 @@ export class AdministracionComponent {
 		private readonly usuariosService: UsuariosService,
 		public cursosService: CursosService,
 		private readonly chatsService: ChatService,
+		private readonly initService: InitService,
 	) {}
 
 	/**
@@ -164,6 +165,32 @@ export class AdministracionComponent {
 					}
 				});
 			}
+		});
+	}
+
+	eliminaClase(clase: Clase) {
+		if (!confirm('¿Estás seguro que deseas eliminar esta clase?\n Esto no eliminará el curso de esta clase')) {
+			return;
+		}
+		this.cursosService.getCurso(clase.cursoClase).then((curso: Curso | null) => {
+			if (!curso) {
+				console.error('Curso no encontrado');
+				return;
+			}
+			if (!curso.clasesCurso) {
+				curso.clasesCurso = [];
+			}
+			curso.clasesCurso = curso.clasesCurso.filter((c) => c.idClase !== clase.idClase);
+			this.cursosService.updateCurso(curso).subscribe({
+				next: (success: Curso) => {
+					if (success) {
+						this.initService.carga().catch((e) => console.error('Error cargando:', e));
+					}
+				},
+				error: (error) => {
+					console.error('Error al actualizar el curso:', error);
+				},
+			});
 		});
 	}
 

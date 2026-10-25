@@ -42,7 +42,7 @@ describe('RegisterComponent', () => {
 	describe('ngOnInit & KeyEvents', () => {
 		it('should subscribe to keyEvents and handle Enter in fase 0', async () => {
 			const keyEvents$ = new Subject<KeyboardEvent>();
-			component.keyEvents = keyEvents$;
+			fixture.componentRef.setInput('keyEvents', keyEvents$);
 			component.fase = 0;
 			spyOn(component, 'compruebaCorreo').and.returnValue(Promise.resolve());
 
@@ -54,7 +54,7 @@ describe('RegisterComponent', () => {
 
 		it('should subscribe to keyEvents and handle Enter in fase 1', async () => {
 			const keyEvents$ = new Subject<KeyboardEvent>();
-			component.keyEvents = keyEvents$;
+			fixture.componentRef.setInput('keyEvents', keyEvents$);
 			component.fase = 1;
 			spyOn(component, 'compruebaPassword');
 
@@ -66,7 +66,7 @@ describe('RegisterComponent', () => {
 
 		it('should subscribe to keyEvents and handle Enter in fase 2 (close)', async () => {
 			const keyEvents$ = new Subject<KeyboardEvent>();
-			component.keyEvents = keyEvents$;
+			fixture.componentRef.setInput('keyEvents', keyEvents$);
 			component.fase = 2;
 			spyOn(component, 'close');
 
@@ -78,7 +78,7 @@ describe('RegisterComponent', () => {
 
 		it('should handle Escape, Esc and Delete keys to close', () => {
 			const keyEvents$ = new Subject<KeyboardEvent>();
-			component.keyEvents = keyEvents$;
+			fixture.componentRef.setInput('keyEvents', keyEvents$);
 			spyOn(component, 'close');
 
 			component.ngOnInit();

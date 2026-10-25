@@ -90,6 +90,267 @@ public class CursoChatService {
     }
 
     /**
+     * Función para actualizar el chat del curso
+     * Si el chat no existe, se crea
+     * 
+     * @param curso
+     * @throws InternalServerException
+     */
+    public void actualizarCursoChat(Curso curso) throws InternalServerException {
+        try {
+            CursoChat cursoChat = cursoChatRepo.findByIdCurso(curso.getIdCurso()).orElse(null);
+            if (cursoChat == null) {
+                cursoChat = new CursoChat(null, curso.getIdCurso(), new ArrayList<>(), new ArrayList<>(), null);
+                cursoChat = cursoChatRepo.save(cursoChat);
+                // Añade el curso al chat de los profesores
+                List<Usuario> profesores = curso.getProfesoresCurso();
+                if (profesores != null) {
+                    for (Usuario profesor : profesores) {
+                        UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getIdUsuario())
+                                .orElseThrow(() -> {
+                                    logger.error(errorProfe);
+                                    throw new EntityNotFoundException(errorProfe);
+                                });
+                        profChat.getCursos().add(cursoChat.getId());
+                        usuarioChatRepo.save(profChat);
+                    }
+                }
+            }
+
+            List<Clase> clases = curso.getClasesCurso();
+            List<ClaseChat> clasesChat = cursoChat.getClases();
+
+            if (clasesChat != null) {
+                if (clases != null && !clases.isEmpty()) {
+                    // 1. Elimina del chat las clases que ya no existen en el curso
+                    clasesChat.removeIf(claseChatObj -> clases.stream()
+                            .noneMatch(c -> c.getIdClase().equals(claseChatObj.getIdClase())));
+
+                    // 2. Añade las nuevas clases que falten
+                    for (Clase clase : clases) {
+                        ClaseChat claseChat = clasesChat.stream()
+                                .filter(c -> c.getIdClase().equals(clase.getIdClase()))
+                                .findFirst()
+                                .orElse(null);
+                        if (claseChat == null) {
+                            claseChat = new ClaseChat(clase.getIdClase(), curso.getIdCurso(), new ArrayList<>());
+                            clasesChat.add(claseChat);
+                        }
+                    }
+                } else {
+                    // Si el curso se ha quedado sin clases, vaciamos el chat por completo
+                    clasesChat.clear();
+                }
+            }
+
+            cursoChat.setClases(clasesChat);
+            cursoChatRepo.save(cursoChat);
+        } catch (RuntimeException e) {
+            throw new InternalServerException("Error en actualizar el curso en el chat: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Función para borrar una clase del chat
+     * 
+     * @param idCurso id del curso
+     * @param idClase id de la clase
+     * @throws EntityNotFoundException si no se puede encontrar un elemento
+     * 
+     */
+    public void borrarClaseChat(Long idCurso, Long idClase) {
+
+        CursoChat cursoChat = this.cursoChatRepo.findByIdCurso(idCurso).orElseThrow(() -> {
+            logger.error("No se pudo borrar la clase del chat, el curso no existe");
+            throw new EntityNotFoundException("No se pudo borrar la clase del chat, el curso no existe");
+        });
+
+        List<ClaseChat> clases = cursoChat.getClases();
+        for (ClaseChat clase : clases) {
+            if (clase.getIdClase().equals(idClase)) {
+                clases.remove(clase);
+                break;
+            }
+        }
+        cursoChat.setClases(clases);
+        this.cursoChatRepo.save(cursoChat);
+    }
+
+    /**
+     * Función para borrar un curso del chat
+     * 
+     * @param idCurso id del curso
+     * @throws EntityNotFoundException si no se puede encontrar un elemento
+     */
+    public void borrarCursoChat(Long idCurso) {
+        CursoChat cursoChat = this.cursoChatRepo.findByIdCurso(idCurso).orElseThrow(() -> {
+            logger.error(errorCurso);
+            throw new EntityNotFoundException(errorCurso);
+        });
+        this.cursoChatRepo.delete(cursoChat);
+    }
+
+    /**
+     * Función para eliminar el chat del usuario
+     * 
+     * @param idUsuario ID del usuario
+     */
+    public void borrarUsuarioChat(Long idUsuario) {
+        UsuarioChat usuarioChat = this.usuarioChatRepo.findByIdUsuario(idUsuario).orElseThrow(() -> {
+            logger.error(errorUsiario);
+            throw new EntityNotFoundException(errorUsiario);
+        });
+        this.usuarioChatRepo.delete(usuarioChat);
+    }
+
+    /**
+     * Función para crear un chat de clase
+     * 
+     * @param message String con la clase JSON
+     * @throws InternalServerException
+     * @throws RuntimeException        si hay un error al parsear el JSON
+     * @throws EntityNotFoundException si no se puede encontrar un elemento
+     */
+    public void creaClaseChat(String claseString) throws InternalServerException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        // Configurar ObjectMapper para manejar referencias circulares
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        Clase clase;
+        try {
+            clase = objectMapper.readValue(claseString, Clase.class);
+            ClaseChat claseChat = new ClaseChat(
+                    clase.getIdClase(),
+                    clase.getCursoClase().getIdCurso(),
+                    new ArrayList<>());
+
+            CursoChat cursoChat = cursoChatRepo.findByIdCurso(clase.getCursoClase().getIdCurso()).orElseThrow(() -> {
+                logger.error(errorCurso);
+                throw new EntityNotFoundException(errorCurso);
+            });
+            List<ClaseChat> clasesChat = cursoChat.getClases();
+            // Comprueba si clasesChat ya contiene una clase con el mismo id
+            boolean exists = clasesChat.stream().anyMatch(c -> c.getIdClase().equals(clase.getIdClase()));
+            if (!exists) {
+                clasesChat.add(claseChat);
+                cursoChat.setClases(clasesChat);
+                cursoChatRepo.save(cursoChat);
+            }
+        } catch (JsonProcessingException e) {
+            throw new InternalServerException("Error al parsear JSON del chat de la clase: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Función para crear un chat de curso
+     * 
+     * @param cursoString String con el curso JSON
+     * @throws InternalServerException
+     * @throws RuntimeException        si hay un error al parsear el JSON
+     */
+    public void creaCursoChat(String cursoString) throws InternalServerException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Curso curso;
+        try {
+            curso = objectMapper.readValue(cursoString, Curso.class);
+
+            List<Clase> clases = curso.getClasesCurso();
+            List<ClaseChat> clasesChat = new ArrayList<>();
+            if (clases != null && !clases.isEmpty()) {
+                for (Clase clase : clases) {
+                    ClaseChat claseChat = new ClaseChat(
+                            clase.getIdClase(), // Long id_clase
+                            curso.getIdCurso(), // Long id_curso
+                            new ArrayList<>()); // List<String> mensajes
+                    clasesChat.add(claseChat);
+                }
+            }
+
+            CursoChat cursoChat = new CursoChat(
+                    null, // String id
+                    curso.getIdCurso(), // Long id_curso
+                    clasesChat, // List<ClaseChat> clases
+                    new ArrayList<>(),
+                    null); // List<String> mensajes
+            cursoChatRepo.save(cursoChat);
+        } catch (JsonProcessingException e) {
+            throw new InternalServerException("Error al parsear JSON del curso: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Función para crear un usuario en el chat
+     * 
+     * @param message
+     * @throws RepositoryException
+     * @throws InternalServerException
+     * @throws RuntimeException
+     */
+    public void creaUsuarioChat(Usuario usuario) throws InternalServerException {
+        try {
+            UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(usuario.getIdUsuario())
+                    .orElseGet(() -> {
+                        // Si no existe, lo creamos
+                        UsuarioChat nuevo = new UsuarioChat(
+                                null,
+                                usuario.getIdUsuario(),
+                                new ArrayList<>(),
+                                new ArrayList<>());
+                        return usuarioChatRepo.save(nuevo); // devolvemos el creado
+                    });
+
+            // Actualizamos los chats de los cursos del usuario
+            this.updateChatsCursosUsuario(usuario, usuarioChat);
+        } catch (Exception e) {
+            throw new InternalServerException("Error al crear el usuario chat: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Función para obtener todos los cursos del chat
+     * 
+     * @return Lista de CursoChatDTO
+     * @throws InternalServerException
+     */
+    public List<CursoChatDTO> getAllCursosChat() throws InternalServerException {
+        try {
+            List<CursoChat> cursosChat = cursoChatRepo.findAll();
+            List<CursoChatDTO> cursosChatDTO = new ArrayList<>();
+            if (!cursosChat.isEmpty()) {
+                for (CursoChat cursoChat : cursosChat) {
+                    List<ClaseChatDTO> clasesChatDTO = new ArrayList<>();
+                    cursoChat.getClases().forEach(clase -> clasesChatDTO.add(new ClaseChatDTO(
+                            clase.getIdClase(),
+                            cursoChat.getIdCurso(),
+                            this.claseRepo.findNombreClaseById(clase.getIdClase()).get(),
+                            new ArrayList<>())));
+                    List<String> mensajesId = cursoChat.getMensajes();
+                    List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
+                    if (mensajesId != null && !mensajesId.isEmpty()) {
+                        List<MensajeChat> mensajesChat = mensajeChatRepo.findAllById(mensajesId);
+                        if (!mensajesChat.isEmpty()) {
+                            mensajesDTO = initChatService.getMensajesDTO(mensajesChat);
+                        }
+                    }
+                    Curso curso = cursoRepo.findById(cursoChat.getIdCurso())
+                            .orElseThrow(() -> new InternalServerException(
+                                    "Curso no encontrado con id " + cursoChat.getIdCurso()));
+                    cursosChatDTO.add(new CursoChatDTO(
+                            curso.getIdCurso(),
+                            clasesChatDTO,
+                            mensajesDTO,
+                            curso.getNombreCurso(),
+                            curso.getImagenCurso()));
+                }
+                return cursosChatDTO;
+            }
+            return null;
+        } catch (Exception e) {
+            throw new InternalServerException("Error al obtener todos los cursos del chat: " + e.getMessage());
+        }
+    }
+
+    /**
      * Función para obtener el chat de un curso
      * 
      * @param idCurso Id del curso
@@ -245,202 +506,6 @@ public class CursoChatService {
     }
 
     /**
-     * Función para crear un usuario en el chat
-     * 
-     * @param message
-     * @throws RepositoryException
-     * @throws InternalServerException
-     * @throws RuntimeException
-     */
-    public void creaUsuarioChat(Usuario usuario) throws InternalServerException {
-        try {
-            UsuarioChat usuarioChat = usuarioChatRepo.findByIdUsuario(usuario.getIdUsuario())
-                    .orElseGet(() -> {
-                        // Si no existe, lo creamos
-                        UsuarioChat nuevo = new UsuarioChat(
-                                null,
-                                usuario.getIdUsuario(),
-                                new ArrayList<>(),
-                                new ArrayList<>());
-                        return usuarioChatRepo.save(nuevo); // devolvemos el creado
-                    });
-
-            // Actualizamos los chats de los cursos del usuario
-            this.updateChatsCursosUsuario(usuario, usuarioChat);
-        } catch (Exception e) {
-            throw new InternalServerException("Error al crear el usuario chat: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Función para crear un chat de curso
-     * 
-     * @param cursoString String con el curso JSON
-     * @throws InternalServerException
-     * @throws RuntimeException        si hay un error al parsear el JSON
-     */
-    public void creaCursoChat(String cursoString) throws InternalServerException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        Curso curso;
-        try {
-            curso = objectMapper.readValue(cursoString, Curso.class);
-
-            List<Clase> clases = curso.getClasesCurso();
-            List<ClaseChat> clasesChat = new ArrayList<>();
-            if (clases != null && !clases.isEmpty()) {
-                for (Clase clase : clases) {
-                    ClaseChat claseChat = new ClaseChat(
-                            clase.getIdClase(), // Long id_clase
-                            curso.getIdCurso(), // Long id_curso
-                            new ArrayList<>()); // List<String> mensajes
-                    clasesChat.add(claseChat);
-                }
-            }
-
-            CursoChat cursoChat = new CursoChat(
-                    null, // String id
-                    curso.getIdCurso(), // Long id_curso
-                    clasesChat, // List<ClaseChat> clases
-                    new ArrayList<>(),
-                    null); // List<String> mensajes
-            cursoChatRepo.save(cursoChat);
-        } catch (JsonProcessingException e) {
-            throw new InternalServerException("Error al parsear JSON del curso: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Función para crear un chat de clase
-     * 
-     * @param message String con la clase JSON
-     * @throws InternalServerException
-     * @throws RuntimeException        si hay un error al parsear el JSON
-     * @throws EntityNotFoundException si no se puede encontrar un elemento
-     */
-    public void creaClaseChat(String claseString) throws InternalServerException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        // Configurar ObjectMapper para manejar referencias circulares
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-        Clase clase;
-        try {
-            clase = objectMapper.readValue(claseString, Clase.class);
-            ClaseChat claseChat = new ClaseChat(
-                    clase.getIdClase(),
-                    clase.getCursoClase().getIdCurso(),
-                    new ArrayList<>());
-
-            CursoChat cursoChat = cursoChatRepo.findByIdCurso(clase.getCursoClase().getIdCurso()).orElseThrow(() -> {
-                logger.error(errorCurso);
-                throw new EntityNotFoundException(errorCurso);
-            });
-            List<ClaseChat> clasesChat = cursoChat.getClases();
-            // Comprueba si clasesChat ya contiene una clase con el mismo id
-            boolean exists = clasesChat.stream().anyMatch(c -> c.getIdClase().equals(clase.getIdClase()));
-            if (!exists) {
-                clasesChat.add(claseChat);
-                cursoChat.setClases(clasesChat);
-                cursoChatRepo.save(cursoChat);
-            }
-        } catch (JsonProcessingException e) {
-            throw new InternalServerException("Error al parsear JSON del chat de la clase: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Función para marcar un mensaje como leido, y quitarlo de los mensajes del
-     * usuario
-     * 
-     * @param message String con el mensaje a marcar como leido
-     * @throws EntityNotFoundException si no se puede encontrar un elemento
-     */
-    public void mensajeLeido(String message) {
-        String[] lMex = message.replaceAll("\"", "").split(",");
-        UsuarioChat usuario = this.usuarioChatRepo.findByIdUsuario(Long.parseLong(lMex[0])).orElseThrow(() -> {
-            logger.error(errorUsiario);
-            throw new EntityNotFoundException(errorUsiario);
-        });
-        List<String> mensajes = usuario.getMensajes();
-        mensajes.remove(lMex[1]);
-        usuario.setMensajes(mensajes);
-        this.usuarioChatRepo.save(usuario);
-    }
-
-    /**
-     * Función para borrar una clase del chat
-     * 
-     * @param idCurso id del curso
-     * @param idClase id de la clase
-     * @throws EntityNotFoundException si no se puede encontrar un elemento
-     * 
-     */
-    public void borrarClaseChat(Long idCurso, Long idClase) {
-
-        CursoChat cursoChat = this.cursoChatRepo.findByIdCurso(idCurso).orElseThrow(() -> {
-            logger.error("No se pudo borrar la clase del chat, el curso no existe");
-            throw new EntityNotFoundException("No se pudo borrar la clase del chat, el curso no existe");
-        });
-
-        List<ClaseChat> clases = cursoChat.getClases();
-        for (ClaseChat clase : clases) {
-            if (clase.getIdClase().equals(idClase)) {
-                clases.remove(clase);
-                break;
-            }
-        }
-        cursoChat.setClases(clases);
-        this.cursoChatRepo.save(cursoChat);
-    }
-
-    /**
-     * Función para borrar un curso del chat
-     * 
-     * @param idCurso id del curso
-     * @throws EntityNotFoundException si no se puede encontrar un elemento
-     */
-    public void borrarCursoChat(Long idCurso) {
-        CursoChat cursoChat = this.cursoChatRepo.findByIdCurso(idCurso).orElseThrow(() -> {
-            logger.error(errorCurso);
-            throw new EntityNotFoundException(errorCurso);
-        });
-        this.cursoChatRepo.delete(cursoChat);
-    }
-
-    /**
-     * Función para eliminar el chat del usuario
-     * 
-     * @param idUsuario ID del usuario
-     */
-    public void borrarUsuarioChat(Long idUsuario) {
-        UsuarioChat usuarioChat = this.usuarioChatRepo.findByIdUsuario(idUsuario).orElseThrow(() -> {
-            logger.error(errorUsiario);
-            throw new EntityNotFoundException(errorUsiario);
-        });
-        this.usuarioChatRepo.delete(usuarioChat);
-    }
-
-    /**
-     * Función para actualizar el token en el websocket abierto
-     * 
-     * @param sessionId ID de la sesión
-     * @param newToken  Token nuevo
-     */
-    public void refreshTokenInOpenWebsocket(String sessionId, String newToken) {
-        Authentication newAuth = jwtUtil.createAuthenticationFromToken(newToken);
-
-        // Obtener el contexto actual y actualizar la autenticación
-        SecurityContext context = SecurityContextHolder.getContext();
-        context.setAuthentication(newAuth);
-
-        // También actualizar en el accessor para que se conserve
-        SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create();
-        accessor.setSessionId(sessionId);
-        accessor.setUser(newAuth);
-
-        logger.info("🔄 Token refrescado con éxito para sesión: {}", sessionId);
-    }
-
-    /**
      * Función para inicializar el chat de usuarios
      * 
      * @throws InternalServerException
@@ -485,94 +550,43 @@ public class CursoChatService {
     }
 
     /**
-     * Función para actualizar el chat del curso
-     * Si el chat no existe, se crea
+     * Función para marcar un mensaje como leido, y quitarlo de los mensajes del
+     * usuario
      * 
-     * @param curso
-     * @throws InternalServerException
+     * @param message String con el mensaje a marcar como leido
+     * @throws EntityNotFoundException si no se puede encontrar un elemento
      */
-    public void actualizarCursoChat(Curso curso) throws InternalServerException {
-        try {
-
-            CursoChat cursoChat = cursoChatRepo.findByIdCurso(curso.getIdCurso()).orElse(null);
-            if (cursoChat == null) {
-                cursoChat = new CursoChat(null, curso.getIdCurso(), new ArrayList<>(), new ArrayList<>(), null);
-                cursoChat = cursoChatRepo.save(cursoChat);
-                // Añade el curso al chat de los profesores
-                List<Usuario> profesores = curso.getProfesoresCurso();
-                for (Usuario profesor : profesores) {
-                    UsuarioChat profChat = usuarioChatRepo.findByIdUsuario(profesor.getIdUsuario()).orElseThrow(() -> {
-                        logger.error(errorProfe);
-                        throw new EntityNotFoundException(errorProfe);
-                    });
-                    profChat.getCursos().add(cursoChat.getId());
-                    usuarioChatRepo.save(profChat);
-                }
-            }
-            List<Clase> clases = curso.getClasesCurso();
-            List<ClaseChat> clasesChat = cursoChat.getClases();
-            // Comprueba si las clases del curso es nueva
-            if (clases != null && !clases.isEmpty()) {
-                for (Clase clase : clases) {
-                    ClaseChat claseChat = clasesChat.stream()
-                            .filter(c -> c.getIdClase().equals(clase.getIdClase()))
-                            .findFirst()
-                            .orElse(null);
-                    if (claseChat == null) {
-                        claseChat = new ClaseChat(clase.getIdClase(), curso.getIdCurso(), new ArrayList<>());
-                        clasesChat.add(claseChat);
-                    }
-                }
-            }
-            cursoChat.setClases(clasesChat);
-            cursoChatRepo.save(cursoChat);
-        } catch (RuntimeException e) {
-            throw new InternalServerException("Error en actualizar el curso en el chat: " + e.getMessage());
-        }
+    public void mensajeLeido(String message) {
+        String[] lMex = message.replaceAll("\"", "").split(",");
+        UsuarioChat usuario = this.usuarioChatRepo.findByIdUsuario(Long.parseLong(lMex[0])).orElseThrow(() -> {
+            logger.error(errorUsiario);
+            throw new EntityNotFoundException(errorUsiario);
+        });
+        List<String> mensajes = usuario.getMensajes();
+        mensajes.remove(lMex[1]);
+        usuario.setMensajes(mensajes);
+        this.usuarioChatRepo.save(usuario);
     }
 
     /**
-     * Función para obtener todos los cursos del chat
+     * Función para actualizar el token en el websocket abierto
      * 
-     * @return Lista de CursoChatDTO
-     * @throws InternalServerException
+     * @param sessionId ID de la sesión
+     * @param newToken  Token nuevo
      */
-    public List<CursoChatDTO> getAllCursosChat() throws InternalServerException {
-        try {
-            List<CursoChat> cursosChat = cursoChatRepo.findAll();
-            List<CursoChatDTO> cursosChatDTO = new ArrayList<>();
-            if (!cursosChat.isEmpty()) {
-                for (CursoChat cursoChat : cursosChat) {
-                    List<ClaseChatDTO> clasesChatDTO = new ArrayList<>();
-                    cursoChat.getClases().forEach(clase -> clasesChatDTO.add(new ClaseChatDTO(
-                            clase.getIdClase(),
-                            cursoChat.getIdCurso(),
-                            this.claseRepo.findNombreClaseById(clase.getIdClase()).get(),
-                            new ArrayList<>())));
-                    List<String> mensajesId = cursoChat.getMensajes();
-                    List<MensajeChatDTO> mensajesDTO = new ArrayList<>();
-                    if (mensajesId != null && !mensajesId.isEmpty()) {
-                        List<MensajeChat> mensajesChat = mensajeChatRepo.findAllById(mensajesId);
-                        if (!mensajesChat.isEmpty()) {
-                            mensajesDTO = initChatService.getMensajesDTO(mensajesChat);
-                        }
-                    }
-                    Curso curso = cursoRepo.findById(cursoChat.getIdCurso())
-                            .orElseThrow(() -> new InternalServerException(
-                                    "Curso no encontrado con id " + cursoChat.getIdCurso()));
-                    cursosChatDTO.add(new CursoChatDTO(
-                            curso.getIdCurso(),
-                            clasesChatDTO,
-                            mensajesDTO,
-                            curso.getNombreCurso(),
-                            curso.getImagenCurso()));
-                }
-                return cursosChatDTO;
-            }
-            return null;
-        } catch (Exception e) {
-            throw new InternalServerException("Error al obtener todos los cursos del chat: " + e.getMessage());
-        }
+    public void refreshTokenInOpenWebsocket(String sessionId, String newToken) {
+        Authentication newAuth = jwtUtil.createAuthenticationFromToken(newToken);
+
+        // Obtener el contexto actual y actualizar la autenticación
+        SecurityContext context = SecurityContextHolder.getContext();
+        context.setAuthentication(newAuth);
+
+        // También actualizar en el accessor para que se conserve
+        SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create();
+        accessor.setSessionId(sessionId);
+        accessor.setUser(newAuth);
+
+        logger.info("🔄 Token refrescado con éxito para sesión: {}", sessionId);
     }
 
     /**

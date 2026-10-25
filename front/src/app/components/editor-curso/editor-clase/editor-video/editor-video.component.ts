@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, Input, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, input, model, output, viewChild } from '@angular/core';
 import Player from 'video.js/dist/types/player';
 import { Clase } from '../../../../models/Clase';
 
@@ -6,17 +6,16 @@ import { Clase } from '../../../../models/Clase';
 	selector: 'app-editor-video',
 	imports: [],
 	templateUrl: './editor-video.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './editor-video.component.css',
 })
 export class EditorVideoComponent implements AfterViewInit {
-	@Input() clase!: Clase;
-	@Input() isUploading: boolean = false;
-	@Output() videoSeleccionado = new EventEmitter<File>();
+	clase = model<Clase | null>(null);
+	isUploading = input<boolean>();
+	videoSeleccionado = output<File>();
 
-	@ViewChild('videoPlayer') videoPlayerRef!: ElementRef<HTMLVideoElement>;
-	@ViewChild('videoUploadButton') videoUploadButtonRef!: ElementRef<HTMLSpanElement>;
-	@ViewChild('videoUploadInput') videoUploadInputRef!: ElementRef<HTMLInputElement>;
+	videoPlayerRef = viewChild<ElementRef<HTMLVideoElement>>('videoPlayer');
+	videoUploadButtonRef = viewChild<ElementRef<HTMLSpanElement>>('videoUploadButton');
+	videoUploadInputRef = viewChild<ElementRef<HTMLInputElement>>('videoUploadInput');
 
 	player: Player | null = null;
 	backStream: string = '';
@@ -30,12 +29,12 @@ export class EditorVideoComponent implements AfterViewInit {
 	 * Inicializa el reproductor de video después de que la vista ha sido inicializada.
 	 */
 	ngAfterViewInit(): void {
-		if (!this.clase?.direccionClase) return;
+		if (!this.clase()?.direccionClase) return;
 
-		console.log('📡 Cargando video desde:', this.clase.direccionClase);
+		console.log('📡 Cargando video desde:', this.clase()!.direccionClase);
 
 		this.backStream = (globalThis.window as any).__env?.BACK_STREAM ?? '';
-		const videoPlayer = this.videoPlayerRef.nativeElement;
+		const videoPlayer = this.videoPlayerRef()?.nativeElement;
 
 		if (!videoPlayer) {
 			console.error('No se pudo obtener el elemento videoPlayer');
@@ -65,7 +64,7 @@ export class EditorVideoComponent implements AfterViewInit {
 				});
 
 				// Asignar fuente HLS
-				const srcUrl = `${this.backStream}/${this.clase.cursoClase}/${this.clase.idClase}/master.m3u8`;
+				const srcUrl = `${this.backStream}/${this.clase()!.cursoClase}/${this.clase()!.idClase}/master.m3u8`;
 				this.player.src({
 					src: srcUrl,
 					type: 'application/x-mpegURL',
@@ -92,14 +91,20 @@ export class EditorVideoComponent implements AfterViewInit {
 		// Mostrar previsualización
 		const reader = new FileReader();
 		reader.onload = (e: ProgressEvent<FileReader>) => {
-			const vid = this.videoPlayerRef.nativeElement;
+			const vid = this.videoPlayerRef()!.nativeElement;
 			if (e.target?.result) {
 				vid.src = e.target.result as string;
 			}
 
 			// Asegurar que la clase tenga id inicial
-			if (this.clase && !this.clase.idClase) {
-				this.clase.idClase = 0;
+			if (this.clase() && !this.clase()!.idClase) {
+				this.clase.update((clase) => {
+					if (!clase) return clase;
+					return {
+						...clase,
+						idClase: 0,
+					};
+				});
 			}
 
 			// ✅ Emitir el archivo al padre
@@ -111,7 +116,7 @@ export class EditorVideoComponent implements AfterViewInit {
 
 	keyEvent(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
-			this.videoUploadInputRef.nativeElement.click();
+			this.videoUploadInputRef()!.nativeElement.click();
 		}
 	}
 }

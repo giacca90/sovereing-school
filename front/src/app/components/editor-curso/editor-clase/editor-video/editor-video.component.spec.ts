@@ -1,14 +1,13 @@
+import { ElementRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { EditorVideoComponent } from './editor-video.component';
-import { ElementRef } from '@angular/core';
 import { Clase } from '../../../../models/Clase';
+import { EditorVideoComponent } from './editor-video.component';
 
 describe('EditorVideoComponent', () => {
 	let component: EditorVideoComponent;
 	let fixture: ComponentFixture<EditorVideoComponent>;
 
-	const createDummyClase = (): Clase =>
-		new Clase(1, 'Clase Video', 'Desc', 'video.mp4', 10, 'Notas', 0, 1);
+	const createDummyClase = (): Clase => new Clase(1, 'Clase Video', 'Desc', 'video.mp4', 10, 'Notas', 0, 1);
 
 	beforeEach(async () => {
 		await TestBed.configureTestingModule({
@@ -17,7 +16,7 @@ describe('EditorVideoComponent', () => {
 
 		fixture = TestBed.createComponent(EditorVideoComponent);
 		component = fixture.componentInstance;
-		component.clase = createDummyClase();
+		component.clase.set(createDummyClase());
 	});
 
 	it('should create the component', () => {
@@ -31,7 +30,7 @@ describe('EditorVideoComponent', () => {
 	describe('ngAfterViewInit', () => {
 		it('should return early when clase has no direccionClase', () => {
 			// Arrange
-			component.clase.direccionClase = '';
+			component.clase.update((c) => ({ ...c!, direccionClase: '' }));
 			spyOn(console, 'log');
 
 			// Act
@@ -43,8 +42,8 @@ describe('EditorVideoComponent', () => {
 
 		it('should log error when videoPlayer nativeElement is missing', () => {
 			// Arrange
-			component.clase.direccionClase = 'test.mp4';
-			component.videoPlayerRef = { nativeElement: null } as any;
+			component.clase.update((c) => ({ ...c!, direccionClase: 'test.mp4' }));
+			(component as any).videoPlayerRef = signal(undefined);
 			spyOn(console, 'error');
 
 			// Act
@@ -73,7 +72,7 @@ describe('EditorVideoComponent', () => {
 			const dummyBlob = new Blob(['sample-video-content'], { type: 'video/mp4' });
 			const dummyFile = new File([dummyBlob], 'sample.mp4', { type: 'video/mp4' });
 			const videoEl = document.createElement('video');
-			component.videoPlayerRef = new ElementRef(videoEl);
+			(component as any).videoPlayerRef = signal(new ElementRef(videoEl));
 
 			component.videoSeleccionado.subscribe((file: File) => {
 				// Assert
@@ -94,7 +93,7 @@ describe('EditorVideoComponent', () => {
 			// Arrange
 			const mockInput = document.createElement('input');
 			spyOn(mockInput, 'click');
-			component.videoUploadInputRef = new ElementRef(mockInput);
+			(component as any).videoUploadInputRef = signal(new ElementRef(mockInput));
 
 			// Act
 			component.keyEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
@@ -107,7 +106,7 @@ describe('EditorVideoComponent', () => {
 			// Arrange
 			const mockInput = document.createElement('input');
 			spyOn(mockInput, 'click');
-			component.videoUploadInputRef = new ElementRef(mockInput);
+			(component as any).videoUploadInputRef = signal(new ElementRef(mockInput));
 
 			// Act
 			component.keyEvent(new KeyboardEvent('keydown', { key: 'Space' }));

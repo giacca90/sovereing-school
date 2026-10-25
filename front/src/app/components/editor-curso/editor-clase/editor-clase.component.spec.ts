@@ -60,8 +60,8 @@ describe('EditorClaseComponent', () => {
 
 		fixture = TestBed.createComponent(EditorClaseComponent);
 		component = fixture.componentInstance;
-		component.clase = createDummyClase();
-		component.curso = createDummyCurso();
+		component.clase.set(createDummyClase());
+		component.curso.set(createDummyCurso());
 	});
 
 	it('should create the component', () => {
@@ -76,8 +76,8 @@ describe('EditorClaseComponent', () => {
 		it('should prompt user if changes were made upon NavigationStart', () => {
 			// Arrange
 			(component as any).claseOriginal = createDummyClase();
-			component.clase = createDummyClase();
-			component.clase.nombreClase = 'Nombre Alterado';
+			component.clase.set(createDummyClase());
+			component.clase.update((c) => ({ ...c!, nombreClase: 'Nombre Alterado' }));
 			spyOn(window, 'confirm').and.returnValue(false);
 
 			// Act
@@ -112,7 +112,7 @@ describe('EditorClaseComponent', () => {
 
 		it('should alert and return false when nombreClase is null or empty', () => {
 			// Arrange
-			component.clase.nombreClase = '';
+			component.clase.update((c) => ({ ...c!, nombreClase: '' }));
 
 			// Act
 			const result = component.confirmacion();
@@ -124,8 +124,7 @@ describe('EditorClaseComponent', () => {
 
 		it('should alert and return false when descripcionClase is null or empty', () => {
 			// Arrange
-			component.clase.nombreClase = 'Valido';
-			component.clase.descripcionClase = '';
+			component.clase.update((c) => ({ ...c!, nombreClase: 'Valido', descripcionClase: '' }));
 
 			// Act
 			const result = component.confirmacion();
@@ -137,9 +136,7 @@ describe('EditorClaseComponent', () => {
 
 		it('should alert and return false when contenidoClase is null or empty', () => {
 			// Arrange
-			component.clase.nombreClase = 'Valido';
-			component.clase.descripcionClase = 'Valida';
-			component.clase.contenidoClase = '';
+			component.clase.update((c) => ({ ...c!, nombreClase: 'Valido', descripcionClase: 'Valida', contenidoClase: '' }));
 
 			// Act
 			const result = component.confirmacion();
@@ -151,9 +148,7 @@ describe('EditorClaseComponent', () => {
 
 		it('should return true when all fields are valid', () => {
 			// Arrange
-			component.clase.nombreClase = 'Valido';
-			component.clase.descripcionClase = 'Valida';
-			component.clase.contenidoClase = 'Valido';
+			component.clase.update((c) => ({ ...c!, nombreClase: 'Valido', descripcionClase: 'Valida', contenidoClase: 'Valido' }));
 
 			// Act
 			const result = component.confirmacion();
@@ -167,8 +162,7 @@ describe('EditorClaseComponent', () => {
 		it('should alert and return false for new static video class without uploaded video', () => {
 			// Arrange
 			spyOn(window, 'alert');
-			component.clase.idClase = 0;
-			component.clase.tipoClase = 0;
+			component.clase.update((c) => ({ ...c!, idClase: 0, tipoClase: 0 }));
 			component.readyComponent = false;
 
 			// Act
@@ -181,8 +175,7 @@ describe('EditorClaseComponent', () => {
 
 		it('should return true if video is already ready or idClase > 0', () => {
 			// Arrange
-			component.clase.idClase = 1;
-			component.clase.tipoClase = 0;
+			component.clase.update((c) => ({ ...c!, idClase: 1, tipoClase: 0 }));
 
 			// Act
 			const result = component.validarVideo();
@@ -220,9 +213,7 @@ describe('EditorClaseComponent', () => {
 
 		it('should prepare new class when idClase is 0 and process', async () => {
 			// Arrange
-			component.clase.idClase = 0;
-			component.clase.tipoClase = 0;
-			component.clase.cursoClase = 0;
+			component.clase.update((c) => ({ ...c!, idClase: 0, tipoClase: 0, cursoClase: 0 }));
 			spyOn(component, 'confirmacion').and.returnValue(true);
 			spyOn(component, 'validarVideo').and.returnValue(true);
 			spyOn(component, 'close');
@@ -235,30 +226,26 @@ describe('EditorClaseComponent', () => {
 		});
 
 		it('should prepare new class when clasesCurso is undefined', async () => {
-			component.clase.idClase = 0;
-			component.clase.tipoClase = 0;
-			component.clase.cursoClase = 0;
-			component.curso.clasesCurso = undefined as any;
+			component.clase.update((c) => ({ ...c!, idClase: 0, tipoClase: 0, cursoClase: 0 }));
+			component.curso.update((cu) => ({ ...cu!, clasesCurso: undefined as any }));
 			spyOn(component, 'confirmacion').and.returnValue(true);
 			spyOn(component, 'validarVideo').and.returnValue(true);
 			spyOn(component, 'close');
 
 			await component.guardarCambiosClase();
 
-			expect(component.curso.clasesCurso).toBeDefined();
+			expect(component.curso()?.clasesCurso).toBeDefined();
 		});
 
 		it('should handle actualizarClaseExistente when clasesCurso is undefined', () => {
-			component.curso.clasesCurso = undefined as any;
-			component.clase.idClase = 1;
+			component.curso.update((cu) => ({ ...cu!, clasesCurso: undefined as any }));
+			component.clase.update((c) => ({ ...c!, idClase: 1 }));
 			expect(() => component.actualizarClaseExistente()).not.toThrow();
 		});
 
 		it('should update existing class when idClase > 0 for static video class', async () => {
 			// Arrange
-			component.clase.idClase = 1;
-			component.clase.tipoClase = 0;
-			component.clase.cursoClase = 1;
+			component.clase.update((c) => ({ ...c!, idClase: 1, tipoClase: 0, cursoClase: 1 }));
 			spyOn(component, 'confirmacion').and.returnValue(true);
 			spyOn(component, 'validarVideo').and.returnValue(true);
 			spyOn(component, 'close');
@@ -273,7 +260,7 @@ describe('EditorClaseComponent', () => {
 
 		it('should process non-zero type class when readyService is false', async () => {
 			// Arrange
-			component.clase.tipoClase = 1;
+			component.clase.update((c) => ({ ...c!, tipoClase: 1 }));
 			component.readyService = false;
 			spyOn(component, 'close');
 
@@ -281,7 +268,7 @@ describe('EditorClaseComponent', () => {
 			await component.procesarClasePorTipo();
 
 			// Assert
-			expect(mockCursosService.getCurso).toHaveBeenCalledWith(component.curso.idCurso, true);
+			expect(mockCursosService.getCurso).toHaveBeenCalledWith(component.curso()?.idCurso!, true);
 			expect(component.close).toHaveBeenCalled();
 		});
 	});
@@ -303,7 +290,7 @@ describe('EditorClaseComponent', () => {
 		it('should delete class and call updateCurso on confirmation', () => {
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(of(createDummyCurso()));
-			component.eliminaClase(component.clase);
+			component.eliminaClase(component.clase()!);
 			expect(mockCursosService.updateCurso).toHaveBeenCalled();
 		});
 
@@ -311,7 +298,7 @@ describe('EditorClaseComponent', () => {
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(of(null as any));
 			spyOn(console, 'error');
-			component.eliminaClase(component.clase);
+			component.eliminaClase(component.clase()!);
 			expect(console.error).toHaveBeenCalledWith('Falló la actualización del curso en editor-clase');
 		});
 
@@ -319,21 +306,19 @@ describe('EditorClaseComponent', () => {
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(throwError(() => new Error('Error')));
 			spyOn(console, 'error');
-			component.eliminaClase(component.clase);
+			component.eliminaClase(component.clase()!);
 			expect(console.error).toHaveBeenCalled();
 		});
 	});
 
 	describe('actualizarClaseExistente and procesarClasePorTipo edge cases', () => {
 		it('should do nothing in actualizarClaseExistente if idClase not found', () => {
-			component.clase.idClase = 999;
+			component.clase.update((c) => ({ ...c!, idClase: 999 }));
 			expect(() => component.actualizarClaseExistente()).not.toThrow();
 		});
 
 		it('should handle falsy success in procesarClasePorTipo', async () => {
-			component.clase.idClase = 1;
-			component.clase.tipoClase = 0;
-			component.clase.cursoClase = 1;
+			component.clase.update((c) => ({ ...c!, idClase: 1, tipoClase: 0, cursoClase: 1 }));
 			mockCursosService.updateCurso.and.returnValue(of(null as any));
 			spyOn(component, 'close');
 			spyOn(console, 'error');
@@ -343,9 +328,7 @@ describe('EditorClaseComponent', () => {
 		});
 
 		it('should handle error in procesarClasePorTipo', async () => {
-			component.clase.idClase = 1;
-			component.clase.tipoClase = 0;
-			component.clase.cursoClase = 1;
+			component.clase.update((c) => ({ ...c!, idClase: 1, tipoClase: 0, cursoClase: 1 }));
 			mockCursosService.updateCurso.and.returnValue(throwError(() => new Error('API Error')));
 			spyOn(component, 'close');
 			spyOn(console, 'error');
@@ -357,20 +340,20 @@ describe('EditorClaseComponent', () => {
 
 	describe('cambiaTipoClase', () => {
 		it('should return early if clase is null', () => {
-			(component as any).clase = null;
+			component.clase.set(null);
 			expect(() => component.cambiaTipoClase(0)).not.toThrow();
 		});
 
 		it('should handle type 0, 1, 2', () => {
-			component.clase = createDummyClase();
+			component.clase.set(createDummyClase());
 			component.cambiaTipoClase(0);
-			expect(component.clase.tipoClase).toBe(0);
+			expect(component.clase()?.tipoClase).toBe(0);
 
 			component.cambiaTipoClase(1);
-			expect(component.clase.tipoClase).toBe(1);
+			expect(component.clase()?.tipoClase).toBe(1);
 
 			component.cambiaTipoClase(2);
-			expect(component.clase.tipoClase).toBe(2);
+			expect(component.clase()?.tipoClase).toBe(2);
 		});
 	});
 
@@ -398,6 +381,55 @@ describe('EditorClaseComponent', () => {
 			// Assert
 			expect(mockCursosService.updateCurso).not.toHaveBeenCalled();
 		});
+
+		it('should handle falsy success and error in eliminaClase', () => {
+			spyOn(window, 'confirm').and.returnValue(true);
+			mockCursosService.updateCurso.and.returnValue(of(null as any));
+			spyOn(console, 'error');
+			component.eliminaClase(createDummyClase());
+			expect(console.error).toHaveBeenCalled();
+
+			mockCursosService.updateCurso.and.returnValue(throwError(() => new Error('Delete error')));
+			component.eliminaClase(createDummyClase());
+			expect(console.error).toHaveBeenCalled();
+		});
+	});
+
+	describe('cambiaTipoClase advanced', () => {
+		it('should handle type 2 getPresets error and success with invalid JSON / valid JSON', () => {
+			component.savedPresets = null;
+			mockStreamingService.getPresets.and.returnValue(of('invalid-json' as any));
+			spyOn(console, 'error');
+			component.cambiaTipoClase(2);
+			expect(component.clase()?.tipoClase).toBe(2);
+
+			component.savedPresets = null;
+			mockStreamingService.getPresets.and.returnValue(throwError(() => new Error('Preset error')));
+			component.cambiaTipoClase(2);
+			expect(component.clase()?.tipoClase).toBe(2);
+		});
+
+		it('should use cached savedPresets if not null', () => {
+			component.savedPresets = new Map<string, any>([['test', 1]]);
+			component.cambiaTipoClase(2);
+			expect(component.clase()?.tipoClase).toBe(2);
+		});
+	});
+
+	describe('subeVideo and preparaWebcam', () => {
+		it('should upload video successfully', () => {
+			const file = new File([''], 'video.mp4');
+			mockStreamingService.subeVideo.and.returnValue(of('http://video-url.com/vid.mp4'));
+			component.subeVideo(file);
+			expect(component.clase()?.direccionClase).toBe('http://video-url.com/vid.mp4');
+		});
+
+		it('should prepare webcam with course image', async () => {
+			component.curso.update((c) => ({ ...c!, imagenCurso: 'http://img.com/image.png' }));
+			spyOn(window, 'fetch').and.returnValue(Promise.resolve(new Response(new Blob(['img']))));
+			await component.preparaWebcam();
+			expect(window.fetch).toHaveBeenCalledWith('http://img.com/image.png', { credentials: 'include' });
+		});
 	});
 
 	describe('cambiaTipoClase', () => {
@@ -407,7 +439,7 @@ describe('EditorClaseComponent', () => {
 
 			// Assert
 			expect(mockStreamingService.stopMediaStreaming).toHaveBeenCalled();
-			expect(component.clase.tipoClase).toBe(0);
+			expect(component.clase()?.tipoClase).toBe(0);
 		});
 
 		it('should set tipoClase to 1 for OBS', () => {
@@ -415,7 +447,7 @@ describe('EditorClaseComponent', () => {
 			component.cambiaTipoClase(1);
 
 			// Assert
-			expect(component.clase.tipoClase).toBe(1);
+			expect(component.clase()?.tipoClase).toBe(1);
 		});
 
 		it('should start WebOBS and fetch presets when switching to type 2', () => {
@@ -428,7 +460,7 @@ describe('EditorClaseComponent', () => {
 			// Assert
 			expect(mockStreamingService.startWebOBS).toHaveBeenCalled();
 			expect(mockStreamingService.getPresets).toHaveBeenCalled();
-			expect(component.clase.tipoClase).toBe(2);
+			expect(component.clase()?.tipoClase).toBe(2);
 		});
 	});
 
@@ -442,7 +474,7 @@ describe('EditorClaseComponent', () => {
 			component.subeVideo(mockFile);
 
 			// Assert
-			expect(component.clase.direccionClase).toBe('http://server.com/video.mp4');
+			expect(component.clase()?.direccionClase).toBe('http://server.com/video.mp4');
 			expect(component.isUploadingVideo).toBeFalse();
 			expect(component.readyComponent).toBeTrue();
 		});

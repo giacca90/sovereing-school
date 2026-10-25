@@ -91,9 +91,9 @@ describe('HomeChatComponent', () => {
 
 		chatServiceSpy.initSubject.next(initData);
 
-		expect(component.chats.length).toBe(1);
-		expect(component.cursos.length).toBe(1);
-		expect(component.cargando).toBeFalse();
+		expect(component.chats().length).toBe(1);
+		expect(component.cursos().length).toBe(1);
+		expect(component.cargando()).toBeFalse();
 	});
 
 	it('should set cargando to false when initSubject emits invalid or mismatched user id', () => {
@@ -105,7 +105,7 @@ describe('HomeChatComponent', () => {
 
 		chatServiceSpy.initSubject.next(initData);
 
-		expect(component.cargando).toBeFalse();
+		expect(component.cargando()).toBeFalse();
 	});
 
 	it('should handle error from initSubject gracefully', () => {

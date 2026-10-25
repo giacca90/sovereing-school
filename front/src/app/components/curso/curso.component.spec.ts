@@ -86,7 +86,7 @@ describe('CursoComponent', () => {
 
 		it('should return user plan when user plan id matches one of course planes', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			(mockLoginService as any).usuario = {
 				idUsuario: 1,
 				nombreUsuario: 'test',
@@ -102,7 +102,7 @@ describe('CursoComponent', () => {
 
 		it('should return null when user plan is found but user has no planUsuario set', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			(mockLoginService as any).usuario = {
 				idUsuario: 1,
 				nombreUsuario: 'test',
@@ -118,7 +118,7 @@ describe('CursoComponent', () => {
 
 		it('should return null when user plan id is not included in course planes', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			const otherPlan: Plan = { ...planUser, idPlan: 99 };
 
 			// Act
@@ -132,7 +132,7 @@ describe('CursoComponent', () => {
 	describe('onKeydownHandler', () => {
 		it('should close modal when escape key is pressed and modalCourse is present', () => {
 			// Arrange
-			component.modalCourse = dummyCurso;
+			component.modalCourse.set(dummyCurso);
 			spyOn(component, 'closeModal');
 
 			// Act
@@ -144,7 +144,7 @@ describe('CursoComponent', () => {
 
 		it('should do nothing on escape key if modalCourse is null', () => {
 			// Arrange
-			component.modalCourse = null;
+			component.modalCourse.set(null);
 			spyOn(component, 'closeModal');
 
 			// Act
@@ -165,13 +165,13 @@ describe('CursoComponent', () => {
 			component.compraCurso(dummyCurso);
 
 			// Assert
-			expect(component.modalCourse).toEqual(dummyCurso);
+			expect(component.modalCourse()).toEqual(dummyCurso);
 			expect(renderer.addClass).toHaveBeenCalledWith((component as any).document.body, 'overflow-hidden');
 		});
 
 		it('should remove overflow-hidden and reset modalCourse in closeModal', () => {
 			// Arrange
-			component.modalCourse = dummyCurso;
+			component.modalCourse.set(dummyCurso);
 			const renderer = (component as any).renderer;
 			spyOn(renderer, 'removeClass');
 
@@ -179,7 +179,7 @@ describe('CursoComponent', () => {
 			component.closeModal();
 
 			// Assert
-			expect(component.modalCourse).toBeNull();
+			expect(component.modalCourse()).toBeNull();
 			expect(renderer.removeClass).toHaveBeenCalledWith((component as any).document.body, 'overflow-hidden');
 		});
 	});
@@ -272,7 +272,7 @@ describe('CursoComponent', () => {
 			await fixture.whenStable();
 
 			// Assert
-			expect(component.curso).toEqual(dummyCurso);
+			expect(component.curso()).toEqual(dummyCurso);
 			expect(component.nombresProfesores).toBe('Profesor John');
 		});
 
@@ -301,7 +301,7 @@ describe('CursoComponent', () => {
 			await fixture.whenStable();
 
 			// Assert
-			expect(component.curso).toBeNull();
+			expect(component.curso()).toBeNull();
 		});
 	});
 

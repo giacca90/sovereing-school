@@ -1,12 +1,12 @@
 <div class="relative">
 	<br />
-	@if (mensajeError) {
+	@if (mensajeError()) {
 		<div class="mr-4 ml-4 text-red-600">
-			<p>{{ mensajeError }}</p>
+			<p>{{ mensajeError() }}</p>
 		</div>
 	}
 
-	@if (fase === 0) {
+	@if (fase() === 0) {
 		<span class="m-4 rounded-lg p-1">Correo Electrónico:</span>
 		<br />
 		<input #correoInput type="text" [(ngModel)]="correo" class="m-4 rounded-lg border border-black p-1 dark:border-gray-400" placeholder="Correo electrónico asociado a tu cuenta" />

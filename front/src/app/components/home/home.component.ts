@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectionStrategy, ChangeDetectorRef, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, ViewChild } from '@angular/core';
+import { afterNextRender, Component, CUSTOM_ELEMENTS_SCHEMA, ElementRef, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import Swiper from 'swiper';
 import { Usuario } from '../../models/Usuario';
@@ -8,20 +8,18 @@ import { UsuariosService } from '../../services/usuarios.service';
 
 @Component({
 	selector: 'app-home',
-	standalone: true,
 	imports: [],
 	schemas: [CUSTOM_ELEMENTS_SCHEMA],
-	changeDetection: ChangeDetectionStrategy.Eager,
 	templateUrl: './home.component.html',
 	styleUrls: ['./home.component.css'], // corregido de styleUrl
 })
 export class HomeComponent {
 	swiperInstance?: Swiper;
-	@ViewChild('swiperContainer') swiperContainer!: ElementRef<HTMLElement>;
+	swiperContainer = viewChild<ElementRef<HTMLElement>>('swiperContainer');
 
-	currentProfe: Usuario | null = null;
-	isReverse: boolean = false;
-	profeOpacity: number = 0;
+	currentProfe = signal<Usuario | null>(null);
+	isReverse = signal<boolean>(false);
+	profeOpacity = signal<number>(0);
 
 	isBrowser = globalThis.window !== undefined;
 
@@ -30,14 +28,12 @@ export class HomeComponent {
 	 * @param {CursosService} cursoService - Servicio de cursos.
 	 * @param {UsuariosService} usuarioService - Servicio de usuarios.
 	 * @param {InitService} initService - Servicio de inicialización.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
 	 * @param {Router} router - Router de Angular.
 	 */
 	constructor(
 		public cursoService: CursosService,
 		public usuarioService: UsuariosService,
 		public initService: InitService,
-		private readonly cdr: ChangeDetectorRef,
 		public router: Router,
 	) {
 		if (this.isBrowser) {
@@ -56,7 +52,7 @@ export class HomeComponent {
 		if (!this.isBrowser) return;
 
 		// 1) obtener el contenedor
-		const container = this.swiperContainer?.nativeElement;
+		const container = this.swiperContainer()?.nativeElement;
 		if (!container) {
 			console.warn('Swiper: contenedor #swiper no encontrado');
 			return;
@@ -147,24 +143,22 @@ export class HomeComponent {
 		while (true) {
 			if (this.usuarioService.profes.length > 0) {
 				const profe = this.usuarioService.profes[index];
-				this.currentProfe = profe;
-				this.isReverse = index % 2 !== 0;
-				this.cdr.detectChanges();
+				this.currentProfe.set(profe);
+				this.isReverse.set(index % 2 !== 0);
 
 				// Fade in
 				await this.delay(100);
-				this.profeOpacity = 1;
-				this.cdr.detectChanges();
+				this.profeOpacity.set(1);
 
 				await this.delay(5000);
 
 				// Fade out
-				this.profeOpacity = 0;
-				this.cdr.detectChanges();
+				this.profeOpacity.set(0);
 				await this.delay(1000);
 
 				index = (index + 1) % this.usuarioService.profes.length;
 			} else {
+				console.log('📡 No hay profesores');
 				await this.delay(1000);
 			}
 		}

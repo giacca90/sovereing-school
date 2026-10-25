@@ -1,5 +1,5 @@
-import { PLATFORM_ID } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
+import { PLATFORM_ID, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { Clase } from '../../models/Clase';
@@ -31,7 +31,7 @@ describe('EditorCursoComponent', () => {
 		mockRouter.navigate.and.resolveTo(true);
 
 		mockCursosService = jasmine.createSpyObj('CursosService', ['getCurso', 'updateCurso', 'deleteCurso', 'addImagenCurso'], {
-			cursos: [],
+			cursos: signal<Curso[]>([]),
 		});
 		mockCursosService.getCurso.and.resolveTo(dummyCurso);
 
@@ -84,7 +84,7 @@ describe('EditorCursoComponent', () => {
 		it('should prompt confirm when editado is true and not streaming', () => {
 			// Arrange
 			(mockStreamingService as any).emitiendo = false;
-			component.editado = true;
+			component.editado.set(true);
 			spyOn(window, 'confirm').and.returnValue(true);
 
 			// Act
@@ -98,7 +98,7 @@ describe('EditorCursoComponent', () => {
 		it('should return true without prompt when neither streaming nor edited', () => {
 			// Arrange
 			(mockStreamingService as any).emitiendo = false;
-			component.editado = false;
+			component.editado.set(false);
 			spyOn(window, 'confirm');
 
 			// Act
@@ -126,7 +126,7 @@ describe('EditorCursoComponent', () => {
 		it('should not prevent default when not streaming and not edited', () => {
 			// Arrange
 			(mockStreamingService as any).emitiendo = false;
-			component.editado = false;
+			component.editado.set(false);
 			const event = jasmine.createSpyObj('BeforeUnloadEvent', ['preventDefault']);
 
 			// Act
@@ -146,9 +146,9 @@ describe('EditorCursoComponent', () => {
 			component.ngOnInit();
 
 			// Assert
-			expect(component.curso).toBeDefined();
-			expect(component.curso.idCurso).toBe(0);
-			expect(component.curso.profesoresCurso).toEqual([10]);
+			expect(component.curso()).toBeDefined();
+			expect(component.curso()!.idCurso).toBe(0);
+			expect(component.curso()!.profesoresCurso).toEqual([10]);
 		});
 
 		it('should navigate to root when idCurso is 0 and no user is logged in', () => {
@@ -175,8 +175,8 @@ describe('EditorCursoComponent', () => {
 			await fixture.whenStable();
 
 			// Assert
-			expect(component.curso).toBeDefined();
-			expect(component.curso.idCurso).toBe(1);
+			expect(component.curso()).toBeDefined();
+			expect(component.curso()!.idCurso).toBe(1);
 		});
 
 		it('should navigate to root when course is not found', async () => {
@@ -193,7 +193,7 @@ describe('EditorCursoComponent', () => {
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
 		});
 
-		it('should navigate to root when getting course throws error', fakeAsync(() => {
+		it('should navigate to root when getting course throws error', async () => {
 			// Arrange
 			component.idCurso = 1;
 			mockCursosService.getCurso.and.returnValue(Promise.reject(new Error('Network error')));
@@ -201,16 +201,16 @@ describe('EditorCursoComponent', () => {
 
 			// Act
 			component.ngOnInit();
-			flush();
+			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Assert
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
-		}));
+		});
 	});
 
 	describe('drag and drop', () => {
 		describe('onDragStart', () => {
-			it('should setup drag image and set draggedElementId', fakeAsync(() => {
+			it('should setup drag image and set draggedElementId', async () => {
 				// Arrange
 				const mockTarget = document.createElement('div');
 				mockTarget.className = 'test-class';
@@ -225,12 +225,12 @@ describe('EditorCursoComponent', () => {
 
 				// Act
 				component.onDragStart(event, 1);
+				await new Promise((resolve) => setTimeout(resolve, 10));
 
 				// Assert
 				expect(component.draggedElementId).toBe(1);
 				expect(mockDataTransfer.setData).toHaveBeenCalledWith('text/plain', '1');
-				tick(1);
-			}));
+			});
 		});
 
 		describe('onDragOver', () => {
@@ -251,7 +251,7 @@ describe('EditorCursoComponent', () => {
 
 			it('should swap class positions when dragging over another item', () => {
 				// Arrange
-				component.curso = structuredClone(dummyCurso);
+				component.curso.set(structuredClone(dummyCurso));
 				component.draggedElementId = 1;
 				spyOn(component, 'compruebaCambios');
 				const event = jasmine.createSpyObj('Event', ['preventDefault']);
@@ -261,7 +261,7 @@ describe('EditorCursoComponent', () => {
 
 				// Assert
 				expect(component.compruebaCambios).toHaveBeenCalled();
-				expect(component.curso!.clasesCurso![0].idClase).toBe(2);
+				expect(component.curso()!.clasesCurso![0].idClase).toBe(2);
 			});
 		});
 
@@ -298,7 +298,7 @@ describe('EditorCursoComponent', () => {
 	describe('compruebaCambios', () => {
 		it('should set editado to true when course differs from remote', async () => {
 			// Arrange
-			component.curso = { ...dummyCurso, nombreCurso: 'Modificado' };
+			component.curso.set({ ...dummyCurso, nombreCurso: 'Modificado' });
 			mockCursosService.getCurso.and.resolveTo(dummyCurso);
 
 			// Act
@@ -306,7 +306,7 @@ describe('EditorCursoComponent', () => {
 			await fixture.whenStable();
 
 			// Assert
-			expect(component.editado).toBeTrue();
+			expect(component.editado()).toBeTrue();
 		});
 	});
 
@@ -314,7 +314,7 @@ describe('EditorCursoComponent', () => {
 		it('should call updateCurso, update state and navigate on success', () => {
 			// Arrange
 			component.idCurso = 0;
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			mockCursosService.updateCurso.and.returnValue(of(dummyCurso));
 
 			// Act
@@ -322,13 +322,13 @@ describe('EditorCursoComponent', () => {
 
 			// Assert
 			expect(mockInitService.carga).toHaveBeenCalled();
-			expect(component.editado).toBeFalse();
+			expect(component.editado()).toBeFalse();
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/cursosUsuario']);
 		});
 
 		it('should log error when update returns falsy or throws error', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			mockCursosService.updateCurso.and.returnValue(throwError(() => new Error('Error al actualizar')));
 			spyOn(console, 'error');
 
@@ -341,7 +341,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should log error when update returns falsy response', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			mockCursosService.updateCurso.and.returnValue(of(null as any));
 			spyOn(console, 'error');
 
@@ -357,19 +357,19 @@ describe('EditorCursoComponent', () => {
 		it('should populate claseEditar when class is found in course', async () => {
 			// Arrange
 			mockCursosService.getCurso.and.resolveTo(dummyCurso);
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 
 			// Act
 			await component.editarClase(dummyClase1);
 
 			// Assert
-			expect(component.claseEditar).toEqual({ ...dummyClase1 });
+			expect(component.claseEditar()).toEqual({ ...dummyClase1 });
 		});
 
 		it('should log error when course or class is missing in editarClase', async () => {
 			// Arrange
 			spyOn(console, 'error');
-			component.curso = {} as any;
+			component.curso.set({} as any);
 			mockCursosService.getCurso.and.resolveTo(null);
 
 			// Act
@@ -384,7 +384,7 @@ describe('EditorCursoComponent', () => {
 			const cursoMock = structuredClone(dummyCurso);
 			cursoMock.clasesCurso = [];
 			mockCursosService.getCurso.and.resolveTo(cursoMock);
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(console, 'error');
 
 			// Act
@@ -397,14 +397,14 @@ describe('EditorCursoComponent', () => {
 		it('should create new class in nuevaClase', () => {
 			// Arrange
 			component.idCurso = 1;
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 
 			// Act
 			component.nuevaClase();
 
 			// Assert
-			expect(component.claseEditar).toBeDefined();
-			expect(component.claseEditar?.posicionClase).toBe(3);
+			expect(component.claseEditar()).toBeDefined();
+			expect(component.claseEditar()?.posicionClase).toBe(3);
 		});
 	});
 
@@ -423,7 +423,7 @@ describe('EditorCursoComponent', () => {
 		it('should upload image when files are present', () => {
 			const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
 			const event = { target: { files: [file] } } as unknown as Event;
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			mockCursosService.addImagenCurso.and.returnValue(of('new-image.png'));
 			spyOn(component, 'compruebaCambios');
 
@@ -440,14 +440,14 @@ describe('EditorCursoComponent', () => {
 			component.cargaImagenCurso(event);
 
 			expect(mockCursosService.addImagenCurso).toHaveBeenCalled();
-			expect(component.curso.imagenCurso).toBe('new-image.png');
+			expect(component.curso()!.imagenCurso).toBe('new-image.png');
 			expect(component.compruebaCambios).toHaveBeenCalled();
 		});
 
 		it('should log error when addImagenCurso fails', () => {
 			const file = new File(['dummy content'], 'test.png', { type: 'image/png' });
 			const event = { target: { files: [file] } } as unknown as Event;
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			mockCursosService.addImagenCurso.and.returnValue(throwError(() => new Error('Upload error')));
 			spyOn(console, 'error');
 
@@ -469,7 +469,7 @@ describe('EditorCursoComponent', () => {
 
 	describe('eliminaClase', () => {
 		it('should remove class and update course on confirmation', () => {
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(of(dummyCurso));
 
@@ -480,7 +480,7 @@ describe('EditorCursoComponent', () => {
 		});
 
 		it('should log error when updateCurso returns falsy in eliminaClase', () => {
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(of(null as any));
 			spyOn(console, 'error');
@@ -491,7 +491,7 @@ describe('EditorCursoComponent', () => {
 		});
 
 		it('should log error when updateCurso throws error in eliminaClase', () => {
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(throwError(() => new Error('Error')));
 			spyOn(console, 'error');
@@ -510,24 +510,24 @@ describe('EditorCursoComponent', () => {
 			await component.claseGuardada(true);
 
 			expect(component.compruebaCambios).toHaveBeenCalled();
-			expect(component.claseEditar).toBeNull();
+			expect(component.claseEditar()).toBeNull();
 		});
 
 		it('should reload course when idCurso is not 0', async () => {
 			component.idCurso = 1;
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			mockCursosService.getCurso.and.resolveTo(dummyCurso);
 			spyOn(component, 'compruebaCambios');
 
 			await component.claseGuardada(true);
 
 			expect(component.compruebaCambios).toHaveBeenCalled();
-			expect(component.claseEditar).toBeNull();
+			expect(component.claseEditar()).toBeNull();
 		});
 
 		it('should log error when getCurso returns null in claseGuardada', async () => {
 			component.idCurso = 1;
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			mockCursosService.getCurso.and.resolveTo(null);
 			spyOn(console, 'error');
 
@@ -538,7 +538,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should log error when getCurso throws in claseGuardada', async () => {
 			component.idCurso = 1;
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			mockCursosService.getCurso.and.returnValue(Promise.reject(new Error('Fetch error')));
 			spyOn(console, 'error');
 
@@ -556,7 +556,7 @@ describe('EditorCursoComponent', () => {
 
 	describe('nuevaClase additional branch', () => {
 		it('should not throw if clasesCurso is undefined in nuevaClase', () => {
-			component.curso = { ...dummyCurso, clasesCurso: undefined };
+			component.curso.set({ ...dummyCurso, clasesCurso: undefined });
 			expect(() => component.nuevaClase()).not.toThrow();
 		});
 	});
@@ -564,7 +564,7 @@ describe('EditorCursoComponent', () => {
 	describe('deleteCurso', () => {
 		it('should delete course and navigate when user confirms twice', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			spyOn(window, 'confirm').and.returnValues(true, true);
 			mockCursosService.deleteCurso.and.returnValue(of(true));
 
@@ -578,7 +578,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should abort if first or second confirm is false', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			spyOn(window, 'confirm').and.returnValue(false);
 
 			// Act
@@ -590,7 +590,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should handle deleteCurso returning false', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			spyOn(window, 'confirm').and.returnValues(true, true);
 			mockCursosService.deleteCurso.and.returnValue(of(false));
 
@@ -603,7 +603,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should handle deleteCurso throwing error', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			spyOn(window, 'confirm').and.returnValues(true, true);
 			mockCursosService.deleteCurso.and.returnValue(throwError(() => new Error('Delete error')));
 			spyOn(console, 'error');
@@ -619,22 +619,22 @@ describe('EditorCursoComponent', () => {
 	describe('eliminaClase', () => {
 		it('should remove class and update course when confirmed', () => {
 			// Arrange
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(window, 'confirm').and.returnValue(true);
-			mockCursosService.updateCurso.and.returnValue(of(component.curso));
+			mockCursosService.updateCurso.and.returnValue(of(component.curso()!));
 
 			// Act
 			component.eliminaClase(dummyClase1);
 
 			// Assert
-			expect(component.curso!.clasesCurso!.length).toBe(1);
+			expect(component.curso()!.clasesCurso!.length).toBe(1);
 			expect(mockCursosService.updateCurso).toHaveBeenCalled();
 			expect(mockInitService.carga).toHaveBeenCalled();
 		});
 
 		it('should not delete class when confirm is false', () => {
 			// Arrange
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(window, 'confirm').and.returnValue(false);
 
 			// Act
@@ -649,22 +649,22 @@ describe('EditorCursoComponent', () => {
 		it('should reset claseEditar and overflow when idCurso is 0 and event is true', async () => {
 			// Arrange
 			component.idCurso = 0;
-			component.claseEditar = dummyClase1;
+			component.claseEditar.set(dummyClase1);
 			spyOn(component, 'compruebaCambios');
 
 			// Act
 			await component.claseGuardada(true);
 
 			// Assert
-			expect(component.claseEditar).toBeNull();
+			expect(component.claseEditar()).toBeNull();
 			expect(component.compruebaCambios).toHaveBeenCalled();
 		});
 
 		it('should reload course when idCurso > 0 and event is true', async () => {
 			// Arrange
 			component.idCurso = 1;
-			component.curso = dummyCurso;
-			component.claseEditar = dummyClase1;
+			component.curso.set(dummyCurso);
+			component.claseEditar.set(dummyClase1);
 			mockCursosService.getCurso.and.resolveTo(dummyCurso);
 			spyOn(component, 'compruebaCambios');
 
@@ -672,25 +672,25 @@ describe('EditorCursoComponent', () => {
 			await component.claseGuardada(true);
 
 			// Assert
-			expect(component.claseEditar).toBeNull();
+			expect(component.claseEditar()).toBeNull();
 			expect(component.compruebaCambios).toHaveBeenCalled();
 		});
 
 		it('should do nothing when event is false', async () => {
 			// Arrange
-			component.claseEditar = dummyClase1;
+			component.claseEditar.set(dummyClase1);
 
 			// Act
 			await component.claseGuardada(false);
 
 			// Assert
-			expect(component.claseEditar).toEqual(dummyClase1);
+			expect(component.claseEditar()).toEqual(dummyClase1);
 		});
 
 		it('should log error when course is not found on claseGuardada with idCurso > 0', async () => {
 			// Arrange
 			component.idCurso = 1;
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			mockCursosService.getCurso.and.resolveTo(null);
 			spyOn(console, 'error');
 
@@ -705,7 +705,7 @@ describe('EditorCursoComponent', () => {
 		it('should log error when getCurso throws error on claseGuardada', async () => {
 			// Arrange
 			component.idCurso = 1;
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			mockCursosService.getCurso.and.returnValue(Promise.reject(new Error('Fetch error')));
 			spyOn(console, 'error');
 
@@ -723,7 +723,7 @@ describe('EditorCursoComponent', () => {
 			// Arrange
 			spyOn(console, 'error');
 			mockCursosService.getCurso.and.resolveTo(dummyCurso);
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			const invalidClase = new Clase(999, 'Invalid', '', '', 0, '', 1, 1);
 
 			// Act
@@ -735,7 +735,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should log error when deleteCurso throws error', () => {
 			// Arrange
-			component.curso = dummyCurso;
+			component.curso.set(dummyCurso);
 			spyOn(window, 'confirm').and.returnValues(true, true);
 			mockCursosService.deleteCurso.and.returnValue(throwError(() => new Error('Delete error')));
 			spyOn(console, 'error');
@@ -749,7 +749,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should log error when updateCurso returns falsy on eliminaClase', () => {
 			// Arrange
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(of(null as any));
 			spyOn(console, 'error');
@@ -763,7 +763,7 @@ describe('EditorCursoComponent', () => {
 
 		it('should log error when updateCurso throws error on eliminaClase', () => {
 			// Arrange
-			component.curso = structuredClone(dummyCurso);
+			component.curso.set(structuredClone(dummyCurso));
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.updateCurso.and.returnValue(throwError(() => new Error('Update error')));
 			spyOn(console, 'error');

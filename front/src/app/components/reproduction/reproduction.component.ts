@@ -1,5 +1,5 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { take } from 'rxjs/operators';
@@ -13,10 +13,8 @@ import { ChatComponent } from '../chat/chat/chat.component';
 
 @Component({
 	selector: 'app-reproduction',
-	standalone: true,
 	imports: [ChatComponent],
 	templateUrl: './reproduction.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './reproduction.component.css',
 })
 export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -25,23 +23,22 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	public momento: number | null = null;
 	private readonly isBrowser: boolean;
 	private readonly subscription: Subscription = new Subscription();
-	public loading: boolean = true;
-	public curso: Curso | null = null;
-	public clase: Clase | null = null;
-	@ViewChild(ChatComponent, { static: false }) chatComponent!: ChatComponent;
-	@ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
+	loading = signal<boolean>(true);
+	curso = signal<Curso | null>(null);
+	clase = signal<Clase | null>(null);
+	chatComponent = viewChild<ChatComponent>(ChatComponent);
+	videoElement = viewChild<ElementRef<HTMLVideoElement>>('videoElement');
 	backStream: string = '';
 	player: Player | null = null;
-	vista: number = 0; // 0: Contenido, 1: Chat
+	vista = signal<number>(0); // 0: Contenido, 1: Chat
 
 	// Estado para UI dinámica
-	contextMenu: { x: number; y: number; time: number } | null = null;
-	hoveredMarker: { message: string; x: number; y: number; idMensaje: string } | null = null;
+	contextMenu = signal<{ x: number; y: number; time: number } | null>(null);
+	hoveredMarker = signal<{ message: string; x: number; y: number; idMensaje: string } | null>(null);
 
 	/**
 	 * Constructor del componente.
 	 * @param {ActivatedRoute} route - Ruta activada.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
 	 * @param {Object} platformId - ID de la plataforma.
 	 * @param {Document} document - Documento.
 	 * @param {CursosService} cursoService - Servicio de cursos.
@@ -51,7 +48,6 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	 */
 	constructor(
 		private readonly route: ActivatedRoute,
-		private readonly cdr: ChangeDetectorRef,
 		@Inject(PLATFORM_ID) private readonly platformId: object,
 		@Inject(DOCUMENT) private readonly document: Document,
 		public cursoService: CursosService,
@@ -68,8 +64,8 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	 */
 	@HostListener('document:click', ['$event'])
 	onDocumentClick(event: MouseEvent) {
-		if (this.contextMenu) {
-			this.contextMenu = null;
+		if (this.contextMenu()) {
+			this.contextMenu.set(null);
 		}
 	}
 
@@ -123,15 +119,15 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		return this.cursoService
 			.getCurso(this.idCurso)
 			.then((result) => {
-				this.curso = result;
-				if (this.curso?.clasesCurso) {
-					const result = this.curso.clasesCurso.find((clase) => clase.idClase == this.idClase);
+				this.curso.set(result);
+				let clases = this.curso()?.clasesCurso;
+				if (clases) {
+					const result = clases.find((clase) => clase.idClase == this.idClase);
 					if (result) {
-						this.clase = result;
+						this.clase.set(result);
 						this.getVideo();
 					}
 				}
-				this.cdr.detectChanges();
 			})
 			.catch((error) => {
 				console.error('Error loading curso:', error);
@@ -148,7 +144,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 		if (!this.isBrowser) return; // 🛡️ Protección SSR
 
 		try {
-			const video: HTMLVideoElement = this.videoElement?.nativeElement;
+			const video: HTMLVideoElement = this.videoElement()!.nativeElement;
 			if (!video) {
 				console.warn('Elemento de video no encontrado');
 				return;
@@ -366,7 +362,7 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 					});
 				}
 
-				this.loading = false;
+				this.loading.set(false);
 
 				if (this.momento) {
 					this.player?.currentTime(this.momento > 3 ? this.momento - 3 : this.momento);
@@ -376,8 +372,6 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 						replaceUrl: true,
 					});
 				}
-
-				this.cdr.detectChanges();
 			});
 
 			this.player.on('play', () => {
@@ -423,35 +417,34 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 	}
 
 	cambiaVista(vista: number) {
-		this.vista = vista;
-		this.cdr.detectChanges();
+		this.vista.set(vista);
 	}
 
 	// Función para mostrar la cortina en la posición del clic
 	private muestraCortina(x: number, y: number, timeInSeconds: number) {
-		this.contextMenu = { x, y: y + (globalThis.window?.scrollY || 0), time: timeInSeconds };
-		this.cdr.detectChanges();
+		this.contextMenu.set({ x, y: y + (globalThis.window?.scrollY || 0), time: timeInSeconds });
 	}
 
 	clickPregunta() {
-		if (this.contextMenu) {
+		if (this.contextMenu()) {
 			this.cambiaVista(1);
-			this.chatComponent.creaPregunta(this.idClase, this.contextMenu.time);
-			this.contextMenu = null;
-			this.cdr.detectChanges();
+			this.chatComponent()!.creaPregunta(this.idClase, this.contextMenu()!.time);
+			this.contextMenu.set(null);
 		}
 	}
 
 	async esperarChatComponent(player: Player) {
 		let retries = 0;
-		while ((!this.chatComponent || !this.chatComponent.chat) && retries < 30) {
+		while (!this.chatComponent()?.chat() && retries < 30) {
 			await new Promise((resolve) => setTimeout(resolve, 100)); // Espera 0.1 segundos
 			retries++;
 		}
-		if (!this.chatComponent?.chat) return;
+		if (!this.chatComponent()?.chat()) return;
 
 		// Ejecutar el código después de verificar que `chat` está definido
-		const claseChat: ClaseChat | undefined = this.chatComponent.chat?.clases.find((clase) => clase.idClase == this.idClase);
+		const claseChat: ClaseChat | undefined = this.chatComponent()
+			?.chat()
+			?.clases.find((clase) => clase.idClase == this.idClase);
 		if (claseChat) {
 			for (const preg of claseChat.mensajes) {
 				if (!preg.pregunta) continue; // saltar mensajes sin tiempo de pregunta
@@ -479,25 +472,22 @@ export class ReproductionComponent implements OnInit, AfterViewInit, OnDestroy {
 				this.renderer.setStyle(marcador, 'backgroundColor', '#eab308');
 
 				this.renderer.listen(marcador, 'mouseover', (event: MouseEvent) => {
-					this.hoveredMarker = {
+					this.hoveredMarker.set({
 						message: preg.mensaje ?? '',
 						x: event.clientX,
 						y: event.clientY + 20,
 						idMensaje: preg.idMensaje ?? '',
-					};
-					this.cdr.detectChanges();
+					});
 				});
 
 				this.renderer.listen(marcador, 'mouseout', () => {
 					setTimeout(() => {
-						this.hoveredMarker = null;
-						this.cdr.detectChanges();
+						this.hoveredMarker.set(null);
 					}, 1000);
 				});
 
 				this.renderer.appendChild(seekBar.el(), marcador);
 			}
 		}
-		this.cdr.detectChanges();
 	}
 }

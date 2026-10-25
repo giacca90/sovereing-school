@@ -68,4 +68,15 @@ describe('RegisterService', () => {
 		req.event(new HttpResponse({ status: 200, body: 'Some other message' }));
 		expect(window.alert).toHaveBeenCalled();
 	});
+
+	it('registrarNuevoUsuario should resolve false when status is not 200', async () => {
+		const user: NuevoUsuario = { nombre: 'Test', email: 'test@test.com', password: '123' } as any;
+		const promise = service.registrarNuevoUsuario(user);
+
+		const req = httpMock.expectOne('http://localhost:8080/usuario/nuevo');
+		req.event(new HttpResponse({ status: 201, body: null }));
+
+		const result = await promise;
+		expect(result).toBeFalse();
+	});
 });

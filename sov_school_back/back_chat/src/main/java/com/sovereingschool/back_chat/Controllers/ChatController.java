@@ -60,159 +60,20 @@ public class ChatController {
     /* Sección para el websocket */
 
     /**
-     * Función para iniciar el chat
+     * Función para actualizar el chat del curso
      * 
-     * @return Object con el resultado de la operación
-     */
-    @MessageMapping("/init")
-    @SendToUser("/init_chat/result")
-    public Object handleInitChat() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            if (authentication == null || !authentication.isAuthenticated()) {
-                return "Token inválido: no autenticado";
-            }
-            Long idUsuario = (Long) authentication.getDetails(); // 👈 aquí recuperas el ID
-            return initChatService.initChat(idUsuario);
-        } catch (IllegalArgumentException | EntityNotFoundException e) {
-            return e.getMessage();
-        } catch (Exception e) {
-            logger.error("Error en el websocket de init: {}", e.getMessage());
-            return "Error en obtener en init del chat: " + e.getMessage();
-        }
-    }
-
-    /**
-     * Función para obtener el chat del curso
-     * 
-     * @param message String con el ID del curso
-     */
-    @MessageMapping("/curso")
-    public void getCursoChat(String message) {
-        Long idCurso = Long.parseLong(message);
-        try {
-            CursoChatDTO cursoChat = cursoChatService.getCursoChat(idCurso);
-            messagingTemplate.convertAndSend("/init_chat/" + idCurso, cursoChat);
-        } catch (EntityNotFoundException e) {
-            messagingTemplate.convertAndSend("/init_chat/" + idCurso, e.getMessage());
-        } catch (Exception e) {
-            logger.error("Error en obtener el chat del curso: {}", e.getMessage());
-            messagingTemplate.convertAndSend("/init_chat/" + idCurso,
-                    "Error en obtener el chat del curso: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Función para guardar un mensaje en el chat
-     * 
-     * @param message String con el mensaje
-     */
-    @MessageMapping("/chat")
-    public void guardaMensaje(String message) {
-        try {
-            this.cursoChatService.guardaMensaje(message);
-        } catch (IllegalArgumentException | NoSuchElementException | DataAccessException e) {
-            messagingTemplate.convertAndSend("/chat/", e.getMessage());
-        } catch (Exception e) {
-            logger.error("Error en guardar mensaje: {}", e.getMessage());
-            messagingTemplate.convertAndSend("/chat/", "Error en guardar mensaje: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Función para marcar un mensaje como leido
-     * 
-     * @param message String con el mensaje
-     */
-    @MessageMapping("/leido")
-    public void mensajeLeido(String message) {
-        try {
-            this.cursoChatService.mensajeLeido(message);
-        } catch (EntityNotFoundException e) {
-            messagingTemplate.convertAndSend("/leido", e.getMessage());
-        } catch (Exception e) {
-            messagingTemplate.convertAndSend("/leido", "Error en marcar el mensaje como leido: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Función para refrescar el token en el websocket abierto
-     * 
-     * @param sessionId String con el ID de la sesión
-     * @param newToken  String con el nuevo token
-     */
-    @MessageMapping("/refresh-token")
-    public void refreshToken(@Header("simpSessionId") String sessionId, String newToken) {
-        try {
-            this.cursoChatService.refreshTokenInOpenWebsocket(sessionId, newToken);
-        } catch (Exception e) {
-            messagingTemplate.convertAndSend("/refresh-token", "Error en refrescar el token: " + e.getMessage());
-            // Devuelvo un error para cerrar el websocket
-            throw new RuntimeException("Error en refrescar el token: " + e.getMessage());
-        }
-    }
-
-    /* Sección para REST */
-
-    /**
-     * Función para crear el chat del usuario
-     * 
-     * @param message String con el mensaje
+     * @param curso Curso a actualizar
      * @return ResponseEntity<String> con el resultado de la operación
      */
-    @PostMapping("/crea_usuario_chat")
-    public ResponseEntity<?> creaUsuarioChat(@RequestBody String message) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    @PostMapping("/actualizar_curso_chat")
+    public ResponseEntity<?> actualizarCursoChat(@RequestBody Curso curso) {
         try {
-            Usuario usuario = objectMapper.readValue(message, Usuario.class);
-            this.cursoChatService.creaUsuarioChat(usuario);
-            return new ResponseEntity<>("Usuario chat creado con exito!!!", HttpStatus.OK);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (JsonProcessingException e) {
-            return new ResponseEntity<>(
-                    "Error al parsear JSON del usuario: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error en crear el usuario del chat: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Función para crear el chat del curso
-     * 
-     * @param message String con el mensaje
-     * @return ResponseEntity<String> con el resultado de la operación
-     */
-    @PostMapping("/crea_curso_chat")
-    public ResponseEntity<?> creaCursoChat(@RequestBody String message) {
-        try {
-            this.cursoChatService.creaCursoChat(message);
-            return new ResponseEntity<>("Curso chat creado con exito!!!", HttpStatus.OK);
-        } catch (RuntimeException e) {
+            this.cursoChatService.actualizarCursoChat(curso);
+            return new ResponseEntity<>("Curso chat actualizado con éxito!!!", HttpStatus.OK);
+        } catch (InternalServerException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error al crear en chat del curso: " + e.getCause(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Función para crear la clase del chat
-     * 
-     * @param message String con el mensaje
-     * @return ResponseEntity<String> con el resultado de la operación
-     */
-    @PostMapping("/crea_clase_chat")
-    public ResponseEntity<?> creaClaseChat(@RequestBody String message) {
-        try {
-            this.cursoChatService.creaClaseChat(message);
-            return new ResponseEntity<>("Clase chat creado con exito!!!", HttpStatus.OK);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (Exception e) {
-            return new ResponseEntity<>("Error en crear el chat de la clase: " + e.getCause(),
+            return new ResponseEntity<>("Error en actualizar el chat del curso: " + e.getCause(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -276,20 +137,65 @@ public class ChatController {
     }
 
     /**
-     * Función para actualizar el chat del curso
+     * Función para crear la clase del chat
      * 
-     * @param curso Curso a actualizar
+     * @param message String con el mensaje
      * @return ResponseEntity<String> con el resultado de la operación
      */
-    @PostMapping("/actualizar_curso_chat")
-    public ResponseEntity<?> actualizarCursoChat(@RequestBody Curso curso) {
+    @PostMapping("/crea_clase_chat")
+    public ResponseEntity<?> creaClaseChat(@RequestBody String message) {
         try {
-            this.cursoChatService.actualizarCursoChat(curso);
-            return new ResponseEntity<>("Curso chat actualizado con éxito!!!", HttpStatus.OK);
-        } catch (InternalServerException e) {
+            this.cursoChatService.creaClaseChat(message);
+            return new ResponseEntity<>("Clase chat creado con exito!!!", HttpStatus.OK);
+        } catch (RuntimeException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            return new ResponseEntity<>("Error en actualizar el chat del curso: " + e.getCause(),
+            return new ResponseEntity<>("Error en crear el chat de la clase: " + e.getCause(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /* Sección para REST */
+
+    /**
+     * Función para crear el chat del curso
+     * 
+     * @param message String con el mensaje
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
+    @PostMapping("/crea_curso_chat")
+    public ResponseEntity<?> creaCursoChat(@RequestBody String message) {
+        try {
+            this.cursoChatService.creaCursoChat(message);
+            return new ResponseEntity<>("Curso chat creado con exito!!!", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error al crear en chat del curso: " + e.getCause(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Función para crear el chat del usuario
+     * 
+     * @param message String con el mensaje
+     * @return ResponseEntity<String> con el resultado de la operación
+     */
+    @PostMapping("/crea_usuario_chat")
+    public ResponseEntity<?> creaUsuarioChat(@RequestBody String message) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            Usuario usuario = objectMapper.readValue(message, Usuario.class);
+            this.cursoChatService.creaUsuarioChat(usuario);
+            return new ResponseEntity<>("Usuario chat creado con exito!!!", HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (JsonProcessingException e) {
+            return new ResponseEntity<>(
+                    "Error al parsear JSON del usuario: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error en crear el usuario del chat: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -312,6 +218,67 @@ public class ChatController {
     }
 
     /**
+     * Función para obtener el chat del curso
+     * 
+     * @param message String con el ID del curso
+     */
+    @MessageMapping("/curso")
+    public void getCursoChat(String message) {
+        Long idCurso = Long.parseLong(message);
+        try {
+            CursoChatDTO cursoChat = cursoChatService.getCursoChat(idCurso);
+            messagingTemplate.convertAndSend("/init_chat/" + idCurso, cursoChat);
+        } catch (EntityNotFoundException e) {
+            messagingTemplate.convertAndSend("/init_chat/" + idCurso, e.getMessage());
+        } catch (Exception e) {
+            logger.error("Error en obtener el chat del curso: {}", e.getMessage());
+            messagingTemplate.convertAndSend("/init_chat/" + idCurso,
+                    "Error en obtener el chat del curso: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Función para guardar un mensaje en el chat
+     * 
+     * @param message String con el mensaje
+     */
+    @MessageMapping("/chat")
+    public void guardaMensaje(String message) {
+        try {
+            this.cursoChatService.guardaMensaje(message);
+        } catch (IllegalArgumentException | NoSuchElementException | DataAccessException e) {
+            messagingTemplate.convertAndSend("/chat/", e.getMessage());
+        } catch (Exception e) {
+            logger.error("Error en guardar mensaje: {}", e.getMessage());
+            messagingTemplate.convertAndSend("/chat/", "Error en guardar mensaje: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Función para iniciar el chat
+     * 
+     * @return Object con el resultado de la operación
+     */
+    @MessageMapping("/init")
+    @SendToUser("/init_chat/result")
+    public Object handleInitChat() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return "Token inválido: no autenticado";
+            }
+            Long idUsuario = (Long) authentication.getDetails(); // 👈 aquí recuperas el ID
+            return initChatService.initChat(idUsuario);
+        } catch (IllegalArgumentException | EntityNotFoundException e) {
+            return e.getMessage();
+        } catch (Exception e) {
+            logger.error("Error en el websocket de init: {}", e.getMessage());
+            return "Error en obtener en init del chat: " + e.getMessage();
+        }
+    }
+
+    /**
      * Función para rellenar la base de datos
      */
     @GetMapping("/init")
@@ -322,6 +289,39 @@ public class ChatController {
             return new ResponseEntity<>("Iniciado chat con exito!!!", HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getCause(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Función para marcar un mensaje como leido
+     * 
+     * @param message String con el mensaje
+     */
+    @MessageMapping("/leido")
+    public void mensajeLeido(String message) {
+        try {
+            this.cursoChatService.mensajeLeido(message);
+        } catch (EntityNotFoundException e) {
+            messagingTemplate.convertAndSend("/leido", e.getMessage());
+        } catch (Exception e) {
+            messagingTemplate.convertAndSend("/leido", "Error en marcar el mensaje como leido: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Función para refrescar el token en el websocket abierto
+     * 
+     * @param sessionId String con el ID de la sesión
+     * @param newToken  String con el nuevo token
+     */
+    @MessageMapping("/refresh-token")
+    public void refreshToken(@Header("simpSessionId") String sessionId, String newToken) {
+        try {
+            this.cursoChatService.refreshTokenInOpenWebsocket(sessionId, newToken);
+        } catch (Exception e) {
+            messagingTemplate.convertAndSend("/refresh-token", "Error en refrescar el token: " + e.getMessage());
+            // Devuelvo un error para cerrar el websocket
+            throw new RuntimeException("Error en refrescar el token: " + e.getMessage());
         }
     }
 }

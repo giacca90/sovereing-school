@@ -1,4 +1,4 @@
-import { ElementRef } from '@angular/core';
+import { ElementRef, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { Usuario } from '../../models/Usuario';
@@ -30,7 +30,9 @@ describe('HomeComponent', () => {
 	} as unknown as Usuario;
 
 	beforeEach(async () => {
-		mockCursoService = jasmine.createSpyObj('CursosService', ['obtenerCursos']);
+		mockCursoService = jasmine.createSpyObj('CursosService', ['obtenerCursos'], {
+			cursos: signal([]),
+		});
 		mockUsuarioService = jasmine.createSpyObj('UsuariosService', ['obtenerProfes'], {
 			profes: [dummyProfe1, dummyProfe2],
 		});
@@ -111,7 +113,7 @@ describe('HomeComponent', () => {
 			await component.carouselProfes();
 
 			// Assert
-			expect(component.currentProfe).toBeNull();
+			expect(component.currentProfe()).toBeNull();
 		});
 
 		it('should iterate over professors updating opacity, reverse flag and currentProfe', async () => {
@@ -171,7 +173,7 @@ describe('HomeComponent', () => {
 		it('should warn and return if container element is not found', async () => {
 			// Arrange
 			component.isBrowser = true;
-			component.swiperContainer = undefined as any;
+			(component as any).swiperContainer = signal(undefined);
 			const warnSpy = spyOn(console, 'warn');
 
 			// Act
@@ -186,7 +188,7 @@ describe('HomeComponent', () => {
 			component.isBrowser = true;
 			const mockEl = document.createElement('div');
 			mockEl.innerHTML = '<div class="swiper-wrapper"></div>';
-			component.swiperContainer = new ElementRef(mockEl);
+			(component as any).swiperContainer = signal(new ElementRef(mockEl));
 			const warnSpy = spyOn(console, 'warn');
 
 			// Act
@@ -201,7 +203,7 @@ describe('HomeComponent', () => {
 			// Arrange
 			component.isBrowser = true;
 			const mockEl = document.createElement('div');
-			component.swiperContainer = new ElementRef(mockEl);
+			(component as any).swiperContainer = signal(new ElementRef(mockEl));
 			const warnSpy = spyOn(console, 'warn');
 
 			// Act
@@ -217,7 +219,7 @@ describe('HomeComponent', () => {
 			component.isBrowser = true;
 			const mockEl = document.createElement('div');
 			mockEl.innerHTML = '<div class="swiper-wrapper"><div class="swiper-slide">Slide 1</div></div>';
-			component.swiperContainer = new ElementRef(mockEl);
+			(component as any).swiperContainer = signal(new ElementRef(mockEl));
 
 			// Act
 			await component.initSwiper();

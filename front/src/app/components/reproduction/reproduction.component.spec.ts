@@ -1,6 +1,5 @@
-import { DOCUMENT } from '@angular/common';
-import { ChangeDetectorRef, Component, Input, PLATFORM_ID, Renderer2 } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { Component, ElementRef, Input, PLATFORM_ID, Renderer2, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import videojs from 'video.js';
@@ -13,13 +12,12 @@ import { ReproductionComponent } from './reproduction.component';
 
 @Component({
 	selector: 'app-chat',
-	standalone: true,
 	template: '<div>Mock Chat</div>',
 })
 class MockChatComponent {
 	@Input() idCurso: number | null = null;
 	creaPregunta = jasmine.createSpy('creaPregunta');
-	chat: any = {
+	chat = signal<any>({
 		clases: [
 			{
 				idClase: 2,
@@ -30,7 +28,7 @@ class MockChatComponent {
 				],
 			},
 		],
-	};
+	});
 }
 
 describe('ReproductionComponent', () => {
@@ -122,20 +120,20 @@ describe('ReproductionComponent', () => {
 			expect(component.loadData).toHaveBeenCalled();
 		});
 
-		it('should handle idClase === 0 and redirect to current class status', fakeAsync(() => {
+		it('should handle idClase === 0 and redirect to current class status', async () => {
 			// Arrange
 			paramsSubject.next({ idCurso: '1', idClase: '0' });
 
 			// Act
 			fixture.detectChanges();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			// Assert
 			expect(mockCursosService.getStatusCurso).toHaveBeenCalledWith(1);
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/repro/1/2']);
-		}));
+		});
 
-		it('should handle idClase === 0 and redirect to root if course status is not available', fakeAsync(() => {
+		it('should handle idClase === 0 and redirect to root if course status is not available', async () => {
 			// Arrange
 			spyOn(window, 'alert');
 			mockCursosService.getStatusCurso.and.returnValue(of(null));
@@ -143,14 +141,14 @@ describe('ReproductionComponent', () => {
 
 			// Act
 			fixture.detectChanges();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			// Assert
 			expect(window.alert).toHaveBeenCalledWith('Este curso no está disponible');
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
-		}));
+		});
 
-		it('should log error when getStatusCurso fails', fakeAsync(() => {
+		it('should log error when getStatusCurso fails', async () => {
 			// Arrange
 			spyOn(console, 'error');
 			mockCursosService.getStatusCurso.and.returnValue(throwError(() => new Error('API Error')));
@@ -158,11 +156,11 @@ describe('ReproductionComponent', () => {
 
 			// Act
 			fixture.detectChanges();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			// Assert
 			expect(console.error).toHaveBeenCalledWith('Error en recibir el estado del curso: API Error');
-		}));
+		});
 	});
 
 	describe('loadData', () => {
@@ -176,8 +174,8 @@ describe('ReproductionComponent', () => {
 
 			// Assert
 			expect(mockCursosService.getCurso).toHaveBeenCalledWith(1);
-			expect(component.curso).toEqual(dummyCurso as Curso);
-			expect(component.clase).toEqual(dummyCurso.clasesCurso![0]);
+			expect(component.curso()).toEqual(dummyCurso as Curso);
+			expect(component.clase()).toEqual(dummyCurso.clasesCurso![0]);
 			expect(component['getVideo']).toHaveBeenCalled();
 		});
 
@@ -190,31 +188,31 @@ describe('ReproductionComponent', () => {
 			await component.loadData();
 
 			// Assert
-			expect(component.clase).toBeNull();
+			expect(component.clase()).toBeNull();
 		});
 	});
 
 	describe('host listener e interacciones de usuario', () => {
 		it('should close context menu on document click if open', () => {
 			// Arrange
-			component.contextMenu = { x: 100, y: 200, time: 30 };
+			component.contextMenu.set({ x: 100, y: 200, time: 30 });
 
 			// Act
 			component.onDocumentClick(new MouseEvent('click'));
 
 			// Assert
-			expect(component.contextMenu).toBeNull();
+			expect(component.contextMenu()).toBeNull();
 		});
 
 		it('should remain null on document click if context menu is already closed', () => {
 			// Arrange
-			component.contextMenu = null;
+			component.contextMenu.set(null);
 
 			// Act
 			component.onDocumentClick(new MouseEvent('click'));
 
 			// Assert
-			expect(component.contextMenu).toBeNull();
+			expect(component.contextMenu()).toBeNull();
 		});
 
 		it('should change views', () => {
@@ -222,7 +220,7 @@ describe('ReproductionComponent', () => {
 			component.cambiaVista(1);
 
 			// Assert
-			expect(component.vista).toBe(1);
+			expect(component.vista()).toBe(1);
 		});
 
 		it('should set contextMenu coordinates when muestraCortina is called', () => {
@@ -230,7 +228,7 @@ describe('ReproductionComponent', () => {
 			component['muestraCortina'](150, 250, 12.5);
 
 			// Assert
-			expect(component.contextMenu).toEqual({
+			expect(component.contextMenu()).toEqual({
 				x: 150,
 				y: 250 + (globalThis.window?.scrollY || 0),
 				time: 12.5,
@@ -239,19 +237,18 @@ describe('ReproductionComponent', () => {
 
 		it('should open chat view, create question and reset context menu when clickPregunta is called', () => {
 			// Arrange
-			component.contextMenu = { x: 100, y: 200, time: 35 };
+			component.contextMenu.set({ x: 100, y: 200, time: 35 });
 			component.idClase = 2;
 			const mockChat = new MockChatComponent() as any;
-			component.chatComponent = mockChat;
-			spyOn((component as any).cdr, 'detectChanges');
+			(component as any).chatComponent = signal(mockChat);
 
 			// Act
 			component.clickPregunta();
 
 			// Assert
-			expect(component.vista).toBe(1);
+			expect(component.vista()).toBe(1);
 			expect(mockChat.creaPregunta).toHaveBeenCalledWith(2, 35);
-			expect(component.contextMenu).toBeNull();
+			expect(component.contextMenu()).toBeNull();
 		});
 	});
 
@@ -270,10 +267,11 @@ describe('ReproductionComponent', () => {
 	});
 
 	describe('esperarChatComponent y marcadores de preguntas', () => {
-		it('should wait for chat and add markers to seekBar', fakeAsync(() => {
+		it('should wait for chat and add markers to seekBar', async () => {
 			// Arrange
 			component.idClase = 2;
-			component.chatComponent = new MockChatComponent() as any;
+			const mockChat = new MockChatComponent() as any;
+			(component as any).chatComponent = signal(mockChat);
 
 			const mockSeekBarElement = document.createElement('div');
 			spyOn(mockSeekBarElement, 'getBoundingClientRect').and.returnValue({
@@ -294,7 +292,7 @@ describe('ReproductionComponent', () => {
 
 			// Act
 			component.esperarChatComponent(mockPlayer);
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			// Assert
 			expect(mockPlayer.duration).toHaveBeenCalled();
@@ -305,7 +303,7 @@ describe('ReproductionComponent', () => {
 			// Simular mouseover en el marcador
 			const mouseOverEvent = new MouseEvent('mouseover', { clientX: 200, clientY: 300 });
 			marker?.dispatchEvent(mouseOverEvent);
-			expect(component.hoveredMarker).toEqual({
+			expect(component.hoveredMarker()).toEqual({
 				message: '¿Qué es esto?',
 				x: 200,
 				y: 320,
@@ -314,15 +312,16 @@ describe('ReproductionComponent', () => {
 
 			// Simular mouseout en el marcador
 			marker?.dispatchEvent(new MouseEvent('mouseout'));
-			tick(1000);
-			expect(component.hoveredMarker).toBeNull();
-		}));
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			expect(component.hoveredMarker()).toBeNull();
+		});
 
-		it('should handle missing chatComponent chat without crashing and wait', fakeAsync(() => {
+		it('should handle missing chatComponent chat without crashing and wait', async () => {
 			// Arrange
 			component.idClase = 2;
-			component.chatComponent = new MockChatComponent() as any;
-			component.chatComponent.chat = null; // Inicialmente null
+			const mockChat = new MockChatComponent() as any;
+			mockChat.chat.set(null); // Inicialmente null
+			(component as any).chatComponent = signal(mockChat);
 
 			const mockPlayer = {
 				duration: jasmine.createSpy('duration').and.returnValue(100),
@@ -339,15 +338,15 @@ describe('ReproductionComponent', () => {
 			component.esperarChatComponent(mockPlayer);
 
 			// Simular que el chat carga después de 300ms
-			tick(300);
-			component.chatComponent.chat = {
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			mockChat.chat.set({
 				clases: [],
-			} as any;
-			tick(300);
+			} as any);
+			await new Promise((resolve) => setTimeout(resolve, 300));
 
 			// Assert
 			expect(mockPlayer.duration).not.toHaveBeenCalled(); // No clases match idClase
-		}));
+		});
 	});
 
 	describe('getVideo real execution coverage', () => {
@@ -370,7 +369,7 @@ describe('ReproductionComponent', () => {
 		it('should log warning if videoElement is not found', async () => {
 			// Arrange
 			(component as any).isBrowser = true;
-			component.videoElement = { nativeElement: null } as any;
+			(component as any).videoElement = signal({ nativeElement: null } as any);
 			spyOn(console, 'warn');
 
 			// Act
@@ -383,7 +382,8 @@ describe('ReproductionComponent', () => {
 		it('should initialize player, quality selector, and listeners via Video.js getPlayer hook', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
+			queryParamsSubject.next({ momento: '5' });
 			component.backStream = 'http://stream';
 			component.idCurso = 1;
 			component.idClase = 2;
@@ -463,13 +463,14 @@ describe('ReproductionComponent', () => {
 				queryParamsHandling: 'merge',
 				replaceUrl: true,
 			});
-			expect(component.loading).toBeFalse();
+			expect(component.loading()).toBeFalse();
 		});
 
 		it('should handle momento <= 3 when setting currentTime in getVideo', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
+			queryParamsSubject.next({ momento: '2' });
 			component.backStream = 'http://stream/test.m3u8';
 			component.momento = 2; // <= 3
 
@@ -504,7 +505,7 @@ describe('ReproductionComponent', () => {
 		it('should handle quality selector creation, item clicks (auto and specific height), and seek fallback', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
 			component.backStream = 'http://stream/test.m3u8';
 			component.momento = null;
 
@@ -617,12 +618,10 @@ describe('ReproductionComponent', () => {
 		it('should handle quality selector when bandwidthEstimator is null and buffer covers currentTime', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
 			component.backStream = 'http://stream/test.m3u8';
 
-			const qualityLevels: any = [
-				{ height: 480, enabled: true },
-			];
+			const qualityLevels: any = [{ height: 480, enabled: true }];
 			qualityLevels.on = (evt: string, cb: Function) => {
 				if (evt === 'addqualitylevel') cb();
 			};
@@ -677,7 +676,7 @@ describe('ReproductionComponent', () => {
 		it('should reuse existing quality selector if already present in DOM', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
 			component.backStream = 'http://stream/test.m3u8';
 
 			const qualityLevels: any = [{ height: 720, enabled: true }];
@@ -706,6 +705,7 @@ describe('ReproductionComponent', () => {
 				buffered: () => ({ length: 0, start: () => 0, end: () => 0 }),
 				one: jasmine.createSpy('one'),
 				on: jasmine.createSpy('on'),
+				trigger: jasmine.createSpy('trigger'),
 			};
 
 			spyOn(videojs, 'getPlayer').and.returnValue(mockPlayer as any);
@@ -717,7 +717,7 @@ describe('ReproductionComponent', () => {
 		it('should jump before start buffer when jump exceeds duration', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
 			component.backStream = 'http://stream/test.m3u8';
 
 			const qualityLevels: any = [{ height: 1080, enabled: true }];
@@ -746,6 +746,7 @@ describe('ReproductionComponent', () => {
 				}),
 				one: jasmine.createSpy('one'),
 				on: jasmine.createSpy('on'),
+				trigger: jasmine.createSpy('trigger'),
 			};
 
 			spyOn(videojs, 'getPlayer').and.returnValue(mockPlayer as any);
@@ -762,7 +763,7 @@ describe('ReproductionComponent', () => {
 		it('should catch and log error if video initialization throws', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
 			component.backStream = 'http://stream/test.m3u8';
 
 			spyOn(videojs, 'getPlayer').and.throwError(new Error('Init fail'));
@@ -776,7 +777,7 @@ describe('ReproductionComponent', () => {
 		it('should attach contextmenu event to seekBar and open context menu if duration > 0', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
 			component.backStream = 'http://stream/test.m3u8';
 
 			const seekBarEl = document.createElement('div');
@@ -795,8 +796,7 @@ describe('ReproductionComponent', () => {
 
 			const mockControlBar = {
 				el: () => document.createElement('div'),
-				getChild: (name: string) =>
-					name === 'ProgressControl' ? { getChild: (s: string) => (s === 'SeekBar' ? mockSeekBar : null) } : null,
+				getChild: (name: string) => (name === 'ProgressControl' ? { getChild: (s: string) => (s === 'SeekBar' ? mockSeekBar : null) } : null),
 			};
 
 			const mockPlayer = {
@@ -836,13 +836,14 @@ describe('ReproductionComponent', () => {
 		it('should trigger player.on play and timeupdate events, handling progress error and segment caching', async () => {
 			(component as any).isBrowser = true;
 			const videoEl = document.createElement('video');
-			component.videoElement = { nativeElement: videoEl };
+			(component as any).videoElement = signal(new ElementRef(videoEl));
 			component.backStream = 'http://stream/test.m3u8';
 			component.idCurso = 1;
 			component.idClase = 2;
 
 			let timeupdateCb: Function = () => {};
 			let playCb: Function = () => {};
+			let mockCurrentTime: any = 25;
 
 			const mockPlayer = {
 				src: jasmine.createSpy('src'),
@@ -854,7 +855,10 @@ describe('ReproductionComponent', () => {
 					return ql;
 				},
 				getChild: () => ({ el: () => document.createElement('div'), getChild: () => null }),
-				currentTime: jasmine.createSpy('currentTime').and.returnValues(25, 25.5, undefined, 45),
+				currentTime: jasmine.createSpy('currentTime').and.callFake((val?: number) => {
+					if (val !== undefined) mockCurrentTime = val;
+					return mockCurrentTime;
+				}),
 				duration: jasmine.createSpy('duration').and.returnValue(100),
 				buffered: () => ({ length: 0, start: () => 0, end: () => 0 }),
 				one: jasmine.createSpy('one'),
@@ -876,20 +880,25 @@ describe('ReproductionComponent', () => {
 
 			// Timeupdate 1: currentTime = 25 -> segmentIndex = Math.floor(25 / 2) = 12
 			// Calls registrarProgreso with success
+			mockCurrentTime = 25;
 			mockStreamingService.registrarProgreso.and.returnValue(of({}));
 			timeupdateCb();
 			expect(mockStreamingService.registrarProgreso).toHaveBeenCalledWith(1, 2, 12);
 
 			// Timeupdate 2: currentTime = 25.5 -> segmentIndex = Math.floor(25.5 / 2) = 12 === lastSegmentReported -> skips call
+			mockCurrentTime = 25.5;
 			mockStreamingService.registrarProgreso.calls.reset();
 			timeupdateCb();
 			expect(mockStreamingService.registrarProgreso).not.toHaveBeenCalled();
 
 			// Timeupdate 3: currentTime = undefined -> skips call
+			mockCurrentTime = undefined;
 			timeupdateCb();
 			expect(mockStreamingService.registrarProgreso).not.toHaveBeenCalled();
 
 			// Timeupdate 4: currentTime = 45 -> segmentIndex = Math.floor(45 / 2) = 22, with error in registrarProgreso
+			mockCurrentTime = 45;
+			(console.error as jasmine.Spy).calls.reset();
 			mockStreamingService.registrarProgreso.and.returnValue(throwError(() => new Error('Progreso error')));
 			timeupdateCb();
 			expect(console.error).toHaveBeenCalledWith('Error al registrar progreso:', jasmine.any(Error));
@@ -897,51 +906,49 @@ describe('ReproductionComponent', () => {
 	});
 
 	describe('esperarChatComponent', () => {
-		it('should stop retrying after 30 attempts if chat is never ready', fakeAsync(() => {
-			component.chatComponent = null as any;
+		it('should stop retrying after 30 attempts if chat is never ready', async () => {
+			(component as any).chatComponent = signal(null);
 			const mockPlayer = { duration: jasmine.createSpy('duration') };
 
 			component.esperarChatComponent(mockPlayer as any);
-			tick(3500); // 35 * 100ms > 30 retries
+			await new Promise((resolve) => setTimeout(resolve, 3500)); // 35 * 100ms > 30 retries
 
 			expect(mockPlayer.duration).not.toHaveBeenCalled();
-		}));
+		});
 
-		it('should handle when chat.clases does not contain current idClase', fakeAsync(() => {
+		it('should handle when chat.clases does not contain current idClase', async () => {
 			component.idClase = 999;
-			component.chatComponent = new MockChatComponent() as any;
-			component.chatComponent.chat = {
+			const mockChat = new MockChatComponent() as any;
+			mockChat.chat.set({
 				clases: [
 					{
 						idClase: 1,
 						mensajes: [{ pregunta: 10, mensaje: 'Test', idMensaje: '1' } as any],
 					},
 				],
-			} as any;
+			} as any);
+			(component as any).chatComponent = signal(mockChat);
 
 			const mockPlayer = { duration: jasmine.createSpy('duration') };
 
 			component.esperarChatComponent(mockPlayer as any);
-			tick(150);
+			await new Promise((resolve) => setTimeout(resolve, 150));
 
 			expect(mockPlayer.duration).not.toHaveBeenCalled();
-		}));
+		});
 
-		it('should filter out invalid messages (pregunta null or > duration) and handle missing seekBar', fakeAsync(() => {
+		it('should filter out invalid messages (pregunta null or > duration) and handle missing seekBar', async () => {
 			component.idClase = 2;
-			component.chatComponent = new MockChatComponent() as any;
-			component.chatComponent.chat = {
+			const mockChat = new MockChatComponent() as any;
+			mockChat.chat.set({
 				clases: [
 					{
 						idClase: 2,
-						mensajes: [
-							{ pregunta: null, mensaje: 'Sin tiempo' } as any,
-							{ pregunta: 150, mensaje: 'Fuera de duracion' } as any,
-							{ pregunta: 10, mensaje: 'Valido' } as any,
-						],
+						mensajes: [{ pregunta: null, mensaje: 'Sin tiempo' } as any, { pregunta: 150, mensaje: 'Fuera de duracion' } as any, { pregunta: 10, mensaje: 'Valido' } as any],
 					},
 				],
-			} as any;
+			} as any);
+			(component as any).chatComponent = signal(mockChat);
 
 			const mockPlayer = {
 				duration: jasmine.createSpy('duration').and.returnValue(100),
@@ -949,26 +956,24 @@ describe('ReproductionComponent', () => {
 			};
 
 			component.esperarChatComponent(mockPlayer as any);
-			tick(150);
+			await new Promise((resolve) => setTimeout(resolve, 150));
 
 			expect(mockPlayer.duration).toHaveBeenCalled();
 			expect(mockPlayer.getChild).toHaveBeenCalledWith('ControlBar');
-		}));
+		});
 
-		it('should create question markers and handle mouseover/mouseout listeners', fakeAsync(() => {
+		it('should create question markers and handle mouseover/mouseout listeners', async () => {
 			component.idClase = 2;
-			component.chatComponent = new MockChatComponent() as any;
-			component.chatComponent.chat = {
+			const mockChat = new MockChatComponent() as any;
+			mockChat.chat.set({
 				clases: [
 					{
 						idClase: 2,
-						mensajes: [
-							{ pregunta: 25, mensaje: 'Pregunta en 25s', idMensaje: 'msg-1' } as any,
-							{ pregunta: 50, mensaje: null, idMensaje: null } as any,
-						],
+						mensajes: [{ pregunta: 25, mensaje: 'Pregunta en 25s', idMensaje: 'msg-1' } as any, { pregunta: 50, mensaje: null, idMensaje: null } as any],
 					},
 				],
-			} as any;
+			} as any);
+			(component as any).chatComponent = signal(mockChat);
 
 			const seekBarEl = document.createElement('div');
 			spyOn(seekBarEl, 'getBoundingClientRect').and.returnValue({ width: 400 } as DOMRect);
@@ -977,8 +982,7 @@ describe('ReproductionComponent', () => {
 				el: () => seekBarEl,
 			};
 			const mockControlBar = {
-				getChild: (n: string) =>
-					n === 'ProgressControl' ? { getChild: (s: string) => (s === 'SeekBar' ? mockSeekBar : null) } : null,
+				getChild: (n: string) => (n === 'ProgressControl' ? { getChild: (s: string) => (s === 'SeekBar' ? mockSeekBar : null) } : null),
 			};
 			const mockPlayer = {
 				duration: jasmine.createSpy('duration').and.returnValue(100),
@@ -986,7 +990,7 @@ describe('ReproductionComponent', () => {
 			};
 
 			component.esperarChatComponent(mockPlayer as any);
-			tick(150);
+			await new Promise((resolve) => setTimeout(resolve, 150));
 
 			const markers = seekBarEl.querySelectorAll('div');
 			expect(markers.length).toBe(2);
@@ -994,7 +998,7 @@ describe('ReproductionComponent', () => {
 			const firstMarker = markers[0];
 			// Mouseover on first marker
 			firstMarker.dispatchEvent(new MouseEvent('mouseover', { clientX: 100, clientY: 200 }));
-			expect(component.hoveredMarker).toEqual({
+			expect(component.hoveredMarker()).toEqual({
 				message: 'Pregunta en 25s',
 				x: 100,
 				y: 220,
@@ -1003,21 +1007,21 @@ describe('ReproductionComponent', () => {
 
 			// Mouseout triggers 1000ms timeout to clear hoveredMarker
 			firstMarker.dispatchEvent(new MouseEvent('mouseout'));
-			expect(component.hoveredMarker).not.toBeNull();
-			tick(1000);
-			expect(component.hoveredMarker).toBeNull();
+			expect(component.hoveredMarker()).not.toBeNull();
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			expect(component.hoveredMarker()).toBeNull();
 
 			// Mouseover on second marker (mensaje is null -> fallback '')
 			const secondMarker = markers[1];
 			secondMarker.dispatchEvent(new MouseEvent('mouseover', { clientX: 150, clientY: 220 }));
-			expect(component.hoveredMarker?.message).toBe('');
-			expect(component.hoveredMarker?.idMensaje).toBe('');
-			expect(component.hoveredMarker?.y).toBe(240);
+			expect(component.hoveredMarker()?.message).toBe('');
+			expect(component.hoveredMarker()?.idMensaje).toBe('');
+			expect(component.hoveredMarker()?.y).toBe(240);
 
 			secondMarker.dispatchEvent(new MouseEvent('mouseout'));
-			tick(1000);
-			expect(component.hoveredMarker).toBeNull();
-		}));
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			expect(component.hoveredMarker()).toBeNull();
+		});
 	});
 
 	describe('loadData edge cases', () => {
@@ -1028,8 +1032,8 @@ describe('ReproductionComponent', () => {
 
 			await component.loadData();
 
-			expect(component.curso).toBeNull();
-			expect(component.clase).toBeNull();
+			expect(component.curso()).toBeNull();
+			expect(component.clase()).toBeNull();
 		});
 
 		it('should handle null clasesCurso', async () => {
@@ -1039,7 +1043,7 @@ describe('ReproductionComponent', () => {
 
 			await component.loadData();
 
-			expect(component.clase).toBeNull();
+			expect(component.clase()).toBeNull();
 		});
 
 		it('should handle clase not found in clasesCurso', async () => {
@@ -1047,14 +1051,14 @@ describe('ReproductionComponent', () => {
 				Promise.resolve({
 					idCurso: 1,
 					clasesCurso: [{ idClase: 99 }],
-				} as any)
+				} as any),
 			);
 			component.idCurso = 1;
 			component.idClase = 2;
 
 			await component.loadData();
 
-			expect(component.clase).toBeNull();
+			expect(component.clase()).toBeNull();
 		});
 
 		it('should catch and log error when getCurso rejects', async () => {
@@ -1070,38 +1074,38 @@ describe('ReproductionComponent', () => {
 	});
 
 	describe('ngOnInit y router params edge cases', () => {
-		it('should navigate to root when idClase is 0 and resp is 0', fakeAsync(() => {
+		it('should navigate to root when idClase is 0 and resp is 0', async () => {
 			mockCursosService.getStatusCurso.and.returnValue(of(0));
 			spyOn(window, 'alert');
 			(component as any).route.params = of({ idCurso: '1', idClase: '0' });
 
 			component.ngOnInit();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			expect(window.alert).toHaveBeenCalledWith('Este curso no está disponible');
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
-		}));
+		});
 
-		it('should navigate to valid class when idClase is 0 and resp > 0', fakeAsync(() => {
+		it('should navigate to valid class when idClase is 0 and resp > 0', async () => {
 			mockCursosService.getStatusCurso.and.returnValue(of(4));
 			(component as any).route.params = of({ idCurso: '1', idClase: '0' });
 
 			component.ngOnInit();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/repro/1/4']);
-		}));
+		});
 
-		it('should log error when getStatusCurso fails', fakeAsync(() => {
+		it('should log error when getStatusCurso fails', async () => {
 			mockCursosService.getStatusCurso.and.returnValue(throwError(() => new Error('Status service fail')));
 			spyOn(console, 'error');
 			(component as any).route.params = of({ idCurso: '1', idClase: '0' });
 
 			component.ngOnInit();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 
 			expect(console.error).toHaveBeenCalledWith('Error en recibir el estado del curso: Status service fail');
-		}));
+		});
 
 		it('should set momento to null if queryParam momento is invalid NaN', () => {
 			(component as any).route.queryParams = of({ momento: 'invalid-number' });
@@ -1126,9 +1130,9 @@ describe('ReproductionComponent', () => {
 
 		it('should change view via cambiaVista', () => {
 			component.cambiaVista(1);
-			expect(component.vista).toBe(1);
+			expect(component.vista()).toBe(1);
 			component.cambiaVista(0);
-			expect(component.vista).toBe(0);
+			expect(component.vista()).toBe(0);
 		});
 
 		it('should navigate to class via navega', () => {
@@ -1138,15 +1142,15 @@ describe('ReproductionComponent', () => {
 		});
 
 		it('should close contextMenu on document click', () => {
-			component.contextMenu = { x: 10, y: 20, time: 30 };
+			component.contextMenu.set({ x: 10, y: 20, time: 30 });
 			component.onDocumentClick(new MouseEvent('click'));
-			expect(component.contextMenu).toBeNull();
+			expect(component.contextMenu()).toBeNull();
 		});
 
 		it('should not call creaPregunta if contextMenu is null', () => {
-			component.contextMenu = null;
+			component.contextMenu.set(null);
 			const mockChat = new MockChatComponent() as any;
-			component.chatComponent = mockChat;
+			(component as any).chatComponent = signal(mockChat);
 
 			component.clickPregunta();
 
@@ -1154,17 +1158,15 @@ describe('ReproductionComponent', () => {
 		});
 
 		it('should call creaPregunta and reset contextMenu when contextMenu is present', () => {
-			component.contextMenu = { x: 50, y: 60, time: 120 };
+			component.contextMenu.set({ x: 50, y: 60, time: 120 });
 			component.idClase = 3;
 			const mockChat = new MockChatComponent() as any;
-			component.chatComponent = mockChat;
-			spyOn((component as any).cdr, 'detectChanges');
+			(component as any).chatComponent = signal(mockChat);
 
 			component.clickPregunta();
 
 			expect(mockChat.creaPregunta).toHaveBeenCalledWith(3, 120);
-			expect((component as any).cdr.detectChanges).toHaveBeenCalled();
-			expect(component.contextMenu).toBeNull();
+			expect(component.contextMenu()).toBeNull();
 		});
 	});
 });

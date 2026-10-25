@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component } from '@angular/core';
 
 /**
  * Componente para gestionar la compra de cursos.
@@ -7,7 +7,6 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 	selector: 'app-compra-curso',
 	imports: [],
 	templateUrl: './compra-curso.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './compra-curso.component.css',
 })
 export class CompraCursoComponent {}

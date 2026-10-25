@@ -65,8 +65,7 @@
 		"video.js": "8.24.2",
 		"videojs-contrib-quality-levels": "4.1.0",
 		"videojs-http-source-selector": "1.1.6",
-		"web-obs": "../../web-obs-workspace/dist/web-obs/web-obs-0.1.40.tgz",
-		"zone.js": "0.16.3"
+		"web-obs": "0.2.0"
 	},
 	"devDependencies": {
 		"@angular-eslint/builder": "22.6.0",

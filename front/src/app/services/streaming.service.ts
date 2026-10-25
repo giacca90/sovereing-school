@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 import { Preset } from 'web-obs';
 import { LoginService } from './login.service';
@@ -31,7 +31,7 @@ export class StreamingService {
 	public rtmpUrl: string = '';
 	// URL de la previsualización de OBS
 	public status: string = '';
-	public UrlPreview: string = '';
+	public UrlPreview = signal<string>('');
 	public streamId: string | null = null;
 	private pc!: RTCPeerConnection;
 	private pendingCandidates: RTCIceCandidateInit[] = [];
@@ -373,7 +373,6 @@ export class StreamingService {
 				return;
 			}
 			console.log('📩 Mensaje recibido (OBS):', data);
-			console.log('¿streamingService está en la zona?:', NgZone.isInAngularZone());
 			try {
 				switch (data.type) {
 					// 🔹 Error de autenticación
@@ -396,13 +395,12 @@ export class StreamingService {
 					// 🔹 Backend envía RTMP URL
 					case 'rtmp_url':
 						console.log('✅ URL RTMP recibida:', data.message);
-						console.log('¿El switch está en la zona?:', NgZone.isInAngularZone());
 						this.rtmpUrl = data.message;
 						this.status = 'Esperando conexión con OBS...';
 
 						// Prepara la URL para preview
-						this.UrlPreview = `${this.URL}/getPreview/${data.message.split('/').pop()}`;
-						console.log('🔗 URL Preview:', this.UrlPreview);
+						this.UrlPreview.set(`${this.URL}/getPreview/${data.message.split('/').pop()}`);
+						console.log('🔗 URL Preview:', this.UrlPreview());
 						break;
 
 					// 🔹 Error genérico del servidor
@@ -435,7 +433,6 @@ export class StreamingService {
 				this.ws?.close();
 				this.emitiendo = false;
 			}
-			//this.cdr.detectChanges();
 		};
 
 		this.ws.onerror = (event: Event) => {

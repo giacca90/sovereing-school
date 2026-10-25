@@ -35,6 +35,11 @@ describe('UsuariosService', () => {
 		expect(service.apiUrl).toBe('http://localhost:8080/usuario/');
 	});
 
+	it('apiUrl should return empty string when __env is missing', () => {
+		delete (window as any).__env;
+		expect(service.apiUrl).toBe('');
+	});
+
 	it('getUsuario should perform GET request', () => {
 		service.getUsuario(1);
 		const req = httpMock.expectOne('http://localhost:8080/usuario/1');

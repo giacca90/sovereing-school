@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, PLATFORM_ID, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, PLATFORM_ID, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { Auth } from '../../models/Auth';
@@ -10,10 +10,8 @@ import { RegisterComponent } from './register/register.component';
 
 @Component({
 	selector: 'app-log-modal',
-	standalone: true,
 	templateUrl: './log-modal.component.html',
 	styleUrl: './log-modal.component.css',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	imports: [LoginComponent, RegisterComponent],
 })
 // Ahora el padre captura los keydown y los pasa a los hijos
@@ -24,7 +22,7 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 	// ✅ Subject para propagar eventos de teclado
 	keyEvents$ = new Subject<KeyboardEvent>();
 
-	@ViewChild('modal') modalEl!: ElementRef<HTMLDivElement>;
+	modalEl = viewChild<ElementRef<HTMLDivElement>>('modal');
 
 	/**
 	 * Constructor del componente.
@@ -47,7 +45,7 @@ export class LogModalComponent implements AfterViewInit, OnDestroy {
 		if (isPlatformBrowser(this.platformId)) {
 			this.backBase = (globalThis.window as any).__env?.BACK_BASE ?? '';
 			// ✅ Aseguramos que el modal recibe foco para captar teclas
-			setTimeout(() => this.modalEl?.nativeElement?.focus(), 0);
+			requestAnimationFrame(() => this.modalEl()?.nativeElement?.focus());
 		}
 	}
 

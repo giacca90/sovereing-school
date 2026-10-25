@@ -87,7 +87,7 @@ describe('InitService', () => {
 
 		const result = await promise;
 		expect(result).toBeTrue();
-		expect(cursosService.cursos).toEqual([]);
+		expect(cursosService.cursos()).toEqual([]);
 	});
 
 	it('carga should use memory cache on subsequent calls', async () => {

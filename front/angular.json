@@ -24,7 +24,7 @@
 						"index": "src/index.html",
 						"browser": "src/main.ts",
 						"server": "src/main.server.ts",
-						"polyfills": ["zone.js"],
+						"polyfills": [],
 						"tsConfig": "tsconfig.app.json",
 						"assets": ["src/favicon.ico", "src/assets"],
 						"styles": ["src/styles.css", "node_modules/video.js/dist/video-js.css"],
@@ -95,7 +95,7 @@
 				"test": {
 					"builder": "@angular/build:karma",
 					"options": {
-						"polyfills": ["zone.js", "zone.js/testing"],
+						"polyfills": [],
 						"tsConfig": "tsconfig.spec.json",
 						"karmaConfig": "karma.conf.js",
 						"assets": ["src/favicon.ico", "src/assets"],

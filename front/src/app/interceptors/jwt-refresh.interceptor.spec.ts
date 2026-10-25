@@ -30,7 +30,7 @@ describe('jwtRefreshInterceptor', () => {
 		});
 	});
 
-	it('should refresh token on 401 error and retry request successfully', (done) => {
+	it('should refresh token on 401 error and retry request successfully with loginWithToken body update', (done) => {
 		const req = new HttpRequest('POST', '/api/loginWithToken', { token: 'old' });
 		let attempts = 0;
 		const next: HttpHandlerFn = (request) => {
@@ -39,6 +39,7 @@ describe('jwtRefreshInterceptor', () => {
 				return throwError(() => new HttpErrorResponse({ status: 401 }));
 			}
 			expect(request.headers.get('Authorization')).toBe('Bearer new-token');
+			expect(request.body).toBe('new-token');
 			return of(new HttpResponse({ status: 200 }));
 		};
 

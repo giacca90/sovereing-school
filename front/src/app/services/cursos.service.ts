@@ -1,5 +1,5 @@
 import { HttpClient, HttpResponse } from '@angular/common/http';
-import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { catchError, firstValueFrom, map, Observable, of } from 'rxjs';
 import { Curso } from '../models/Curso';
 import { Plan } from '../models/Plan';
@@ -9,7 +9,7 @@ import { Usuario } from '../models/Usuario';
 	providedIn: 'root',
 })
 export class CursosService {
-	public cursos: Curso[] = [];
+	cursos = signal<Curso[]>([]);
 
 	constructor(
 		private readonly http: HttpClient,
@@ -47,7 +47,7 @@ export class CursosService {
 	async getCurso(idCurso: number, fromServer = false): Promise<Curso | null> {
 		if (!idCurso) return null;
 
-		const curso = this.cursos.find((c) => c.idCurso === idCurso);
+		const curso = this.cursos().find((c) => c.idCurso === idCurso);
 		if (!curso) return null;
 
 		// Si ya tiene clases cargadas y no se fuerza la recarga → devolver directamente
@@ -96,9 +96,9 @@ export class CursosService {
 		return this.http.put<Curso>(`${this.backURL}/cursos/update`, curso, { observe: 'response', responseType: 'json' }).pipe(
 			map((response: HttpResponse<Curso>) => {
 				if (response.ok && response.body) {
-					const old = this.cursos.find((c) => c.idCurso === curso.idCurso);
+					const old = this.cursos().find((c) => c.idCurso === curso.idCurso);
 					if (!old) {
-						this.cursos.push(response.body);
+						this.cursos.update((cursos) => [...cursos, response.body!]);
 					}
 					return response.body;
 				} else {
@@ -140,7 +140,7 @@ export class CursosService {
 	 */
 	getCursosProfe(profe: Usuario) {
 		const cursosProfe: Curso[] = [];
-		for (const curso of this.cursos) {
+		for (const curso of this.cursos()) {
 			for (const idProfe of curso.profesoresCurso) {
 				if (idProfe === profe.idUsuario) {
 					cursosProfe.push(curso);
@@ -159,7 +159,7 @@ export class CursosService {
 		return this.http.delete<string>(this.backURL + '/cursos/delete/' + curso.idCurso, { observe: 'response', responseType: 'text' as 'json' }).pipe(
 			map((response: HttpResponse<string>) => {
 				if (response.ok) {
-					this.cursos = this.cursos.filter((c) => c.idCurso !== curso.idCurso);
+					this.cursos.update((cursos) => cursos.filter((c) => c.idCurso !== curso.idCurso));
 					return true;
 				}
 				return false;
@@ -199,11 +199,11 @@ export class CursosService {
 		return this.http.get<Curso[]>(this.backURL + '/cursos/getAll', { observe: 'response' }).pipe(
 			map((response: HttpResponse<Curso[]>) => {
 				if (response.ok && response.body) {
-					this.cursos = response.body;
-					for (const curso of this.cursos) {
+					this.cursos.set(response.body);
+					for (const curso of this.cursos()) {
 						curso.clasesCurso = curso.clasesCurso?.sort((a, b) => a.posicionClase - b.posicionClase);
 					}
-					return this.cursos;
+					return this.cursos();
 				}
 				return [];
 			}),

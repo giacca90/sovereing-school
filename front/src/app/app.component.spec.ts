@@ -53,7 +53,7 @@ describe('AppComponent', () => {
 			isVisibleSubject.next(true);
 
 			// Assert
-			expect(component.isModalVisible).toBeTrue();
+			expect(component.isModalVisible()).toBeTrue();
 		});
 
 		it('should configure matchMedia listener and handle dark theme when theme not in localStorage', () => {
@@ -108,13 +108,13 @@ describe('AppComponent', () => {
 	describe('salir', () => {
 		it('should set vistaMenu to false, call logout and navigate to root', () => {
 			// Arrange
-			component.vistaMenu = true;
+			component.vistaMenu.set(true);
 
 			// Act
 			component.salir();
 
 			// Assert
-			expect(component.vistaMenu).toBeFalse();
+			expect(component.vistaMenu()).toBeFalse();
 			expect(mockLoginService.logout).toHaveBeenCalled();
 			expect(router.navigate).toHaveBeenCalledWith(['/']);
 		});

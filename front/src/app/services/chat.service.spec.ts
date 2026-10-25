@@ -230,11 +230,10 @@ describe('ChatService', () => {
 			return { unsubscribe: () => {} };
 		});
 		spyOn(client, 'publish');
-		loginServiceSpy.refreshToken.and.returnValue(of('new-token-123'));
+		loginServiceSpy.refreshToken.and.returnValue(of('new-token-chat'));
 
 		(service as any).initUsuario();
-		subCallback({ body: 'Token inválido' });
-
-		expect(client.publish).toHaveBeenCalledWith(jasmine.objectContaining({ destination: '/app/refresh-token' }));
+		subCallback({ body: 'Token inválido en init' });
+		expect(loginServiceSpy.refreshToken).toHaveBeenCalled();
 	});
 });

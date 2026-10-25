@@ -1,5 +1,5 @@
 import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { Auth } from '../../models/Auth';
@@ -97,7 +97,7 @@ describe('ConfirmEmailComponent', () => {
 			expect(mockHttp.post).not.toHaveBeenCalled();
 		});
 
-		it('should handle successful confirmation response', fakeAsync(() => {
+		it('should handle successful confirmation response', async () => {
 			// Arrange
 			mockActivatedRoute.snapshot.queryParams = { token: 'valid-token-123' };
 			const dummyAuth = {
@@ -127,9 +127,9 @@ describe('ConfirmEmailComponent', () => {
 			expect(component.isError).toBeFalse();
 
 			// Test timer
-			tick(1500);
+			await new Promise((resolve) => setTimeout(resolve, 1500));
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
-		}));
+		});
 
 		it('should not update user if response ok is true but body is null', () => {
 			// Arrange
@@ -148,7 +148,7 @@ describe('ConfirmEmailComponent', () => {
 			expect(component.mensajeText).toBe('Confirmando tu correo electrónico...');
 		});
 
-		it('should handle error when http request fails', fakeAsync(() => {
+		it('should handle error when http request fails', async () => {
 			// Arrange
 			mockActivatedRoute.snapshot.queryParams = { token: 'invalid-token' };
 			const errorResponse = new HttpErrorResponse({
@@ -166,9 +166,9 @@ describe('ConfirmEmailComponent', () => {
 			expect(component.mensaje2Text).toBe('Token inválido o expirado');
 
 			// Test timer
-			tick(3000);
+			await new Promise((resolve) => setTimeout(resolve, 3000));
 			expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
-		}));
+		});
 	});
 
 	describe('ngOnDestroy', () => {

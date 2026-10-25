@@ -63,4 +63,16 @@ describe('jwtInterceptor', () => {
 
 		executeInterceptor(req, next).subscribe(() => done());
 	});
+
+	it('should not add token when url includes refresh on browser', (done) => {
+		TestBed.overrideProvider(PLATFORM_ID, { useValue: 'browser' });
+		localStorage.setItem('Token', 'my-token');
+		const req = new HttpRequest('GET', '/login/refresh');
+		const next: HttpHandlerFn = (request) => {
+			expect(request.headers.has('Authorization')).toBeFalse();
+			return of(new HttpResponse({ status: 200 }));
+		};
+
+		executeInterceptor(req, next).subscribe(() => done());
+	});
 });

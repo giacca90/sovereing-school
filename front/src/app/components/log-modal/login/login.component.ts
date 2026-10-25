@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { Component, ElementRef, input, OnDestroy, OnInit, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { LoginModalService } from '../../../services/login-modal.service';
@@ -6,45 +6,41 @@ import { LoginService } from '../../../services/login.service';
 
 @Component({
 	selector: 'app-login',
-	standalone: true,
 	imports: [FormsModule],
 	templateUrl: './login.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './login.component.css',
 })
 export class LoginComponent implements OnInit, OnDestroy {
-	@Output() oauth2: EventEmitter<string> = new EventEmitter<string>();
-	@Input() keyEvents!: Subject<KeyboardEvent>;
+	oauth2 = output<string>();
+	keyEvents = input<Subject<KeyboardEvent>>();
 
-	fase: number = 0;
+	fase = signal<number>(0);
 	correo: string = '';
 	password: string = '';
-	mensajeError: string = '';
+	mensajeError = signal<string>('');
 	private keySub?: Subscription;
 
-	@ViewChild('correoInput') correoInput!: ElementRef<HTMLInputElement>;
-	@ViewChild('passwordInput') passwordInput!: ElementRef<HTMLInputElement>;
+	correoInput = viewChild<ElementRef<HTMLInputElement>>('correoInput');
+	passwordInput = viewChild<ElementRef<HTMLInputElement>>('passwordInput');
 
 	/**
 	 * Constructor del componente.
 	 * @param {LoginModalService} modalService - Servicio para controlar la visibilidad del modal.
 	 * @param {LoginService} loginService - Servicio para manejar la autenticación.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
 	 */
 	constructor(
 		private readonly modalService: LoginModalService,
 		private readonly loginService: LoginService,
-		private readonly cdr: ChangeDetectorRef,
 	) {}
 
 	/**
 	 * Inicialización del componente.
 	 */
 	ngOnInit(): void {
-		if (this.keyEvents) {
-			this.keySub = this.keyEvents.subscribe((e: KeyboardEvent) => {
+		if (this.keyEvents()) {
+			this.keySub = this.keyEvents()!.subscribe((e: KeyboardEvent) => {
 				if (e.key === 'Enter') {
-					this.fase === 0 ? this.compruebaCorreo() : this.compruebaPassword();
+					this.fase() === 0 ? this.compruebaCorreo() : this.compruebaPassword();
 				} else if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'Delete') {
 					this.close();
 				}
@@ -52,8 +48,8 @@ export class LoginComponent implements OnInit, OnDestroy {
 		}
 
 		// Ponemos el foco inicial en el campo correo
-		setTimeout(() => {
-			this.correoInput?.nativeElement?.focus();
+		requestAnimationFrame(() => {
+			this.correoInput()?.nativeElement?.focus();
 		});
 	}
 
@@ -76,24 +72,23 @@ export class LoginComponent implements OnInit, OnDestroy {
 	 * Comprueba la validez del correo electrónico proporcionado.
 	 */
 	async compruebaCorreo() {
-		this.mensajeError = '';
+		this.mensajeError.set('');
 		if (this.correo.length == 0) {
-			this.mensajeError = 'El correo electrónico no puede estar vació!!!';
+			this.mensajeError.set('El correo no puede estar vacío!!!');
 			return;
 		}
 
 		if (!this.compruebaEmail(this.correo)) {
-			this.mensajeError = 'El correo electrónico no tiene un formato valido!!!';
+			this.mensajeError.set('El formato del correo no es válido!!!');
 			return;
 		}
 		if ((await this.loginService.compruebaCorreo(this.correo)) === true) {
-			this.fase = 1;
-			this.cdr.detectChanges();
-			setTimeout(() => {
-				this.passwordInput?.nativeElement?.focus();
+			this.fase.set(1);
+			requestAnimationFrame(() => {
+				this.passwordInput()?.nativeElement?.focus();
 			});
 		} else {
-			this.mensajeError = 'Este correo no está registrado!!!';
+			this.mensajeError.set('El correo no existe!!!');
 		}
 	}
 
@@ -101,9 +96,9 @@ export class LoginComponent implements OnInit, OnDestroy {
 	 * Comprueba la validez de la contraseña proporcionada.
 	 */
 	async compruebaPassword() {
-		this.mensajeError = '';
+		this.mensajeError.set('');
 		if (this.password.length == 0) {
-			this.mensajeError = 'La contraseña no puede estar vacía!!!';
+			this.mensajeError.set('La contraseña no puede estar vacía!!!');
 			return;
 		}
 		const success = await this.loginService.compruebaPassword(this.password);
@@ -111,7 +106,7 @@ export class LoginComponent implements OnInit, OnDestroy {
 			this.close();
 			//globalThis.window.location.reload();
 		} else {
-			this.mensajeError = 'La contraseña es incorrecta!!!';
+			this.mensajeError.set('La contraseña no es correcta!!!');
 		}
 	}
 

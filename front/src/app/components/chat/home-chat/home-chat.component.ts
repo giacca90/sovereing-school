@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectorRef, Component, NgZone, ChangeDetectionStrategy } from '@angular/core';
+import { afterNextRender, Component, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CursoChat } from '../../../models/CursoChat';
 import { InitChatUsuario } from '../../../models/InitChatUsuario';
@@ -8,16 +8,14 @@ import { LoginService } from '../../../services/login.service';
 
 @Component({
 	selector: 'app-home-chat',
-	standalone: true,
 	imports: [],
 	templateUrl: './home-chat.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './home-chat.component.css',
 })
 export class HomeChatComponent {
-	chats: MensajeChat[] = [];
-	cursos: CursoChat[] = [];
-	cargando: boolean = true;
+	chats = signal<MensajeChat[]>([]);
+	cursos = signal<CursoChat[]>([]);
+	cargando = signal<boolean>(true);
 	public Math = Math;
 
 	/**
@@ -25,29 +23,21 @@ export class HomeChatComponent {
 	 * @param {Router} router - Router de Angular.
 	 * @param {LoginService} loginService - Servicio de autenticación.
 	 * @param {ChatService} chatService - Servicio de chat.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
-	 * @param {NgZone} ngZone - Zona de Angular.
 	 */
 	constructor(
 		public router: Router,
 		public loginService: LoginService,
 		private readonly chatService: ChatService,
-		private readonly cdr: ChangeDetectorRef,
-		private readonly ngZone: NgZone,
 	) {
 		afterNextRender(() => {
 			if (this.loginService.usuario) {
 				this.chatService.initSubject.subscribe({
 					next: (init: InitChatUsuario | null) => {
 						if (init?.mensajes && init.cursos && init.idUsuario === this.loginService.usuario?.idUsuario) {
-							this.chats = init.mensajes;
-							this.cursos = init.cursos;
-							this.cargando = false;
-							this.cdr.detectChanges();
-						} else {
-							this.cargando = false;
-							this.cdr.detectChanges();
+							this.chats.set(init.mensajes);
+							this.cursos.set(init.cursos);
 						}
+						this.cargando.set(false);
 					},
 					error: (e: Error) => {
 						console.error('Error en recibir la respuesta: ' + e.message);
@@ -62,12 +52,11 @@ export class HomeChatComponent {
 
 	/**
 	 * Navega a la vista de un mensaje específico.
-	 * @param {MensajeChat} mensaje - Mensaje seleccionado.
+	 *
+	 * @param {MensajeChat} mensaje Mensaje seleccionado.
 	 */
-	navegaMensaje(mensaje: MensajeChat) {
-		this.ngZone.run(() => {
-			this.router.navigate(['/chat/', mensaje.idCurso?.toString(), mensaje.idMensaje]);
-		});
+	navegaMensaje(mensaje: MensajeChat): void {
+		this.router.navigate(['/chat/', mensaje.idCurso?.toString(), mensaje.idMensaje]);
 	}
 
 	/**
@@ -75,8 +64,6 @@ export class HomeChatComponent {
 	 * @param {CursoChat} curso - Curso seleccionado.
 	 */
 	navegaCurso(curso: CursoChat) {
-		this.ngZone.run(() => {
-			this.router.navigate(['/chat/', curso.idCurso.toString()]);
-		});
+		this.router.navigate(['/chat/', curso.idCurso.toString()]);
 	}
 }

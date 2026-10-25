@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ElementRef, input, OnDestroy, OnInit, output, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription } from 'rxjs';
 import { NuevoUsuario } from '../../../models/NuevoUsuario';
@@ -8,18 +8,16 @@ import { RegisterService } from '../../../services/register.service';
 
 @Component({
 	selector: 'app-register',
-	standalone: true,
 	imports: [FormsModule],
 	templateUrl: './register.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './register.component.css',
 })
 export class RegisterComponent implements OnInit, OnDestroy {
-	@Output() oauth2: EventEmitter<string> = new EventEmitter<string>();
-	@Input() keyEvents!: Subject<KeyboardEvent>;
+	oauth2 = output<string>();
+	keyEvents = input<Subject<KeyboardEvent>>();
 
-	@ViewChild('nombreInput') nombreInput!: ElementRef<HTMLInputElement>;
-	@ViewChild('passwordInput') passwordInput!: ElementRef<HTMLInputElement>;
+	nombreInput = viewChild<ElementRef<HTMLInputElement>>('nombreInput');
+	passwordInput = viewChild<ElementRef<HTMLInputElement>>('passwordInput');
 
 	public nuevoUsuario: NuevoUsuario = new NuevoUsuario();
 	public fase: number = 0;
@@ -43,8 +41,8 @@ export class RegisterComponent implements OnInit, OnDestroy {
 	 * Inicialización del componente.
 	 */
 	ngOnInit(): void {
-		if (this.keyEvents) {
-			this.keySub = this.keyEvents.subscribe((e: KeyboardEvent) => {
+		if (this.keyEvents()) {
+			this.keySub = this.keyEvents()!.subscribe((e: KeyboardEvent) => {
 				if (e.key === 'Enter') {
 					if (this.fase === 0) {
 						this.compruebaCorreo();
@@ -62,7 +60,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
 
 		// Foco inicial en el nombre
 		setTimeout(() => {
-			this.nombreInput?.nativeElement?.focus();
+			this.nombreInput()?.nativeElement?.focus();
 		});
 	}
 
@@ -104,8 +102,8 @@ export class RegisterComponent implements OnInit, OnDestroy {
 
 		if ((await this.loginService.compruebaCorreo(this.nuevoUsuario.correoElectronico)) === false) {
 			this.fase = 1;
-			setTimeout(() => {
-				this.passwordInput?.nativeElement?.focus();
+			requestAnimationFrame(() => {
+				this.passwordInput()?.nativeElement?.focus();
 			});
 		} else {
 			this.mensajeError = 'Este correo ya está registrado!!!';

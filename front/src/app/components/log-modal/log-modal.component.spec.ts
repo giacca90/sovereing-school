@@ -1,5 +1,5 @@
-import { Component, ElementRef, Input, PLATFORM_ID } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { Component, ElementRef, Input, PLATFORM_ID, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { LoginModalService } from '../../services/login-modal.service';
 import { LoginService } from '../../services/login.service';
@@ -9,7 +9,6 @@ import { RegisterComponent } from './register/register.component';
 
 @Component({
 	selector: 'app-login',
-	standalone: true,
 	template: '<div>Mock Login</div>',
 })
 class MockLoginComponent {
@@ -18,7 +17,6 @@ class MockLoginComponent {
 
 @Component({
 	selector: 'app-register',
-	standalone: true,
 	template: '<div>Mock Register</div>',
 })
 class MockRegisterComponent {
@@ -80,34 +78,38 @@ describe('LogModalComponent', () => {
 	});
 
 	describe('ngAfterViewInit', () => {
-		it('should configure backBase and focus on modal when run in browser platform', fakeAsync(() => {
+		it('should configure backBase and focus on modal when run in browser platform', async () => {
 			// Arrange
 			(globalThis.window as any).__env = { BACK_BASE: 'http://test-server:8080' };
 			const mockDiv = document.createElement('div');
 			spyOn(mockDiv, 'focus');
-			component.modalEl = new ElementRef(mockDiv);
+			(component as any).modalEl = signal(new ElementRef(mockDiv));
+			spyOn(window, 'requestAnimationFrame').and.callFake((cb: FrameRequestCallback) => {
+				setTimeout(() => cb(0), 0);
+				return 0;
+			});
 
 			// Act
 			component.ngAfterViewInit();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			// Assert
 			expect(component.backBase).toBe('http://test-server:8080');
 			expect(mockDiv.focus).toHaveBeenCalled();
-		}));
+		});
 
-		it('should do nothing if platform is not browser', fakeAsync(() => {
+		it('should do nothing if platform is not browser', async () => {
 			// Arrange
 			(component as any).platformId = 'server';
 			component.backBase = '';
 
 			// Act
 			component.ngAfterViewInit();
-			tick();
+			await new Promise((resolve) => setTimeout(resolve, 10));
 
 			// Assert
 			expect(component.backBase).toBe('');
-		}));
+		});
 	});
 
 	describe('keyboard and view switching interactions', () => {

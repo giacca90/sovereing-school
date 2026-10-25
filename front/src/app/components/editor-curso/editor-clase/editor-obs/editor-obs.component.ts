@@ -1,21 +1,20 @@
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, Renderer2, SimpleChanges, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, effect, ElementRef, input, OnDestroy, output, Renderer2, signal, viewChild } from '@angular/core';
 
 @Component({
 	selector: 'app-editor-obs',
 	imports: [],
 	templateUrl: './editor-obs.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './editor-obs.component.css',
 })
 export class EditorObsComponent implements AfterViewInit, OnDestroy {
-	@Input() emitiendo?: boolean; // Avisa cuando está listo para emitir (opcional)
-	@Input() status?: string; // Estado del servicio de streaming (opcional)
-	@Input() urlPreview?: string;
-	@Input() rtmpUrl?: string;
-	@Output() obsEvent: EventEmitter<{ type: string; message: string }> = new EventEmitter();
+	emitiendo = input<boolean>(); // Avisa cuando está listo para emitir (opcional)
+	status = input<string>(); // Estado del servicio de streaming (opcional)
+	urlPreview = input<string>();
+	rtmpUrl = input<string>();
+	obsEvent = output<{ type: string; message: string }>();
 
-	@ViewChild('videoOBS') videoOBSRef!: ElementRef<HTMLVideoElement>;
-	@ViewChild('audioLevel') audioLevelRef!: ElementRef<HTMLDivElement>;
+	videoOBSRef = viewChild<ElementRef<HTMLVideoElement>>('videoOBS');
+	audioLevelRef = viewChild<ElementRef<HTMLDivElement>>('audioLevel');
 
 	m3u8Loaded: boolean = false;
 	isBrowser: boolean;
@@ -23,43 +22,40 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	rutaOBS: string = '';
 	tiempoGrabacion: string = '00:00:00';
 
-	rtmpServer: string = '';
+	rtmpServer = signal<string>('');
 	rtmpKey: string = '';
 	tooltipText: string = 'Haz click para copiar';
-	showTooltip: boolean = false;
+	showTooltip = signal<boolean>(false);
 	tooltipPos = { x: 0, y: 0 };
+
+	private audioContext: AudioContext | null = null;
+	private animationFrameId: number | null = null;
 
 	/**
 	 * Constructor del componente.
 	 * @param {Renderer2} renderer - Renderer2 de Angular.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
 	 */
-	constructor(
-		private readonly renderer: Renderer2,
-		private readonly cdr: ChangeDetectorRef,
-	) {
+	constructor(private readonly renderer: Renderer2) {
 		this.isBrowser = globalThis.window !== undefined;
+		effect(() => {
+			if (!this.isBrowser) return;
+			const urlPreview = this.urlPreview();
+			if (!urlPreview) {
+				return;
+			}
+			const videoOBS = this.videoOBSRef()?.nativeElement;
+			if (!videoOBS) {
+				console.error('Elemento con ID "OBS" no encontrado');
+				return;
+			}
+			this.initVideoJS(videoOBS)
+				.then(() => {
+					this.initMediaStream(videoOBS);
+					this.prepareRTMPData();
+				})
+				.catch((e) => console.error(e));
+		});
 	}
-
-	/**
-	 * Detecta cambios en las propiedades de entrada (@Input).
-	 * @param {SimpleChanges} changes - Cambios detectados.
-	 */
-	/* ngOnChanges(changes: SimpleChanges): void {
-		if (changes['rtmpUrl']) {
-			this.prepareRTMPData();
-		}
-		if (changes['urlPreview'] && !changes['urlPreview'].firstChange && this.player) {
-			this.player.src({
-				src: this.urlPreview,
-				type: 'application/x-mpegURL',
-				withCredentials: true,
-			});
-		}
-		if (changes['status'] || changes['emitiendo'] || changes['urlPreview'] || changes['rtmpUrl']) {
-			this.cdr.markForCheck();
-		}
-	} */
 
 	/**
 	 * Inicialización de la vista.
@@ -74,7 +70,19 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	 * Limpieza de recursos al destruir el componente.
 	 */
 	ngOnDestroy(): void {
-		this.player.dispose();
+		if (this.audioContext && this.audioContext.state !== 'closed') {
+			this.audioContext.close().catch(() => {});
+		}
+		if (this.animationFrameId) {
+			cancelAnimationFrame(this.animationFrameId);
+		}
+		if (this.player && typeof this.player.dispose === 'function') {
+			try {
+				this.player.dispose();
+			} catch (e) {
+				console.error(e);
+			}
+		}
 	}
 
 	/**
@@ -82,18 +90,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	 */
 	async startOBS() {
 		if (!this.isBrowser) return; // Evita ejecutar en SSR
-
 		this.obsEvent.emit({ type: 'startOBS', message: '' });
-
-		// Esperar a que el DOM esté listo
-		setTimeout(async () => {
-			const videoOBS = this.videoOBSRef.nativeElement;
-			if (!videoOBS) return console.error('Elemento con ID "OBS" no encontrado');
-
-			await this.initVideoJS(videoOBS);
-			this.initMediaStream(videoOBS);
-			this.prepareRTMPData();
-		}, 300);
 	}
 
 	/**
@@ -101,14 +98,16 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	 * @param {HTMLVideoElement} videoEl - Elemento de video.
 	 */
 	private async initVideoJS(videoEl: HTMLVideoElement): Promise<void> {
-		if (!this.urlPreview) {
-			console.log('usrPreview vacío');
-			setTimeout(() => {
-				this.initVideoJS(videoEl);
-			}, 100);
-		}
 		const videojsModule = await import('video.js');
 		const videojs = videojsModule.default;
+
+		if (this.player && typeof this.player.dispose === 'function') {
+			try {
+				this.player.dispose();
+			} catch (e) {
+				console.error(e);
+			}
+		}
 
 		this.player = videojs(videoEl, {
 			aspectRatio: '16:9',
@@ -124,7 +123,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 		});
 
 		this.player.src({
-			src: this.urlPreview,
+			src: this.urlPreview(),
 			type: 'application/x-mpegURL',
 			withCredentials: true,
 		});
@@ -144,7 +143,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 			const techEl = this.player.tech(true)?.el() as HTMLVideoElement & { captureStream(): MediaStream };
 			if (techEl?.captureStream) {
 				const mediaStream = techEl.captureStream();
-				const audioLevel = this.audioLevelRef?.nativeElement;
+				const audioLevel = this.audioLevelRef()?.nativeElement;
 				if (audioLevel) this.visualizeAudio(mediaStream, audioLevel);
 			}
 		});
@@ -152,9 +151,9 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 
 	/** Prepara los datos RTMP para el template */
 	private prepareRTMPData(): void {
-		if (!this.rtmpUrl) return;
-		this.rtmpServer = this.rtmpUrl.substring(0, this.rtmpUrl.lastIndexOf('/'));
-		this.rtmpKey = this.rtmpUrl.substring(this.rtmpUrl.lastIndexOf('/') + 1);
+		if (!this.rtmpUrl()) return;
+		this.rtmpServer.set(this.rtmpUrl()!.substring(0, this.rtmpUrl()!.lastIndexOf('/')));
+		this.rtmpKey = this.rtmpUrl()!.substring(this.rtmpUrl()!.lastIndexOf('/') + 1);
 	}
 
 	copyToClipboard(text: string) {
@@ -169,11 +168,11 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 
 	onMouseOver() {
 		this.tooltipText = 'Haz click para copiar';
-		this.showTooltip = true;
+		this.showTooltip.set(true);
 	}
 
 	onMouseLeave() {
-		this.showTooltip = false;
+		this.showTooltip.set(false);
 	}
 
 	async emiteOBS() {
@@ -182,16 +181,22 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 			return;
 		}
 
-		if (!this.rtmpUrl) return;
+		if (!this.rtmpUrl()) return;
 
-		this.obsEvent.emit({ type: 'emiteOBS', message: this.rtmpUrl });
+		this.obsEvent.emit({ type: 'emiteOBS', message: this.rtmpUrl()! });
 		this.calculaTiempoGrabacion();
 	}
 
 	detenerEmision() {
 		this.obsEvent.emit({ type: 'stopOBS', message: '' });
-		this.player.src = '';
-		this.player.srcObject = null;
+		if (typeof this.player?.src === 'function') {
+			this.player.src({ src: '' });
+		} else if (this.player) {
+			this.player.src = '';
+		}
+		if (this.player) {
+			this.player.srcObject = null;
+		}
 	}
 
 	visualizeAudio(stream: MediaStream, audioLevel: HTMLDivElement) {
@@ -222,7 +227,7 @@ export class EditorObsComponent implements AfterViewInit, OnDestroy {
 	async calculaTiempoGrabacion() {
 		let tiempo = -1;
 		const updateTimer = () => {
-			if (this.emitiendo) {
+			if (this.emitiendo()) {
 				tiempo += 1;
 				this.tiempoGrabacion = this.formatTime(tiempo);
 			}

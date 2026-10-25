@@ -38,6 +38,12 @@ describe('CursosService', () => {
 		delete (window as any).__env;
 	});
 
+	it('backURL and backURLStreaming should return empty string when __env is missing', () => {
+		delete (window as any).__env;
+		expect(service.backURL).toBe('');
+		expect(service.backURLStreaming).toBe('');
+	});
+
 	it('getCurso should return null if idCurso is 0 or not found', async () => {
 		const res1 = await service.getCurso(0);
 		expect(res1).toBeNull();
@@ -55,7 +61,7 @@ describe('CursosService', () => {
 			profesoresCurso: [1],
 			clasesCurso: [{ idClase: 10, posicionClase: 1, cursoClase: 0, nombreClase: 'Clase 1' }] as any,
 		};
-		service.cursos = [mockCurso];
+		service.cursos.set([mockCurso]);
 		const curso = await service.getCurso(1, false);
 		expect(curso).toEqual(mockCurso);
 	});
@@ -68,7 +74,7 @@ describe('CursosService', () => {
 			imagenCurso: 'img.jpg',
 			profesoresCurso: [1],
 		};
-		service.cursos = [mockCurso];
+		service.cursos.set([mockCurso]);
 
 		const promise = service.getCurso(1, true);
 
@@ -100,6 +106,34 @@ describe('CursosService', () => {
 		req.flush(mockCurso, { status: 200, statusText: 'OK' });
 	});
 
+	it('updateCurso should handle error response', (done) => {
+		const mockCurso: Curso = { idCurso: 1, nombreCurso: 'Updated', descripcionCorta: 'Desc', imagenCurso: 'img.jpg', profesoresCurso: [1] };
+		service.updateCurso(mockCurso).subscribe({
+			error: (err) => {
+				expect(err).toBeTruthy();
+				done();
+			},
+		});
+
+		const req = httpMock.expectOne('http://localhost:8080/cursos/update');
+		req.flush('Error', { status: 400, statusText: 'Bad Request' });
+	});
+
+	it('getCurso should return null on server error or null response', async () => {
+		const mockCurso: Curso = { idCurso: 1, nombreCurso: 'Test', descripcionCorta: 'D', imagenCurso: 'i.jpg', profesoresCurso: [1] };
+		service.cursos.set([mockCurso]);
+
+		const p1 = service.getCurso(1, true);
+		httpMock.expectOne('http://localhost:8080/cursos/getCurso/1').flush(null);
+		const r1 = await p1;
+		expect(r1).toBeNull();
+
+		const p2 = service.getCurso(1, true);
+		httpMock.expectOne('http://localhost:8080/cursos/getCurso/1').flush('Error', { status: 500, statusText: 'Error' });
+		const r2 = await p2;
+		expect(r2).toBeNull();
+	});
+
 	it('updateCurso should throw error if curso is null', () => {
 		expect(() => service.updateCurso(null)).toThrowError('El curso no existe!!!');
 	});
@@ -119,7 +153,7 @@ describe('CursosService', () => {
 	it('getCursosProfe should return courses belonging to professor', () => {
 		const curso1: Curso = { idCurso: 1, nombreCurso: 'C1', descripcionCorta: 'D1', imagenCurso: 'i1.jpg', profesoresCurso: [1, 2] };
 		const curso2: Curso = { idCurso: 2, nombreCurso: 'C2', descripcionCorta: 'D2', imagenCurso: 'i2.jpg', profesoresCurso: [3] };
-		service.cursos = [curso1, curso2];
+		service.cursos.set([curso1, curso2]);
 
 		const profe: Usuario = { idUsuario: 1 } as any;
 		const res = service.getCursosProfe(profe);
@@ -128,11 +162,11 @@ describe('CursosService', () => {
 
 	it('deleteCurso should remove curso on success', (done) => {
 		const curso: Curso = { idCurso: 1, nombreCurso: 'C1', descripcionCorta: 'D1', imagenCurso: 'i1.jpg', profesoresCurso: [1] };
-		service.cursos = [curso];
+		service.cursos.set([curso]);
 
 		service.deleteCurso(curso).subscribe((success) => {
 			expect(success).toBe(true);
-			expect(service.cursos.length).toBe(0);
+			expect(service.cursos().length).toBe(0);
 			done();
 		});
 
@@ -156,8 +190,8 @@ describe('CursosService', () => {
 		(window as any).__env = { BACK_BASE: 'http://localhost:8080' };
 		const cursos: Curso[] = [{ idCurso: 1, nombreCurso: 'C1', descripcionCorta: 'D1', imagenCurso: 'i1.jpg', profesoresCurso: [1], clasesCurso: [] }];
 		service.getAllCursos().subscribe((res) => {
-			expect(res).toEqual(cursos);
-			expect(service.cursos).toEqual(cursos);
+			expect(res as any).toEqual(cursos);
+			expect(service.cursos()).toEqual(cursos);
 			delete (window as any).__env;
 			done();
 		});
@@ -175,7 +209,7 @@ describe('CursosService', () => {
 			imagenCurso: 'img.jpg',
 			profesoresCurso: [1],
 		};
-		service.cursos = [mockCurso];
+		service.cursos.set([mockCurso]);
 
 		const promise = service.getCurso(1, true);
 		const req = httpMock.expectOne('http://localhost:8080/cursos/getCurso/1');

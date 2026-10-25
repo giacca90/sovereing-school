@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, QueryList, Renderer2, ViewChildren, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ElementRef, HostListener, Inject, OnDestroy, OnInit, PLATFORM_ID, Renderer2, signal, viewChildren } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -14,22 +14,20 @@ import { EditorClaseComponent } from './editor-clase/editor-clase.component';
 
 @Component({
 	selector: 'app-editor-curso',
-	standalone: true,
 	imports: [FormsModule, EditorClaseComponent],
 	templateUrl: './editor-curso.component.html',
-	changeDetection: ChangeDetectionStrategy.Eager,
 	styleUrl: './editor-curso.component.css',
 })
 export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeactivate {
 	private readonly subscription: Subscription = new Subscription();
 	idCurso!: number;
-	curso!: Curso;
+	curso = signal<Curso | null>(null);
 	backBase!: string;
 	draggedElementId: number | null = null;
-	editado: boolean = false;
-	claseEditar: Clase | null = null;
+	editado = signal<boolean>(false);
+	claseEditar = signal<Clase | null>(null);
 	isBrowser: boolean;
-	@ViewChildren('claseElement') claseElements!: QueryList<ElementRef<HTMLDivElement>>;
+	readonly claseElements = viewChildren<ElementRef<HTMLDivElement>>('claseElement');
 
 	/**
 	 * Constructor del componente.
@@ -39,7 +37,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	 * @param {LoginService} loginService - Servicio de autenticación.
 	 * @param {StreamingService} streamingService - Servicio de streaming.
 	 * @param {InitService} initService - Servicio de inicialización.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
 	 * @param {Object} platformId - ID de la plataforma.
 	 * @param {Renderer2} renderer - Renderer2 de Angular.
 	 */
@@ -50,7 +47,6 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		public loginService: LoginService,
 		public streamingService: StreamingService,
 		private readonly initService: InitService,
-		//private readonly cdr: ChangeDetectorRef,
 		@Inject(PLATFORM_ID) private readonly platformId: Object,
 		private readonly renderer: Renderer2,
 	) {
@@ -69,7 +65,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		if (this.streamingService.emitiendo) {
 			return confirm('Estás emitiendo. ¿Seguro que quieres salir?');
 		}
-		if (this.editado) {
+		if (this.editado()) {
 			return confirm('Tienes cambios sin guardar. ¿Seguro que quieres salir?');
 		}
 		return true;
@@ -81,7 +77,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	 */
 	@HostListener('window:beforeunload', ['$event'])
 	unloadNotification($event: BeforeUnloadEvent) {
-		if (this.streamingService.emitiendo || this.editado) {
+		if (this.streamingService.emitiendo || this.editado()) {
 			$event.preventDefault();
 		}
 	}
@@ -92,7 +88,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	ngOnInit(): void {
 		if (this.idCurso === 0) {
 			if (this.loginService.usuario) {
-				this.curso = new Curso(0, '', [this.loginService.usuario.idUsuario], '', '', new Date(), [], [], '', 0);
+				this.curso.set(new Curso(0, '', [this.loginService.usuario.idUsuario], '', '', new Date(), [], [], '', 0));
 			} else {
 				console.error('No hay usuario logueado');
 				this.router.navigate(['/']);
@@ -108,13 +104,13 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 						return;
 					}
 
-					this.curso = structuredClone(curso);
-					if (this.curso.clasesCurso) {
-						for (const clase of this.curso.clasesCurso) {
-							clase.cursoClase = this.curso.idCurso;
+					this.curso.set(structuredClone(curso));
+					const cursoActual = this.curso();
+					if (cursoActual?.clasesCurso) {
+						for (const clase of cursoActual.clasesCurso) {
+							clase.cursoClase = cursoActual.idCurso;
 						}
 					}
-					//this.cdr.detectChanges();
 				})
 				.catch((err) => {
 					console.error('Error al obtener el curso:', err);
@@ -150,9 +146,9 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		this.draggedElementId = id;
 		event2.dataTransfer?.setData('text/plain', id.toString());
 		event2.dataTransfer?.setDragImage(img, 0, 0);
-		setTimeout(() => {
+		requestAnimationFrame(() => {
 			this.renderer.removeChild(document.body, img);
-		}, 0);
+		});
 		this.renderer.addClass(div, 'opacity-0');
 	}
 
@@ -167,18 +163,30 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 			return;
 		}
 
-		if (this.curso?.clasesCurso) {
-			const draggedIndex = this.curso.clasesCurso.findIndex((clase) => clase.idClase === this.draggedElementId);
-			const targetIndex = this.curso.clasesCurso.findIndex((clase) => clase.idClase === id);
+		const cursoActual = this.curso();
+
+		if (cursoActual?.clasesCurso) {
+			const clases = cursoActual.clasesCurso;
+			const draggedIndex = clases.findIndex((clase) => clase.idClase === this.draggedElementId);
+			const targetIndex = clases.findIndex((clase) => clase.idClase === id);
 
 			if (draggedIndex > -1 && targetIndex > -1 && draggedIndex !== targetIndex) {
-				const draggedClase = this.curso.clasesCurso[draggedIndex];
 				this.compruebaCambios();
-				const temp: number = draggedClase.posicionClase;
-				draggedClase.posicionClase = this.curso.clasesCurso[targetIndex].posicionClase;
-				this.curso.clasesCurso[targetIndex].posicionClase = temp;
-				this.curso.clasesCurso.splice(draggedIndex, 1);
-				this.curso.clasesCurso.splice(targetIndex, 0, draggedClase);
+
+				const draggedClase = clases[draggedIndex];
+				const targetClase = clases[targetIndex];
+
+				// Intercambiamos las posiciones
+				const tempPosicion = draggedClase.posicionClase;
+				draggedClase.posicionClase = targetClase.posicionClase;
+				targetClase.posicionClase = tempPosicion;
+
+				// Reordenamos el array
+				clases.splice(draggedIndex, 1);
+				clases.splice(targetIndex, 0, draggedClase);
+
+				// Notificamos a la señal que el valor ha cambiado (o si 'curso' es una Signal)
+				this.curso.set({ ...cursoActual, clasesCurso: [...clases] });
 			}
 		}
 	}
@@ -193,7 +201,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	}
 
 	getClosestElementId(event: DragEvent): number | null {
-		const elements = this.claseElements.map((el) => el.nativeElement);
+		const elements = this.claseElements().map((el) => el.nativeElement);
 		const y = event.clientY;
 		const closestElement = elements.reduce(
 			(closest, element) => {
@@ -217,20 +225,20 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	}
 
 	compruebaCambios() {
-		this.cursoService.getCurso(this.curso.idCurso).then((curso) => {
-			this.editado = JSON.stringify(this.curso) !== JSON.stringify(curso);
+		this.cursoService.getCurso(this.curso()!.idCurso).then((curso) => {
+			this.editado.set(JSON.stringify(this.curso()) !== JSON.stringify(curso));
 		});
 	}
 
 	updateCurso() {
 		this.subscription.add(
-			this.cursoService.updateCurso(this.curso).subscribe({
+			this.cursoService.updateCurso(this.curso()).subscribe({
 				next: (success: Curso) => {
 					if (success) {
 						this.initService.carga();
-						this.editado = false;
+						this.editado.set(false);
 						if (this.idCurso == 0) {
-							this.cursoService.cursos.push(success);
+							this.cursoService.cursos.update((cursos) => [...cursos, success]);
 						}
 						this.router.navigate(['/cursosUsuario']);
 					} else {
@@ -246,7 +254,7 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 
 	async editarClase(clase: Clase) {
 		const curso: Curso | null = await this.cursoService.getCurso(clase.cursoClase, true);
-		Object.assign(this.curso, curso);
+		Object.assign(this.curso()!, curso);
 		if (!curso) {
 			console.error('No se pudo obtener el curso');
 			return;
@@ -256,12 +264,14 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 			console.error('No se pudo obtener la clase');
 			return;
 		}
-		this.claseEditar = { ...actual };
+		this.claseEditar.set({ ...actual });
 	}
 
-	nuevaClase() {
-		if (this.curso.clasesCurso) {
-			this.claseEditar = new Clase(0, '', '', '', 0, '', this.curso.clasesCurso?.length + 1, this.idCurso);
+	nuevaClase(): void {
+		const cursoActual = this.curso();
+		if (cursoActual?.clasesCurso) {
+			const nuevaPosicion = cursoActual.clasesCurso.length + 1;
+			this.claseEditar.set(new Clase(0, '', '', '', 0, '', nuevaPosicion, this.idCurso));
 		}
 	}
 
@@ -276,14 +286,16 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		}
 		const reader = new FileReader();
 		reader.onload = (e: ProgressEvent<FileReader>) => {
-			if (e.target && input.files && this.curso) {
+			if (e.target && input.files && this.curso()) {
 				const formData = new FormData();
 				formData.append('files', input.files[0], input.files[0].name);
 
 				this.subscription.add(
 					this.cursoService.addImagenCurso(formData).subscribe({
 						next: (response) => {
-							if (this.curso && response) this.curso.imagenCurso = response;
+							if (response) {
+								this.curso.update((prev) => (prev ? { ...prev, imagenCurso: response } : null));
+							}
 							this.compruebaCambios();
 						},
 						error: (e: Error) => {
@@ -300,9 +312,9 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		const confirm = globalThis.window.confirm('Esta acción borrará definitivamente este curso, incluida todas sus clases con su contenido. \n Tampoco el administrador de la plataforma podrá recuperar el curso una vez borrado.');
 		if (confirm) {
 			const confirm2 = globalThis.window.confirm('ESTÁS ABSOLUTAMENTE SEGURO DE LO QUE HACES??');
-			if (confirm2 && this.curso) {
+			if (confirm2 && this.curso()) {
 				this.subscription.add(
-					this.cursoService.deleteCurso(this.curso).subscribe({
+					this.cursoService.deleteCurso(this.curso()!).subscribe({
 						next: (result: boolean) => {
 							if (result) {
 								this.router.navigate(['/cursosUsuario']);
@@ -320,9 +332,12 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 	// metodo para eliminar una clase desde la vista del curso
 	eliminaClase(clase: Clase) {
 		if (confirm('Esto eliminará definitivamente la clase. Estás seguro??')) {
-			this.curso.clasesCurso = this.curso.clasesCurso?.filter((c) => c.idClase !== clase.idClase);
+			this.curso.update((prev) => {
+				if (!prev) return null;
+				return { ...prev, clasesCurso: prev.clasesCurso?.filter((c) => c.idClase !== clase.idClase) ?? [] };
+			});
 			this.subscription.add(
-				this.cursoService.updateCurso(this.curso).subscribe({
+				this.cursoService.updateCurso(this.curso()).subscribe({
 					next: (success: Curso) => {
 						if (!success) {
 							console.error('Falló la actualización del curso en editor-clase');
@@ -341,21 +356,19 @@ export class EditorCursoComponent implements OnInit, OnDestroy, CanComponentDeac
 		if (event) {
 			if (this.idCurso === 0) {
 				this.compruebaCambios();
-				this.claseEditar = null;
+				this.claseEditar.set(null);
 				document.body.style.overflow = 'auto';
-				//this.cdr.detectChanges();
 				return;
 			}
 			this.cursoService
-				.getCurso(this.curso.idCurso, true)
+				.getCurso(this.curso()!.idCurso, true)
 				.then((curso) => {
 					if (curso) {
-						this.curso = curso;
+						this.curso.set(curso);
 						this.compruebaCambios();
-						this.claseEditar = null;
+						this.claseEditar.set(null);
 
 						document.body.style.overflow = 'auto';
-						//this.cdr.detectChanges();
 					} else {
 						console.error('No se pudo obtener el curso');
 					}

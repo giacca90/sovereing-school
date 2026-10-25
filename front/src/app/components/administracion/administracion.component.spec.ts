@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Curso } from '../../models/Curso';
 import { CursoChat } from '../../models/CursoChat';
 import { Usuario } from '../../models/Usuario';
@@ -69,9 +69,9 @@ describe('AdministracionComponent', () => {
 		mockUsuariosService = jasmine.createSpyObj('UsuariosService', ['getAllUsuarios', 'eliminaUsuario'], {
 			profes: [dummyUsuarios[1]],
 		});
-		mockCursosService = jasmine.createSpyObj('CursosService', ['getAllCursos', 'deleteCurso']);
+		mockCursosService = jasmine.createSpyObj('CursosService', ['getAllCursos', 'deleteCurso', 'getCurso', 'updateCurso']);
 		mockChatService = jasmine.createSpyObj('ChatService', ['getAllChats', 'deleteChat']);
-		mockInitService = jasmine.createSpyObj('InitService', ['init']);
+		mockInitService = jasmine.createSpyObj('InitService', ['init', 'carga']);
 
 		await TestBed.configureTestingModule({
 			imports: [AdministracionComponent],
@@ -90,7 +90,7 @@ describe('AdministracionComponent', () => {
 	it('should create', () => {
 		// Arrange & Act & Assert
 		expect(component).toBeTruthy();
-		expect(component.tipo).toBe(0);
+		expect(component.tipo()).toBe(0);
 	});
 
 	describe('cargaUsuarios', () => {
@@ -104,8 +104,8 @@ describe('AdministracionComponent', () => {
 			// Assert
 			expect(mockUsuariosService.getAllUsuarios).toHaveBeenCalled();
 			expect(component.usuarios).toEqual(dummyUsuarios);
-			expect(component.usuariosSel).toEqual(dummyUsuarios);
-			expect(component.tipo).toBe(1);
+			expect(component.usuariosSel()).toEqual(dummyUsuarios);
+			expect(component.tipo()).toBe(1);
 		});
 
 		it('should not overwrite users if null is returned', () => {
@@ -117,7 +117,7 @@ describe('AdministracionComponent', () => {
 
 			// Assert
 			expect(component.usuarios).toEqual([]);
-			expect(component.tipo).toBe(1);
+			expect(component.tipo()).toBe(1);
 		});
 
 		it('should not call service if users are already loaded', () => {
@@ -129,14 +129,14 @@ describe('AdministracionComponent', () => {
 
 			// Assert
 			expect(mockUsuariosService.getAllUsuarios).not.toHaveBeenCalled();
-			expect(component.tipo).toBe(1);
+			expect(component.tipo()).toBe(1);
 		});
 	});
 
 	describe('cargaCursos', () => {
 		it('should load courses when list is empty and data is returned', () => {
 			// Arrange
-			mockCursosService.getAllCursos.and.returnValue(of(dummyCursos));
+			mockCursosService.getAllCursos.and.returnValue(of(dummyCursos as any));
 
 			// Act
 			component.cargaCursos();
@@ -144,8 +144,8 @@ describe('AdministracionComponent', () => {
 			// Assert
 			expect(mockCursosService.getAllCursos).toHaveBeenCalled();
 			expect(component.cursos).toEqual(dummyCursos);
-			expect(component.cursosSel).toEqual(dummyCursos);
-			expect(component.tipo).toBe(2);
+			expect(component.cursosSel()).toEqual(dummyCursos);
+			expect(component.tipo()).toBe(2);
 		});
 
 		it('should not overwrite courses if null is returned', () => {
@@ -157,7 +157,7 @@ describe('AdministracionComponent', () => {
 
 			// Assert
 			expect(component.cursos).toEqual([]);
-			expect(component.tipo).toBe(2);
+			expect(component.tipo()).toBe(2);
 		});
 
 		it('should not call service if courses already loaded', () => {
@@ -169,7 +169,7 @@ describe('AdministracionComponent', () => {
 
 			// Assert
 			expect(mockCursosService.getAllCursos).not.toHaveBeenCalled();
-			expect(component.tipo).toBe(2);
+			expect(component.tipo()).toBe(2);
 		});
 	});
 
@@ -184,8 +184,8 @@ describe('AdministracionComponent', () => {
 			// Assert
 			expect(mockChatService.getAllChats).toHaveBeenCalled();
 			expect(component.chats).toEqual(dummyChats);
-			expect(component.chatsSel).toEqual(dummyChats);
-			expect(component.tipo).toBe(3);
+			expect(component.chatsSel()).toEqual(dummyChats);
+			expect(component.tipo()).toBe(3);
 		});
 
 		it('should not overwrite chats if null is returned', () => {
@@ -197,7 +197,7 @@ describe('AdministracionComponent', () => {
 
 			// Assert
 			expect(component.chats).toEqual([]);
-			expect(component.tipo).toBe(3);
+			expect(component.tipo()).toBe(3);
 		});
 
 		it('should not call service if chats already loaded', () => {
@@ -209,7 +209,7 @@ describe('AdministracionComponent', () => {
 
 			// Assert
 			expect(mockChatService.getAllChats).not.toHaveBeenCalled();
-			expect(component.tipo).toBe(3);
+			expect(component.tipo()).toBe(3);
 		});
 	});
 
@@ -226,7 +226,7 @@ describe('AdministracionComponent', () => {
 			component.buscaUsuarios(event);
 
 			// Assert
-			expect(component.usuariosSel).toEqual(dummyUsuarios);
+			expect(component.usuariosSel()).toEqual(dummyUsuarios);
 		});
 
 		it('should filter usuarios by name', () => {
@@ -237,8 +237,8 @@ describe('AdministracionComponent', () => {
 			component.buscaUsuarios(event);
 
 			// Assert
-			expect(component.usuariosSel.length).toBe(1);
-			expect(component.usuariosSel[0].nombreUsuario).toBe('Alice');
+			expect(component.usuariosSel().length).toBe(1);
+			expect(component.usuariosSel()[0].nombreUsuario).toBe('Alice');
 		});
 
 		it('should filter usuarios by role', () => {
@@ -249,8 +249,8 @@ describe('AdministracionComponent', () => {
 			component.buscaUsuarios(event);
 
 			// Assert
-			expect(component.usuariosSel.length).toBe(1);
-			expect(component.usuariosSel[0].nombreUsuario).toBe('Bob');
+			expect(component.usuariosSel().length).toBe(1);
+			expect(component.usuariosSel()[0].nombreUsuario).toBe('Bob');
 		});
 
 		it('should filter usuarios by id', () => {
@@ -261,8 +261,8 @@ describe('AdministracionComponent', () => {
 			component.buscaUsuarios(event);
 
 			// Assert
-			expect(component.usuariosSel.length).toBe(1);
-			expect(component.usuariosSel[0].idUsuario).toBe(2);
+			expect(component.usuariosSel().length).toBe(1);
+			expect(component.usuariosSel()[0].idUsuario).toBe(2);
 		});
 	});
 
@@ -279,7 +279,7 @@ describe('AdministracionComponent', () => {
 			component.buscaCursos(event);
 
 			// Assert
-			expect(component.cursosSel).toEqual(dummyCursos);
+			expect(component.cursosSel()).toEqual(dummyCursos);
 		});
 
 		it('should filter cursos by name', () => {
@@ -290,8 +290,8 @@ describe('AdministracionComponent', () => {
 			component.buscaCursos(event);
 
 			// Assert
-			expect(component.cursosSel.length).toBe(1);
-			expect(component.cursosSel[0].idCurso).toBe(101);
+			expect(component.cursosSel().length).toBe(1);
+			expect(component.cursosSel()[0].idCurso).toBe(101);
 		});
 
 		it('should filter cursos by professor id/string', () => {
@@ -302,7 +302,7 @@ describe('AdministracionComponent', () => {
 			component.buscaCursos(event);
 
 			// Assert
-			expect(component.cursosSel.length).toBe(2);
+			expect(component.cursosSel().length).toBe(2);
 		});
 
 		it('should filter cursos by course id', () => {
@@ -313,8 +313,8 @@ describe('AdministracionComponent', () => {
 			component.buscaCursos(event);
 
 			// Assert
-			expect(component.cursosSel.length).toBe(1);
-			expect(component.cursosSel[0].idCurso).toBe(102);
+			expect(component.cursosSel().length).toBe(1);
+			expect(component.cursosSel()[0].idCurso).toBe(102);
 		});
 	});
 
@@ -331,7 +331,7 @@ describe('AdministracionComponent', () => {
 			component.buscaChats(event);
 
 			// Assert
-			expect(component.chatsSel).toEqual(dummyChats);
+			expect(component.chatsSel()).toEqual(dummyChats);
 		});
 
 		it('should filter chats by name', () => {
@@ -342,7 +342,7 @@ describe('AdministracionComponent', () => {
 			component.buscaChats(event);
 
 			// Assert
-			expect(component.chatsSel.length).toBe(1);
+			expect(component.chatsSel().length).toBe(1);
 		});
 
 		it('should filter chats by id', () => {
@@ -353,7 +353,7 @@ describe('AdministracionComponent', () => {
 			component.buscaChats(event);
 
 			// Assert
-			expect(component.chatsSel.length).toBe(1);
+			expect(component.chatsSel().length).toBe(1);
 		});
 	});
 
@@ -413,7 +413,7 @@ describe('AdministracionComponent', () => {
 			// Arrange
 			spyOn(window, 'confirm').and.returnValue(true);
 			mockCursosService.deleteCurso.and.returnValue(of(true));
-			mockCursosService.getAllCursos.and.returnValue(of([dummyCursos[1]]));
+			mockCursosService.getAllCursos.and.returnValue(of([dummyCursos[1]] as any));
 
 			// Act
 			component.eliminaCurso(dummyCursos[0]);
@@ -422,6 +422,45 @@ describe('AdministracionComponent', () => {
 			expect(mockCursosService.deleteCurso).toHaveBeenCalledWith(dummyCursos[0]);
 			expect(mockCursosService.getAllCursos).toHaveBeenCalled();
 			expect(component.cursos).toEqual([dummyCursos[1]]);
+		});
+	});
+
+	describe('eliminaClase', () => {
+		it('should do nothing if confirmation is cancelled', () => {
+			spyOn(window, 'confirm').and.returnValue(false);
+			component.eliminaClase({ idClase: 1, cursoClase: 101 } as any);
+			expect(mockCursosService.getCurso).not.toHaveBeenCalled();
+		});
+
+		it('should handle curso not found', async () => {
+			spyOn(window, 'confirm').and.returnValue(true);
+			mockCursosService.getCurso.and.resolveTo(null);
+			spyOn(console, 'error');
+
+			await component.eliminaClase({ idClase: 1, cursoClase: 101 } as any);
+			expect(console.error).toHaveBeenCalledWith('Curso no encontrado');
+		});
+
+		it('should remove class from course and update successfully', async () => {
+			spyOn(window, 'confirm').and.returnValue(true);
+			const cursoMock = { idCurso: 101, clasesCurso: [{ idClase: 1 }, { idClase: 2 }] };
+			mockCursosService.getCurso.and.resolveTo(cursoMock as any);
+			mockCursosService.updateCurso.and.returnValue(of(cursoMock as any));
+			mockInitService.carga.and.resolveTo();
+
+			await component.eliminaClase({ idClase: 1, cursoClase: 101 } as any);
+			expect(mockCursosService.updateCurso).toHaveBeenCalled();
+		});
+
+		it('should handle error on updateCurso', async () => {
+			spyOn(window, 'confirm').and.returnValue(true);
+			const cursoMock = { idCurso: 101, clasesCurso: [{ idClase: 1 }] };
+			mockCursosService.getCurso.and.resolveTo(cursoMock as any);
+			mockCursosService.updateCurso.and.returnValue(throwError(() => new Error('Update error')));
+			spyOn(console, 'error');
+
+			await component.eliminaClase({ idClase: 1, cursoClase: 101 } as any);
+			expect(console.error).toHaveBeenCalled();
 		});
 	});
 
@@ -457,68 +496,68 @@ describe('AdministracionComponent', () => {
 		describe('mostrarUsuario', () => {
 			it('should toggle usuarioVisible between id and null', () => {
 				// Arrange
-				component.usuarioVisible = null;
+				component.usuarioVisible.set(null);
 
 				// Act 1
 				component.mostrarUsuario(1);
 				// Assert 1
-				expect(component.usuarioVisible).toBe(1 as any);
+				expect(component.usuarioVisible()).toBe(1 as any);
 
 				// Act 2
 				component.mostrarUsuario(1);
 				// Assert 2
-				expect(component.usuarioVisible).toBeNull();
+				expect(component.usuarioVisible()).toBeNull();
 			});
 		});
 
 		describe('mostrarCurso', () => {
 			it('should toggle cursoVisible between id and null', () => {
 				// Arrange
-				component.cursoVisible = null;
+				component.cursoVisible.set(null);
 
 				// Act 1
 				component.mostrarCurso(101);
 				// Assert 1
-				expect(component.cursoVisible).toBe(101 as any);
+				expect(component.cursoVisible()).toBe(101 as any);
 
 				// Act 2
 				component.mostrarCurso(101);
 				// Assert 2
-				expect(component.cursoVisible).toBeNull();
+				expect(component.cursoVisible()).toBeNull();
 			});
 		});
 
 		describe('mostrarChat', () => {
 			it('should toggle chatVisible between id and null', () => {
 				// Arrange
-				component.chatVisible = null;
+				component.chatVisible.set(null);
 
 				// Act 1
 				component.mostrarChat(101);
 				// Assert 1
-				expect(component.chatVisible).toBe(101 as any);
+				expect(component.chatVisible()).toBe(101 as any);
 
 				// Act 2
 				component.mostrarChat(101);
 				// Assert 2
-				expect(component.chatVisible).toBeNull();
+				expect(component.chatVisible()).toBeNull();
 			});
 		});
 
 		describe('mostrarClaseChat', () => {
 			it('should toggle claseChatVisible between id and null', () => {
 				// Arrange
-				component.claseChatVisible = null;
+				component.claseChatVisible.set(null);
 
 				// Act 1
 				component.mostrarClaseChat(5);
 				// Assert 1
-				expect(component.claseChatVisible).toBe(5 as any);
+				expect(component.claseChatVisible()).toBe(5 as any);
 
 				// Act 2
 				component.mostrarClaseChat(5);
 				// Assert 2
-				expect(component.claseChatVisible).toBeNull();
+				expect(component.claseChatVisible()).toBeNull();
 			});
 		});
 	});

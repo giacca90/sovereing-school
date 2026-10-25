@@ -1,5 +1,6 @@
-import { ElementRef } from '@angular/core';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ElementRef, signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import Player from 'video.js/dist/types/player';
 import { EditorObsComponent } from './editor-obs.component';
 
 describe('EditorObsComponent', () => {
@@ -22,7 +23,7 @@ describe('EditorObsComponent', () => {
 					captureStream: () => ({}) as MediaStream,
 				}),
 			}),
-		};
+		} as unknown as Player;
 	});
 
 	it('should create the component', () => {
@@ -62,20 +63,20 @@ describe('EditorObsComponent', () => {
 			component.ngOnDestroy();
 
 			// Assert
-			expect(component.player.dispose).toHaveBeenCalled();
+			expect(component.player?.dispose).toHaveBeenCalled();
 		});
 	});
 
 	describe('startOBS', () => {
-		it('should emit startOBS event and initialize player after timeout', fakeAsync(() => {
+		it('should emit startOBS event and initialize player after timeout', async () => {
 			// Arrange
 			spyOn(component.obsEvent, 'emit');
 			spyOn<any>(component, 'initVideoJS').and.resolveTo();
 			spyOn<any>(component, 'initMediaStream');
 			const mockVideo = document.createElement('video');
-			component.videoOBSRef = new ElementRef(mockVideo);
-			component.urlPreview = 'http://localhost/test.m3u8';
-			component.rtmpUrl = 'rtmp://live.stream/app/streamKey123';
+			(component as any).videoOBSRef = signal(new ElementRef(mockVideo));
+			fixture.componentRef.setInput('urlPreview', 'http://localhost/test.m3u8');
+			fixture.componentRef.setInput('rtmpUrl', 'rtmp://live.stream/app/streamKey123');
 
 			// Act
 			component.startOBS();
@@ -83,11 +84,10 @@ describe('EditorObsComponent', () => {
 			// Assert
 			expect(component.obsEvent.emit).toHaveBeenCalledWith({ type: 'startOBS', message: '' });
 
-			tick(350);
-			tick();
-			expect(component.rtmpServer).toBe('rtmp://live.stream/app');
+			await new Promise((resolve) => setTimeout(resolve, 360));
+			expect(component.rtmpServer()).toBe('rtmp://live.stream/app');
 			expect(component.rtmpKey).toBe('streamKey123');
-		}));
+		});
 	});
 
 	describe('emiteOBS', () => {
@@ -106,7 +106,7 @@ describe('EditorObsComponent', () => {
 		it('should emit emiteOBS event and calculate timer when m3u8 is loaded and rtmpUrl is provided', async () => {
 			// Arrange
 			component.m3u8Loaded = true;
-			component.rtmpUrl = 'rtmp://test/live/key';
+			fixture.componentRef.setInput('rtmpUrl', 'rtmp://test/live/key');
 			spyOn(component.obsEvent, 'emit');
 			spyOn(component, 'calculaTiempoGrabacion');
 
@@ -124,7 +124,7 @@ describe('EditorObsComponent', () => {
 		it('should return without emitting if rtmpUrl is empty', async () => {
 			// Arrange
 			component.m3u8Loaded = true;
-			component.rtmpUrl = '';
+			fixture.componentRef.setInput('rtmpUrl', '');
 			spyOn(component.obsEvent, 'emit');
 
 			// Act
@@ -139,14 +139,16 @@ describe('EditorObsComponent', () => {
 		it('should emit stopOBS and clear player source', () => {
 			// Arrange
 			spyOn(component.obsEvent, 'emit');
+			const mockVideo = document.createElement('video');
+			(component as any).videoOBSRef = signal(new ElementRef(mockVideo));
 
 			// Act
 			component.detenerEmision();
 
 			// Assert
 			expect(component.obsEvent.emit).toHaveBeenCalledWith({ type: 'stopOBS', message: '' });
-			expect(component.player.src).toBe('');
-			expect(component.player.srcObject).toBeNull();
+			expect(component.player?.src).toHaveBeenCalledWith({ src: '' });
+			expect(mockVideo.srcObject).toBeNull();
 		});
 	});
 
@@ -181,11 +183,11 @@ describe('EditorObsComponent', () => {
 		it('should show tooltip on mouse over and hide on mouse leave', () => {
 			// Arrange & Act
 			component.onMouseOver();
-			expect(component.showTooltip).toBeTrue();
+			expect(component.showTooltip()).toBeTrue();
 			expect(component.tooltipText).toBe('Haz click para copiar');
 
 			component.onMouseLeave();
-			expect(component.showTooltip).toBeFalse();
+			expect(component.showTooltip()).toBeFalse();
 		});
 	});
 
@@ -200,18 +202,19 @@ describe('EditorObsComponent', () => {
 			expect(format(Infinity)).toBe('00:00:00');
 		});
 
-		it('should increment recording time while emitiendo is true', fakeAsync(() => {
+		it('should increment recording time while emitiendo is true', async () => {
 			// Arrange
-			component.emitiendo = true;
+			fixture.componentRef.setInput('emitiendo', true);
 
 			// Act
 			component.calculaTiempoGrabacion();
 			expect(component.tiempoGrabacion).toBe('00:00:00');
-			tick(1000);
+			await new Promise((resolve) => setTimeout(resolve, 1005));
 			expect(component.tiempoGrabacion).toBe('00:00:01');
-			tick(1000);
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 			expect(component.tiempoGrabacion).toBe('00:00:02');
-		}));
+			fixture.componentRef.setInput('emitiendo', false);
+		});
 	});
 
 	describe('visualizeAudio', () => {
@@ -235,35 +238,36 @@ describe('EditorObsComponent', () => {
 			expect(() => component.visualizeAudio(mockStream, dummyAudioEl)).not.toThrow();
 		});
 
-		it('should handle startOBS when videoOBSRef is missing', fakeAsync(() => {
+		it('should handle startOBS when videoOBSRef is missing', async () => {
 			spyOn(console, 'error');
-			component.videoOBSRef = { nativeElement: null } as any;
-			component.startOBS();
-			tick(350);
+			fixture.componentRef.setInput('urlPreview', 'http://localhost/test.m3u8');
+			(component as any).videoOBSRef = signal(undefined);
+			fixture.detectChanges();
+			await new Promise((resolve) => setTimeout(resolve, 350));
 			expect(console.error).toHaveBeenCalledWith('Elemento con ID "OBS" no encontrado');
-		}));
-
-		it('should handle prepareRTMPData when rtmpUrl is empty', () => {
-			component.rtmpUrl = '';
-			(component as any).prepareRTMPData();
-			expect(component.rtmpServer).toBe('');
 		});
 
-		it('should handle initVideoJS when urlPreview is empty', fakeAsync(() => {
-			component.urlPreview = '';
+		it('should handle prepareRTMPData when rtmpUrl is empty', () => {
+			fixture.componentRef.setInput('rtmpUrl', '');
+			(component as any).prepareRTMPData();
+			expect(component.rtmpServer()).toBe('');
+		});
+
+		it('should handle initVideoJS when urlPreview is empty', async () => {
+			fixture.componentRef.setInput('urlPreview', '');
 			const mockVideo = document.createElement('video');
 			spyOn(component as any, 'initVideoJS').and.callThrough();
 			(component as any).initVideoJS(mockVideo);
-			tick(100);
+			await new Promise((resolve) => setTimeout(resolve, 150));
 			// Should retry
 			expect((component as any).initVideoJS).toHaveBeenCalled();
-		}));
+		});
 
-		it('should handle calculaTiempoGrabacion when emitiendo is false', fakeAsync(() => {
-			component.emitiendo = false;
+		it('should handle calculaTiempoGrabacion when emitiendo is false', async () => {
+			fixture.componentRef.setInput('emitiendo', false);
 			component.calculaTiempoGrabacion();
-			tick(1000);
+			await new Promise((resolve) => setTimeout(resolve, 1050));
 			expect(component.tiempoGrabacion).toBe('00:00:00');
-		}));
+		});
 	});
 });

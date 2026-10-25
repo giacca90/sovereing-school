@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, Renderer2 } from '@angular/core';
+import { Component, OnDestroy, OnInit, Renderer2, signal } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { LogModalComponent } from './components/log-modal/log-modal.component';
@@ -9,16 +9,14 @@ import { LoginService } from './services/login.service';
 
 @Component({
 	selector: 'app-root',
-	standalone: true,
-	changeDetection: ChangeDetectionStrategy.Eager,
 	templateUrl: './app.component.html',
 	styleUrl: './app.component.css',
 	imports: [RouterOutlet, SearchComponent, LogModalComponent, CommonModule],
 })
 export class AppComponent implements OnInit, OnDestroy {
 	title = 'Sovereign School';
-	isModalVisible: boolean = false;
-	vistaMenu: boolean = false;
+	isModalVisible = signal<boolean>(false);
+	vistaMenu = signal<boolean>(false);
 	currentYear: string = new Date().getFullYear().toString();
 	private readonly subscription: Subscription = new Subscription();
 
@@ -27,14 +25,12 @@ export class AppComponent implements OnInit, OnDestroy {
 	 * @param {LoginModalService} modalService - Servicio para gestionar el modal de login.
 	 * @param {LoginService} loginService - Servicio de autenticación.
 	 * @param {Router} router - Router de Angular.
-	 * @param {ChangeDetectorRef} cdr - Detección de cambios.
 	 * @param {Renderer2} renderer - Renderer para manipulación del DOM.
 	 */
 	constructor(
 		private readonly modalService: LoginModalService,
 		public loginService: LoginService,
 		public router: Router,
-		private readonly cdr: ChangeDetectorRef,
 		private readonly renderer: Renderer2,
 	) {}
 
@@ -57,8 +53,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
 		this.subscription.add(
 			this.modalService.isVisible$.subscribe((isVisible) => {
-				this.isModalVisible = isVisible;
-				this.cdr.detectChanges();
+				this.isModalVisible.set(isVisible);
 			}),
 		);
 	}
@@ -74,7 +69,7 @@ export class AppComponent implements OnInit, OnDestroy {
 	 * Cierra la sesión del usuario y redirige al inicio.
 	 */
 	salir() {
-		this.vistaMenu = false;
+		this.vistaMenu.set(false);
 		this.loginService.logout();
 		this.router.navigate(['/']);
 	}
